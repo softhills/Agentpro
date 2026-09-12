@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ListingAdminController;
 use App\Http\Controllers\Admin\ModerationController;
 use App\Http\Controllers\Admin\OperationsController;
 use App\Http\Controllers\Admin\OrderAdminController;
+use App\Http\Controllers\Admin\SettlementAdminController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -121,7 +122,25 @@ Route::middleware('auth')->group(function () {
         Route::put('/people/{user}/verification', [UserAdminController::class, 'updateVerification'])->name('users.verify');
 
         Route::get('/orders', [OrderAdminController::class, 'index'])->name('orders');
-        Route::post('/orders/{order}/refund', [OrderAdminController::class, 'refund'])->name('orders.refund');
+
+        /*
+        | Money (M11). Admin rather than moderator: refunding and reading the
+        | bank position are finance decisions, and the moderation role exists to
+        | let people review listings without also handing them the till.
+        */
+        Route::middleware('staff:admin')->group(function () {
+            Route::post('/orders/{order}/refund', [OrderAdminController::class, 'refund'])->name('orders.refund');
+            Route::post('/refunds/{refund}/approve', [OrderAdminController::class, 'approveRefund'])->name('refunds.approve');
+            Route::post('/refunds/{refund}/cancel', [OrderAdminController::class, 'cancelRefund'])->name('refunds.cancel');
+
+            Route::get('/settlements', [SettlementAdminController::class, 'index'])->name('settlements');
+            Route::post('/settlements/reconcile', [SettlementAdminController::class, 'reconcile'])
+                // The provider's API is the expensive part, not ours.
+                ->middleware('throttle:6,1')->name('settlements.reconcile');
+            Route::get('/settlements/{settlement}', [SettlementAdminController::class, 'show'])->name('settlements.show');
+            Route::post('/settlement-transactions/{transaction}/confirm', [SettlementAdminController::class, 'confirmTransaction'])
+                ->name('settlements.confirm');
+        });
 
         Route::get('/operations', [OperationsController::class, 'index'])->name('operations');
         Route::put('/areas/{area}/coverage', [OperationsController::class, 'toggleCoverage'])->name('areas.coverage');

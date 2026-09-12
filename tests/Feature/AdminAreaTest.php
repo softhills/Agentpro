@@ -39,6 +39,23 @@ class AdminAreaTest extends TestCase
         return $this->user(['category' => 'seeker', 'is_staff' => true, 'staff_role' => 'moderator']);
     }
 
+    /** Staff who may move money, as opposed to the moderator above. */
+    private function financeAdmin(): User
+    {
+        return $this->user(['category' => 'seeker', 'is_staff' => true, 'staff_role' => 'admin']);
+    }
+
+    private function order(float $amount = 150000): Order
+    {
+        $property = $this->listing();
+
+        return Order::create([
+            'uuid' => Str::uuid(), 'user_id' => $property->lister_id, 'property_id' => $property->id,
+            'item_type' => 'scan_3d', 'amount' => $amount, 'currency' => 'NGN',
+            'state' => 'paid', 'paid_at' => now(),
+        ]);
+    }
+
     private function area(bool $coverage = true): Area
     {
         return Area::firstOrCreate(['slug' => 'ikoyi'], [
@@ -187,42 +204,49 @@ class AdminAreaTest extends TestCase
 
     // -------------------------------------------------------------------- orders
 
-    /** FR-M11-05. The record is the thing; the money moves in Paystack. */
-    public function test_a_refund_is_recorded_against_the_order(): void
+    /**
+     * FR-M11-05. Moderating listings and moving money are different jobs, and
+     * the moderator role exists to let someone do the first without the second.
+     */
+    public function test_a_moderator_cannot_refund(): void
     {
-        $property = $this->listing();
-        $order = Order::create([
-            'uuid' => Str::uuid(), 'user_id' => $property->lister_id, 'property_id' => $property->id,
-            'item_type' => 'scan_3d', 'amount' => 150000, 'currency' => 'NGN',
-            'state' => 'paid', 'paid_at' => now(),
-        ]);
+        $order = $this->order();
 
-        $this->actingAs($this->admin())
+        $this->actingAs($this->admin())       // staff_role: moderator
+            ->post(route('admin.orders.refund', $order), ['amount' => 1000, 'reason' => 'Should never reach the gateway.'])
+            ->assertNotFound();
+
+        $this->assertSame(0, $order->refunds()->count());
+    }
+
+    public function test_an_admin_can_send_a_refund(): void
+    {
+        $order = $this->order();
+
+        $this->actingAs($this->financeAdmin())
             ->post(route('admin.orders.refund', $order), ['amount' => 150000, 'reason' => 'Technician could not access the property.'])
             ->assertRedirect();
 
-        $order->refresh();
+        $refund = $order->refunds()->firstOrFail();
 
-        $this->assertSame('refunded', $order->state);
-        $this->assertEqualsWithDelta(150000.0, (float) $order->refunded_amount, 0.01);
-        $this->assertDatabaseHas('audit_events', ['action' => 'order.refunded', 'subject_id' => $order->id]);
+        $this->assertSame('submitted', $refund->state);
+        // Deliberately still paid: the provider has accepted the refund, and
+        // the customer has not been paid back yet. See RefundTest for the rest
+        // of the lifecycle.
+        $this->assertSame('paid', $order->fresh()->state);
+        $this->assertDatabaseHas('audit_events', ['action' => 'refund.submitted', 'subject_id' => $refund->id]);
     }
 
     public function test_a_refund_cannot_exceed_what_is_outstanding(): void
     {
-        $property = $this->listing();
-        $order = Order::create([
-            'uuid' => Str::uuid(), 'user_id' => $property->lister_id, 'property_id' => $property->id,
-            'item_type' => 'scan_3d', 'amount' => 150000, 'currency' => 'NGN',
-            'state' => 'paid', 'paid_at' => now(),
-        ]);
+        $order = $this->order();
 
-        $this->actingAs($this->admin())
+        $this->actingAs($this->financeAdmin())
             ->post(route('admin.orders.refund', $order), ['amount' => 500000, 'reason' => 'Overshooting on purpose.'])
             ->assertSessionHasErrors('amount');
 
         $this->assertSame('paid', $order->fresh()->state);
-        $this->assertEqualsWithDelta(0.0, (float) $order->fresh()->refunded_amount, 0.01);
+        $this->assertSame(0, $order->refunds()->count());
     }
 
     // ---------------------------------------------------------------- operations

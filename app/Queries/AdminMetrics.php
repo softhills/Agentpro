@@ -6,7 +6,9 @@ use App\Enums\LifecycleState;
 use App\Models\Interaction;
 use App\Models\Order;
 use App\Models\Property;
+use App\Models\Refund;
 use App\Models\ScanJob;
+use App\Models\Settlement;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -140,6 +142,66 @@ class AdminMetrics
             'unredeemed'    => Order::where('item_type', 'scan_3d')->where('state', 'paid')
                 ->whereDoesntHave('scanJob')->count(),
         ];
+    }
+
+    /**
+     * Has the money actually arrived, and can all of it be accounted for?
+     *
+     * A different question from revenue(), which reports what was charged. These
+     * are the figures Finance is asked about, and all but two of them are
+     * supposed to be zero.
+     */
+    public function money(): array
+    {
+        $grace = (int) config('agentpro.settlement.grace_days');
+        $stale = (int) config('agentpro.refunds.stale_after_days');
+
+        $unsettled = Order::whereIn('state', ['paid', 'partially_refunded', 'refunded'])
+            ->whereNull('settlement_id')
+            ->whereNotNull('paid_at')
+            ->where('paid_at', '<', now()->subDays($grace));
+
+        return [
+            // Money in the bank this system cannot account for: either no
+            // order carries the reference, or the order it belongs to was never
+            // marked paid. Read from the reconciliation rollup rather than
+            // recounted, so the dashboard cannot disagree with the run.
+            'orphans'        => (int) Settlement::sum('unmatched_count'),
+            'orphan_amount'  => (float) Settlement::sum('unmatched_amount'),
+
+            // The mirror image: orders we told people succeeded, that no payout
+            // ever contained.
+            'unsettled'        => (clone $unsettled)->count(),
+            'unsettled_amount' => (float) (clone $unsettled)->sum('amount'),
+
+            'discrepancies' => Settlement::where('reconciliation_state', 'discrepancy')->count(),
+
+            'settled_30d' => (float) Settlement::where('status', 'success')
+                ->where('settlement_date', '>=', now()->subDays(30))->sum('effective_amount'),
+            'fees_30d'    => (float) Settlement::where('status', 'success')
+                ->where('settlement_date', '>=', now()->subDays(30))->sum('total_fees'),
+
+            'refunds_awaiting'  => Refund::where('state', 'requested')->count(),
+            'refunds_in_flight' => Refund::where('state', 'submitted')->count(),
+            'refunds_stuck'     => Refund::where('state', 'submitted')
+                ->where('submitted_at', '<', now()->subDays($stale))->count(),
+            'refunds_failed'    => Refund::where('state', 'failed')
+                ->where('updated_at', '>=', now()->subDays(30))->count(),
+
+            // The job going quiet is itself a finding, and the only one that
+            // nothing else on this page would ever reveal — every other figure
+            // here would simply stop changing, which looks like good news.
+            'last_reconciled' => $this->lastReconciliation(),
+        ];
+    }
+
+    private function lastReconciliation(): ?\Illuminate\Support\Carbon
+    {
+        $at = DB::table('audit_events')
+            ->where('action', 'settlement.reconciled')
+            ->max('created_at');
+
+        return $at ? \Illuminate\Support\Carbon::parse($at) : null;
     }
 
     /** Field operations — capacity is the constraint on the only paid feature. */

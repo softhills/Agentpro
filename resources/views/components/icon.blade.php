@@ -26,6 +26,7 @@
         'draw'    => '<path d="M4 18 18 4l2 2L6 20l-3 1Z"/>',
         'phone'   => '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1Z"/>',
         'minus'   => '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
+        'naira'   => '<path d="M7 19V5l10 14V5"/><path d="M4 10h16M4 14h16"/>',
         'chevron' => '<path d="m6 9 6 6 6-6"/>',
     ];
 @endphp

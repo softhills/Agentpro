@@ -101,6 +101,38 @@ return [
         'batch_window_minutes' => env('AGENTPRO_ALERT_WINDOW', 30),
     ],
 
+    /*
+     * Refunds (FR-M11-05).
+     *
+     * A refund can only travel back along the transaction that paid it, so the
+     * risk is not theft — it is somebody destroying revenue, by accident or
+     * otherwise. Hence a ceiling rather than a lock: under it, an admin refunds
+     * without ceremony; over it, a second admin has to agree. The default sits
+     * above a capture (₦150,000) and below a RealSure verification (₦350,000),
+     * so the everyday case is one click and the expensive one is not.
+     */
+    'refunds' => [
+        'dual_approval_above' => env('AGENTPRO_REFUND_APPROVAL_ABOVE', 200000),
+        // Nigerian card refunds genuinely take days. Past this, a refund has
+        // stopped being in progress and started being something to chase.
+        'stale_after_days'    => env('AGENTPRO_REFUND_STALE_DAYS', 7),
+    ],
+
+    /*
+     * Settlement reconciliation (FR-M11-06).
+     */
+    'settlement' => [
+        // A window, not a day: providers backfill and amend, and a job that only
+        // ever looks at yesterday never sees the amendment.
+        'lookback_days'      => env('AGENTPRO_SETTLEMENT_LOOKBACK', 14),
+        // How long a paid order may go unsettled before it is a finding.
+        // Paystack settles NGN on T+1 working days; this allows for a weekend
+        // and a public holiday without crying wolf every Monday.
+        'grace_days'         => env('AGENTPRO_SETTLEMENT_GRACE', 4),
+        // Rounding slack in naira. Above this, the figures genuinely disagree.
+        'variance_tolerance' => env('AGENTPRO_SETTLEMENT_TOLERANCE', 1.00),
+    ],
+
     'paystack' => [
         'secret_key'   => env('PAYSTACK_SECRET_KEY'),
         'public_key'   => env('PAYSTACK_PUBLIC_KEY'),

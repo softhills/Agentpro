@@ -10,83 +10,58 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Turning a webhook into a paid order (FR-M4-04, SEC-05).
+ * Turning a provider reference into a paid order (FR-M4-04, SEC-05).
  *
- * Three rules, each of which exists because the obvious implementation gets it
+ * Two rules, each of which exists because the obvious implementation gets it
  * wrong:
  *
- *  1. Confirmation happens here, from the webhook — never from the browser
- *     redirect. A payer who closes the tab has still paid; a payer who forges a
- *     redirect has not.
- *  2. The provider is asked what happened rather than believed. The webhook
- *     body says a payment succeeded; only fetchTransaction can confirm it, and
- *     the amount it reports is checked against the order.
- *  3. It is idempotent on the provider's event id. Providers retry, and a
- *     replayed event must not credit an order twice.
+ *  1. The provider is asked what happened rather than believed. A webhook body
+ *     says a payment succeeded; only fetchTransaction can confirm it, and the
+ *     amount it reports is checked against the order.
+ *  2. It is safe to call twice. Providers retry, and reconciliation can arrive
+ *     at the same conclusion a day later from a different direction, so a
+ *     second call on a paid order must change nothing.
+ *
+ * Idempotency on the *delivery* — the provider's event id — belongs one level
+ * up, in ReceivePaymentWebhook. This class is about the order.
  */
 class ConfirmPayment
 {
     public function __construct(private PaymentGateway $gateway) {}
 
     /**
+     * @param  PaymentEvent|null  $event  the delivery this came from, if any
+     * @param  int|null  $actorId  the operator, when a human confirmed it from
+     *                             reconciliation rather than a webhook
      * @return bool whether this call changed anything
      */
-    public function fromWebhook(string $eventId, string $eventType, array $payload, bool $signatureValid): bool
+    public function confirm(string $reference, ?PaymentEvent $event = null, ?int $actorId = null): bool
     {
-        // Recorded whether or not it is valid: a stream of rejected signatures
-        // is exactly the thing worth being able to see afterwards.
-        $event = PaymentEvent::firstOrCreate(
-            ['event_id' => $eventId],
-            [
-                'provider'        => $this->gateway->name(),
-                'event_type'      => $eventType,
-                'payload'         => $payload,
-                'signature_valid' => $signatureValid,
-            ]
-        );
-
-        if (! $signatureValid) {
-            Log::warning('payment.webhook.bad_signature', ['event_id' => $eventId]);
-
-            return false;
-        }
-
-        // Already handled — a retry, which is normal and must be a no-op.
-        if ($event->processed_at !== null) {
-            return false;
-        }
-
-        $reference = $payload['data']['reference'] ?? null;
-
-        if (! $reference) {
-            $event->update(['processed_at' => now()]);
-
-            return false;
-        }
-
-        $order = Order::where('uuid', $reference)->first();
+        $order = Order::where('uuid', $reference)
+            ->orWhere('paystack_reference', $reference)
+            ->first();
 
         if (! $order) {
-            Log::warning('payment.webhook.unknown_order', ['reference' => $reference]);
-            $event->update(['processed_at' => now()]);
+            Log::warning('payment.unknown_order', ['reference' => $reference]);
+            $event?->update(['processed_at' => now()]);
 
             return false;
         }
 
-        $event->update(['order_id' => $order->id]);
+        $event?->update(['order_id' => $order->id]);
 
         if ($order->isPaid()) {
-            $event->update(['processed_at' => now()]);
+            $event?->update(['processed_at' => now()]);
 
             return false;
         }
 
-        // Rule 2: ask, do not believe.
+        // Rule 1: ask, do not believe.
         $status = $this->gateway->fetchTransaction($reference);
 
         if (! $status || ! $status->successful) {
-            Log::warning('payment.webhook.not_successful_on_verify', ['reference' => $reference]);
-            $event->update(['processed_at' => now()]);
+            Log::warning('payment.not_successful_on_verify', ['reference' => $reference]);
+            $event?->update(['processed_at' => now()]);
 
             return false;
         }
@@ -99,12 +74,12 @@ class ConfirmPayment
                 'expected'  => (float) $order->amount,
                 'received'  => $status->amount(),
             ]);
-            $event->update(['processed_at' => now()]);
+            $event?->update(['processed_at' => now()]);
 
             return false;
         }
 
-        DB::transaction(function () use ($order, $status, $event) {
+        DB::transaction(function () use ($order, $status, $event, $actorId) {
             $order->update([
                 'state'              => 'paid',
                 'paystack_reference' => $status->reference,
@@ -112,13 +87,17 @@ class ConfirmPayment
                 'paid_at'            => now(),
             ]);
 
-            $event->update(['processed_at' => now()]);
+            $event?->update(['processed_at' => now()]);
 
             Audit::record('order.paid', $order, ['state' => 'pending'], [
                 'state'     => 'paid',
                 'channel'   => $status->channel,
                 'reference' => $status->reference,
-            ], $order->user_id);
+                // Worth distinguishing in the log: a payment recovered from a
+                // settlement is a webhook that never arrived, which is a
+                // different problem from an ordinary sale.
+                'source'    => $event ? 'webhook' : 'reconciliation',
+            ], $actorId ?? $order->user_id);
         });
 
         return true;

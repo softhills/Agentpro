@@ -72,7 +72,22 @@ Seeded accounts — all password `password`:
 |---|---|
 | `tunde@example.test` | Verified seller's agent |
 | `ngozi@example.test` | Verified developer |
-| `realsure@example.test` | RealSure officer (staff) |
+| `realsure@example.test` | Admin — the whole console |
+| `finance@example.test` | Admin — a second one, so a large refund can be approved |
+| `technician@example.test` | Capture technician |
+
+Two admins rather than one is deliberate: a refund over
+`agentpro.refunds.dual_approval_above` cannot be approved by the person who
+asked for it, so with a single account that path is unreachable. The seed leaves
+one waiting, which `finance@example.test` can approve from **Orders**.
+
+Settlements come from the development gateway, which derives them from the
+orders actually in the database — so the reconciliation screen shows a real,
+balanced picture rather than invented money. Pull them with:
+
+```bash
+php artisan agentpro:reconcile-settlements
+```
 
 ---
 
@@ -167,6 +182,20 @@ saved criteria are validated by its own rules. If they diverged, a seeker could
 be alerted about a listing that 404s when they click it — or one they are not
 allowed to see, since visibility is decided in that same query.
 
+**Money is confirmed by the provider, never asserted locally.** An order becomes
+paid when a verified transaction says so, and a refund becomes `processed` when
+the provider says the money landed — not when an operator pressed the button.
+Between those two points a refund sits in `submitted` and the order still reads
+`paid`, because it is still true. `refunds` carries that lifecycle; `settlements`
+and `settlement_transactions` carry the provider's side of it; and reconciliation
+is what compares the two.
+
+**Refunds need two people over a ceiling.** A refund travels back along the
+transaction that paid it, so a stolen admin session cannot use it to take money
+out of the business — but it can destroy revenue. Under
+`agentpro.refunds.dual_approval_above` an admin refunds directly; over it, a
+*different* admin has to approve. Moderators cannot refund at all.
+
 **Saved searches track reported listings, not a timestamp.** A listing published
 last week at ₦15M that drops to ₦11M today becomes a match without its
 `published_at` moving, so a watermark would never report it — and a price drop
@@ -235,6 +264,16 @@ who hid the listing), several changes batching into one message, cosmetic edits
 queueing nothing, every email carrying a way out, and every channel a
 notification can route to being resolvable from the container.
 
+`RefundTest` and `ReconciliationTest` cover the money that moves after a sale.
+Almost every case is a disagreement, because agreement is not what reconciliation
+is for: a payout containing money no order accounts for, an order marked paid
+that no payout ever contained, and a transaction list that came back short —
+which must read as "could not check this settlement", never as a clean run. The
+refund tests pin down that submitting is not paying back, that a refund still in
+flight is already spoken for so two operators cannot refund the same money, that
+a failure at the provider leaves a visible failed record rather than vanishing,
+and that nobody approves their own large refund.
+
 `ModerationTest` covers the gate between submission and the public — the console
 is invisible to non-staff, approval stamps the display period from the decision
 (not the submission), a rejection cannot be saved without an actionable note,
@@ -256,10 +295,10 @@ Not yet implemented:
   instead: FR-M12-02 wants a purpose-built side-by-side review view (content,
   media, declared title, fee breakdown, duplicate flags on one screen), which
   generic CRUD scaffolding does poorly
-- Refunds and daily settlement reconciliation (FR-M11-05, FR-M11-06). Orders
-  carry the fields; the operator screens are not built
 - Web push and SMS transports. Both are declared as channels and currently fall
   back to the in-app inbox rather than failing
+- Payouts to listers. Reconciliation covers money coming *in*; there is no
+  disbursement side, because R1 has nothing to disburse
 
 ## Open decisions blocking build
 

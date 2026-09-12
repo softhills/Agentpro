@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\Property;
+use App\Models\Refund;
+use App\Models\Settlement;
 use App\Models\User;
 use App\Policies\PropertyPolicy;
 use App\Services\Identity\IdentityVerifier;
@@ -97,6 +99,10 @@ class AppServiceProvider extends ServiceProvider
             $view->with([
                 'queueDepth' => Property::whereIn('lifecycle_state', ['submitted', 'under_review'])->count(),
                 'pendingUsers' => User::where('verification_state', 'pending')->count(),
+                // A refund waiting on a second approver is blocked on a person,
+                // not on a provider, so it belongs on the badge.
+                'refundsWaiting' => Refund::where('state', 'requested')->count(),
+                'settlementIssues' => Settlement::where('reconciliation_state', 'discrepancy')->count(),
             ]);
         });
 

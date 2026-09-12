@@ -32,3 +32,15 @@ Schedule::command('agentpro:run-saved-searches --frequency=instant')
 Schedule::command('agentpro:run-saved-searches --frequency=daily')
     ->dailyAt('08:00')
     ->withoutOverlapping();
+
+/*
+ | FR-M11-06: settlement reconciliation.
+ |
+ | Early, before anyone is working, so Finance opens the settlements screen to
+ | a picture of yesterday rather than to a stale one. It reads a rolling window
+ | rather than a single day, so a settlement the provider amends after the fact
+ | is picked up on the next run instead of being missed forever.
+ */
+Schedule::command('agentpro:reconcile-settlements')
+    ->dailyAt('06:30')
+    ->withoutOverlapping();

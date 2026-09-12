@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Webhooks;
 
-use App\Actions\ConfirmPayment;
+use App\Actions\ReceivePaymentWebhook;
 use App\Http\Controllers\Controller;
 use App\Services\Payments\PaymentGateway;
 use Illuminate\Http\Request;
@@ -19,7 +19,7 @@ use Illuminate\Support\Str;
  */
 class PaystackWebhookController extends Controller
 {
-    public function __invoke(Request $request, PaymentGateway $gateway, ConfirmPayment $confirm)
+    public function __invoke(Request $request, PaymentGateway $gateway, ReceivePaymentWebhook $receive)
     {
         // The raw body, not the parsed array: re-encoding changes the bytes and
         // would invalidate a perfectly good signature.
@@ -29,7 +29,7 @@ class PaystackWebhookController extends Controller
 
         $payload = json_decode($raw, true) ?: [];
 
-        $confirm->fromWebhook(
+        $receive->handle(
             // Paystack does not always send an event id, so fall back to a
             // deterministic hash of the body — a genuine retry carries the same
             // bytes and therefore the same key, which is what idempotency needs.

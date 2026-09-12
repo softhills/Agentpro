@@ -16,10 +16,18 @@
                 ['admin.queue',      'Review queue', 'shield', $queueDepth ?? null],
                 ['admin.listings',   'Listings',   'doc',    null],
                 ['admin.users',      'People',     'check',  $pendingUsers ?? null],
-                ['admin.orders',     'Orders',     'phone',  null],
+                ['admin.orders',     'Orders',     'phone',  $refundsWaiting ?? null],
                 ['admin.operations', 'Coverage & capacity', 'pin', null],
                 ['admin.audit',      'Audit log',  'plan',   null],
             ];
+
+            // Finance is admin-only, so the entry is not shown to a moderator
+            // rather than being shown and then refused.
+            if (auth()->user()?->isStaff('admin')) {
+                array_splice($sections, 5, 0, [
+                    ['admin.settlements', 'Settlements', 'naira', $settlementIssues ?? null],
+                ]);
+            }
         @endphp
 
         <nav>

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Actions\ConfirmPayment;
+use App\Actions\ReceivePaymentWebhook;
 use App\Actions\RequestScanUpgrade;
 use App\Actions\ScheduleScan;
 use App\Enums\LifecycleState;
@@ -266,7 +266,7 @@ class ScanPurchaseTest extends TestCase
             }
         });
 
-        $changed = app(ConfirmPayment::class)->fromWebhook(
+        $changed = app(ReceivePaymentWebhook::class)->handle(
             eventId: 'evt_short_'.Str::random(8),
             eventType: 'charge.success',
             payload: ['data' => ['reference' => $order->uuid]],
@@ -298,7 +298,7 @@ class ScanPurchaseTest extends TestCase
             }
         });
 
-        $changed = app(ConfirmPayment::class)->fromWebhook(
+        $changed = app(ReceivePaymentWebhook::class)->handle(
             eventId: 'evt_failed_'.Str::random(8),
             eventType: 'charge.success',
             payload: ['data' => ['reference' => $order->uuid]],
@@ -433,7 +433,7 @@ class ScanPurchaseTest extends TestCase
     {
         $order = app(RequestScanUpgrade::class)($property, $property->lister);
 
-        app(ConfirmPayment::class)->fromWebhook(
+        app(ReceivePaymentWebhook::class)->handle(
             eventId: 'evt_'.Str::random(12),
             eventType: 'charge.success',
             payload: ['data' => ['reference' => $order->uuid]],

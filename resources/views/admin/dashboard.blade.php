@@ -19,6 +19,30 @@
         $fees['missing'] > 0
             ? ['bad', $fees['missing'].' live '.Str::plural('listing', $fees['missing']).' with no cost breakdown — publishing should have blocked this', route('admin.listings', ['state' => 'published'])]
             : null,
+        // FR-M11-06. Both directions of the same failure: money we cannot
+        // explain, and money we claimed and never received. Shown only to
+        // admins, since only they can open the screen that resolves them.
+        $money && $money['orphans'] > 0
+            ? ['bad', $money['orphans'].' settled '.Str::plural('payment', $money['orphans']).' worth '.Money::naira($money['orphan_amount']).' with no order behind '.($money['orphans'] === 1 ? 'it' : 'them').' — somebody paid and this system does not know', route('admin.settlements')]
+            : null,
+        $money && $money['unsettled'] > 0
+            ? ['bad', $money['unsettled'].' paid '.Str::plural('order', $money['unsettled']).' worth '.Money::naira($money['unsettled_amount']).' that never settled', route('admin.orders', ['view' => 'unsettled'])]
+            : null,
+        $money && $money['refunds_awaiting'] > 0
+            ? ['warn', $money['refunds_awaiting'].' '.Str::plural('refund', $money['refunds_awaiting']).' waiting on a second approver', route('admin.orders')]
+            : null,
+        $money && $money['refunds_stuck'] > 0
+            ? ['warn', $money['refunds_stuck'].' '.Str::plural('refund', $money['refunds_stuck']).' still with the provider after '.config('agentpro.refunds.stale_after_days').' days', route('admin.settlements')]
+            : null,
+        $money && $money['discrepancies'] > 0
+            ? ['warn', $money['discrepancies'].' '.Str::plural('settlement', $money['discrepancies']).' that do not reconcile', route('admin.settlements')]
+            : null,
+        // The quiet failure: every figure above stops changing when the job
+        // stops running, and a stalled reconciliation looks exactly like a
+        // clean one.
+        $money && ($money['last_reconciled'] === null || $money['last_reconciled']->diffInHours(now()) > 48)
+            ? ['warn', 'Settlement reconciliation last ran '.($money['last_reconciled']?->diffForHumans() ?? 'never'), route('admin.settlements')]
+            : null,
         $operations['awaiting_capture'] > 0
             ? ['warn', $operations['awaiting_capture'].' capture '.Str::plural('visit', $operations['awaiting_capture']).' past their slot and not marked captured', route('admin.operations')]
             : null,
@@ -75,6 +99,14 @@
     <x-metric label="Paid orders" :value="number_format($revenue['orders_paid'])"
               :note="Money::naira($revenue['gross']).' gross · '.Money::naira($revenue['gross_30d']).' last 30d'"
               caption="O6 · scan upgrade revenue" />
+
+    @if ($money)
+        {{-- Gross is what we charged; this is what the bank actually received. --}}
+        <x-metric label="Settled to bank" :value="Money::naira($money['settled_30d'], true)"
+                  :note="Money::naira($money['fees_30d']).' in provider fees · '.Money::naira($revenue['refunded']).' refunded'"
+                  :alert="$money['orphans'] > 0 || $money['unsettled'] > 0"
+                  caption="FR-M11-06 · last 30 days, net" />
+    @endif
 
     <x-metric label="Reports" :value="$integrity['per_thousand']"
               :note="$integrity['reports'].' total · '.$integrity['reports_30d'].' in 30 days'"

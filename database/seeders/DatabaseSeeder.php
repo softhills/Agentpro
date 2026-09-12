@@ -5,8 +5,11 @@ namespace Database\Seeders;
 use App\Models\Amenity;
 use App\Models\Area;
 use App\Models\MediaAsset;
+use App\Models\Order;
 use App\Models\Property;
+use App\Models\Refund;
 use App\Models\RealsureRecord;
+use App\Models\ScanJob;
 use App\Models\TitleClaim;
 use App\Models\Unit;
 use App\Models\User;
@@ -64,7 +67,24 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'),
             'category' => 'seeker',
             'is_staff' => true,
-            'staff_role' => 'realsure_officer',
+            // Full admin, not just the RealSure desk: this is the account a
+            // developer signs in with to see the whole console. 'admin'
+            // satisfies every narrower staff check, so the RealSure work it
+            // is attributed to below still fits.
+            'staff_role' => 'admin',
+            'verification_state' => 'verified',
+        ]);
+
+        // FR-M11-05 needs two different admins to be demonstrable at all: a
+        // large refund cannot be approved by the person who asked for it.
+        $finance = User::create([
+            'uuid' => Str::uuid(),
+            'name' => 'Finance Desk',
+            'email' => 'finance@example.test',
+            'password' => Hash::make('password'),
+            'category' => 'seeker',
+            'is_staff' => true,
+            'staff_role' => 'admin',
             'verification_state' => 'verified',
         ]);
 
@@ -81,6 +101,102 @@ class DatabaseSeeder extends Seeder
 
         $this->seedProperties($agent, $developer, $officer);
         $this->seedTechnicianSlots($technician);
+        $this->seedCommerce($agent, $officer, $technician);
+    }
+
+    /**
+     * Orders, refunds and the settlements behind them (M11).
+     *
+     * Enough of a trading history that the money screens have something real to
+     * show. Deliberately does NOT seed a reconciliation failure: the development
+     * gateway derives settlements from these very orders, so anything it
+     * reported as unaccounted for would be a fiction planted here rather than a
+     * disagreement between two systems. The failure paths are covered in
+     * ReconciliationTest, where the provider can be made to disagree.
+     */
+    private function seedCommerce(User $agent, User $admin, User $technician): void
+    {
+        $properties = Property::where('lister_id', $agent->id)->orderBy('id')->take(4)->get();
+
+        if ($properties->count() < 4) {
+            return;
+        }
+
+        $order = fn (Property $property, string $item, float $amount, int $daysAgo) => Order::create([
+            'uuid' => Str::uuid(),
+            'user_id' => $property->lister_id,
+            'property_id' => $property->id,
+            'item_type' => $item,
+            'amount' => $amount,
+            'currency' => 'NGN',
+            'price_version' => config('agentpro.prices.version'),
+            'state' => 'paid',
+            'paystack_reference' => null,
+            'paystack_channel' => 'bank_transfer',
+            'paid_at' => now()->subDays($daysAgo)->setTime(11, 14),
+        ]);
+
+        // Delivered: paid, captured, live.
+        $delivered = $order($properties[0], 'scan_3d', 150000, 9);
+        ScanJob::create([
+            'uuid' => Str::uuid(),
+            'property_id' => $properties[0]->id,
+            'order_id' => $delivered->id,
+            'area_id' => $properties[0]->area_id,
+            'technician_id' => $technician->id,
+            'state' => 'live',
+            'scheduled_for' => now()->subDays(6)->setTime(10, 0),
+            'attended_at' => now()->subDays(6)->setTime(10, 12),
+            'capture_reference' => 'SxQL3iGyvQk',
+        ]);
+
+        // FR-M4-07: paid, nothing booked. The dashboard is supposed to shout.
+        $order($properties[1], 'scan_3d', 150000, 4);
+
+        // Part-refunded after the capture came back short.
+        $short = $order($properties[2], 'scan_3d', 150000, 12);
+        $this->refund($short, $admin, 50000, 'Two bedrooms were missed on the capture.', 'processed');
+
+        // Over the dual-approval ceiling, so it sits waiting for finance@ to
+        // agree — the state the approval screen exists for.
+        $big = $order($properties[3], 'realsure', 350000, 3);
+        $this->refund($big, $admin, 350000, 'Title search could not be completed at the registry.', 'requested');
+
+        // Someone part-way through checkout who never paid.
+        Order::create([
+            'uuid' => Str::uuid(),
+            'user_id' => $agent->id,
+            'property_id' => $properties[1]->id,
+            'item_type' => 'scan_3d',
+            'amount' => 150000,
+            'currency' => 'NGN',
+            'price_version' => config('agentpro.prices.version'),
+            'state' => 'pending',
+        ]);
+    }
+
+    private function refund(Order $order, User $admin, float $amount, string $reason, string $state): void
+    {
+        $submitted = $state === 'requested' ? null : $order->paid_at->copy()->addDays(2);
+
+        Refund::create([
+            'uuid' => Str::uuid(),
+            'order_id' => $order->id,
+            'amount' => $amount,
+            'currency' => 'NGN',
+            'reason' => $reason,
+            'state' => $state,
+            'requested_by' => $admin->id,
+            'approved_by' => $state === 'requested' ? null : $admin->id,
+            'approved_at' => $submitted,
+            'submitted_at' => $submitted,
+            'processed_at' => $state === 'processed' ? $submitted->copy()->addDays(2) : null,
+            'provider' => 'fake',
+            'provider_refund_id' => $state === 'requested' ? null : 'fake_rf_'.Str::random(16),
+            'provider_status' => $state === 'requested' ? null : $state,
+        ]);
+
+        $order->syncRefundState();
     }
 
     /**
