@@ -14,7 +14,7 @@ search, saved-search alerts, a property/unit inventory model.
 | | Version | Notes |
 |---|---|---|
 | PHP | 8.2+ | 8.3 recommended for production |
-| MariaDB | **10.11 LTS** | the agreed target (PRD Q20). MySQL 8.0+ also works — see *Database engine* |
+| MariaDB | **10.11.19** | installed. MySQL 8.0+ also works — see *Database engine* |
 | Composer | 2.x | installed per machine — not vendored in the repo |
 
 Extensions: `pdo_mysql`, `mbstring`, `openssl`, `fileinfo`, `gd` (image
@@ -60,26 +60,37 @@ engines implement and which returns metres regardless of SRID. `lat`/`lng`
 decimals are kept alongside for the map pane and as a portable fallback.
 
 > **XAMPP's "MySQL" module is MariaDB.** The control panel labels it MySQL, but
-> `mysqld --version` reports `10.4.32-MariaDB`. This is why the schema avoids
-> MySQL-8-only syntax.
->
-> **Observed on 10.4.32 during initial setup:** a `DROP TABLE` against an
-> InnoDB table carrying a `SPATIAL` index hung indefinitely and wedged all
-> subsequent DDL — every `CREATE TABLE` blocked, the stuck threads ignored
-> `KILL`, and a graceful shutdown could not complete. It needed a force-kill and
-> restart. This happened once and has not been reproduced or traced to a
-> specific upstream bug, so treat it as a caution rather than a known defect: if
-> `migrate:fresh` hangs, check `SHOW PROCESSLIST` for threads stuck in
-> `Creating table` and restart the service.
->
-> MariaDB is a fine production engine. The question is the **version**, not the
-> fork — 10.4 reached end of life in June 2024 and receives no further fixes.
+> the binary reports MariaDB. This is why the schema avoids MySQL-8-only syntax.
 
-**Decided (PRD Q20): MariaDB 10.11 LTS, in development and production.** It keeps
-the XAMPP workflow at no running cost and is supported to 2028. XAMPP 8.2.12
-bundles 10.4.32, so the bundled server needs replacing — take a full
-`mysqldump --all-databases` first, since a shared XAMPP instance holds other
-projects' data too.
+**Decided (PRD Q20): MariaDB 10.11 LTS, in development and production** —
+supported to 2028, and it keeps the XAMPP workflow at no running cost.
+
+### The upgrade, as performed
+
+XAMPP 8.2.12 bundles MariaDB **10.4.32**, which reached end of life in June 2024.
+On 10.4.32 a `DROP TABLE` against an InnoDB table carrying a `SPATIAL` index hung
+indefinitely and wedged all subsequent DDL — every `CREATE TABLE` blocked, the
+stuck threads ignored `KILL`, and graceful shutdown could not complete. It needed
+a force-kill. `migrate:fresh` was effectively unusable.
+
+The bundled server was replaced with **10.11.19** (official ZIP, SHA256 verified)
+using a fresh data directory and a dump/restore rather than an in-place data-file
+upgrade — the dump is version-neutral SQL, which sidesteps data-format risk.
+
+Measured before and after, same schema, same machine:
+
+| | 10.4.32 | 10.11.19 |
+|---|---|---|
+| `migrate:fresh --seed` | hung indefinitely, force-kill required | **5s** |
+| create + spatial index + drop | wedged the server | **0.14s**, repeatable |
+| viewport query plan at 20k rows | `range`, 430 rows examined | `range`, **13 rows** examined |
+
+InnoDB sizing was also raised from XAMPP's defaults (16M pool / 5M log) to
+256M / 128M, which are sane for a development database carrying spatial indexes.
+
+The previous install is preserved at `C:\xampp\mysql-10.4-backup` (285 MB) and
+dumps are in `storage/backups/`. Delete the backup folder once you are satisfied
+everything works.
 
 ## Architecture
 
@@ -146,7 +157,6 @@ Not yet implemented:
 - Paystack checkout, webhooks and the scan scheduling workflow (M4, M11)
 - Real map library in place of the SVG mock; `/search/pins` already returns the
   production payload
-- Media upload, transcode queue and the moderation gate (M3)
 - Saved-search matcher and notification fan-out (M5, M9)
 
 ## Open decisions blocking build
