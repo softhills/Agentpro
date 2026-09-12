@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Services\Identity\IdentityVerifier;
 use App\Services\Identity\VerificationSubmission;
+use App\Notifications\VerificationDecided;
 use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -71,6 +72,12 @@ class VerificationController extends Controller
             'reference' => $result->reference,
             'reason'    => $result->reason,
         ]);
+
+        // Publishing is blocked until this decision lands, so the lister is
+        // told rather than left to poll the page.
+        if (in_array($result->state, ['verified', 'rejected'], true)) {
+            $user->notify(new VerificationDecided($result->state, $result->reason));
+        }
 
         return redirect()->route('verify.show')->with('status', match ($result->state) {
             'verified' => 'Your identity is verified. You can publish listings now.',

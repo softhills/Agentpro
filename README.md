@@ -33,6 +33,13 @@ The fake does not mark anything paid on its own: `/orders/{order}/sandbox` shows
 the signed webhook body and the `curl` to send it, so the real
 pay → webhook → confirm sequence is what gets tested.
 
+**Notifications** need a queue worker (`php artisan queue:work`) and the
+scheduler (`php artisan schedule:work`) for batched listing alerts. Without the
+worker nothing is sent; without the scheduler, alerts accumulate in their window
+and never close. Mail goes to `storage/logs/laravel.log` under the default
+`MAIL_MAILER=log`. WhatsApp logs what it would send until a Meta business
+account and approved templates exist.
+
 **FFmpeg is optional but recommended.** Without it, uploaded video is stored
 intact but never transcoded: the asset stays `pending`, the job logs
 `media.video.transcode_unavailable`, and nothing is lost — the job can be
@@ -176,6 +183,13 @@ webhook is a no-op, a short or failed transaction never credits the order, a
 full slot cannot be double-booked, and a paid-but-unbooked capture is surfaced
 rather than lost.
 
+`NotificationTest` covers who gets told what — quiet hours including the
+overnight window that wraps past midnight, WhatsApp and SMS staying off unless
+chosen, only interacting users being alerted (never the lister, never someone
+who hid the listing), several changes batching into one message, cosmetic edits
+queueing nothing, every email carrying a way out, and every channel a
+notification can route to being resolvable from the container.
+
 `ModerationTest` covers the gate between submission and the public — the console
 is invisible to non-staff, approval stamps the display period from the decision
 (not the submission), a rejection cannot be saved without an actionable note,
@@ -201,7 +215,10 @@ Not yet implemented:
   carry the fields; the operator screens are not built
 - Real map library in place of the SVG mock; `/search/pins` already returns the
   production payload
-- Saved-search matcher and notification fan-out (M5, M9)
+- Saved-search matching (M5). The notification side is built; nothing yet runs
+  new listings against saved criteria
+- Web push and SMS transports. Both are declared as channels and currently fall
+  back to the in-app inbox rather than failing
 
 ## Open decisions blocking build
 

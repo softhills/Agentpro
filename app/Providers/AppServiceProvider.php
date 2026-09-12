@@ -6,6 +6,8 @@ use App\Models\Property;
 use App\Policies\PropertyPolicy;
 use App\Services\Identity\IdentityVerifier;
 use App\Services\Identity\StubVerifier;
+use App\Services\Messaging\LogWhatsAppSender;
+use App\Services\Messaging\WhatsAppSender;
 use App\Services\Payments\FakeGateway;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\PaystackGateway;
@@ -35,6 +37,21 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return new StubVerifier();
+        });
+
+        /*
+         * WhatsApp sender (FR-M9-08).
+         *
+         * Bound unconditionally: the channel resolves it whenever a user has
+         * WhatsApp enabled, and an unbound interface there does not fail the
+         * check — it fails the whole notification, after the email has already
+         * gone out, leaving a half-delivered message in failed_jobs.
+         */
+        $this->app->bind(WhatsAppSender::class, function ($app) {
+            // A real Meta-backed sender goes here once the business account and
+            // approved templates exist. Until then every environment logs what
+            // it would have sent rather than pretending to deliver it.
+            return new LogWhatsAppSender();
         });
 
         /*

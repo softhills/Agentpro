@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Technician;
 use App\Http\Controllers\Controller;
 use App\Models\MediaAsset;
 use App\Models\ScanJob;
+use App\Actions\RecordListingChange;
+use App\Notifications\TourIsLive;
 use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -90,6 +92,13 @@ class AssignmentController extends Controller
                 'capture_reference' => $data['capture_reference'],
             ]);
         });
+
+        // After commit. The lister is told their tour is live, and everyone
+        // who saved the listing is queued into the batching window — a new
+        // tour is a material change (FR-M9-05).
+        $property = $job->property->fresh();
+        $property->lister->notify(new TourIsLive($property));
+        app(RecordListingChange::class)->fromNewMedia($property, 'tour_3d');
 
         return redirect()
             ->route('technician.assignments')

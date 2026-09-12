@@ -5,6 +5,8 @@ namespace App\Actions;
 use App\Enums\LifecycleState;
 use App\Models\Property;
 use App\Models\User;
+use App\Notifications\ListingApproved;
+use App\Notifications\ListingReturned;
 use App\Support\Audit;
 use Illuminate\Support\Facades\DB;
 
@@ -28,7 +30,7 @@ class ModerateListing
      */
     public function approve(Property $property, User $moderator): Property
     {
-        return DB::transaction(function () use ($property, $moderator) {
+        $updated = DB::transaction(function () use ($property, $moderator) {
             $before = ['lifecycle_state' => $property->lifecycle_state->value];
 
             $property->update([
@@ -47,6 +49,13 @@ class ModerateListing
 
             return $property->fresh();
         });
+
+        // Notified after the transaction commits, deliberately. Sent from
+        // inside, the message can reach the lister before the row it describes
+        // is visible to anyone else — or describe a decision that then rolls back.
+        $updated->lister->notify(new ListingApproved($updated));
+
+        return $updated;
     }
 
     /**
@@ -56,7 +65,7 @@ class ModerateListing
      */
     public function reject(Property $property, User $moderator, string $reasonCode, string $note): Property
     {
-        return DB::transaction(function () use ($property, $moderator, $reasonCode, $note) {
+        $updated = DB::transaction(function () use ($property, $moderator, $reasonCode, $note) {
             $before = ['lifecycle_state' => $property->lifecycle_state->value];
 
             $property->update([
@@ -73,6 +82,10 @@ class ModerateListing
 
             return $property->fresh();
         });
+
+        $updated->lister->notify(new ListingReturned($updated, $note));
+
+        return $updated;
     }
 
     /**

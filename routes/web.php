@@ -5,6 +5,8 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InteractionController;
+use App\Http\Controllers\NotificationPreferenceController;
 use App\Http\Controllers\Lister\DashboardController;
 use App\Http\Controllers\Lister\ListingController;
 use App\Http\Controllers\Lister\MediaController;
@@ -21,6 +23,12 @@ use Illuminate\Support\Facades\Route;
 */
 Route::get('/', HomeController::class)->name('home');
 Route::get('/search', [SearchController::class, 'index'])->name('search');
+
+// FR-M9-07: one tap, from any message, without signing in. Signed so it
+// cannot be altered to unsubscribe somebody else.
+Route::get('/unsubscribe/{user}/{category}', [NotificationPreferenceController::class, 'unsubscribe'])
+    ->middleware('signed')
+    ->name('unsubscribe');
 
 // The cheapest way to scrape the whole inventory, so it is capped per IP (SEC-10).
 Route::get('/search/pins', [SearchController::class, 'pins'])
@@ -64,6 +72,21 @@ Route::post('/logout', [LoginController::class, 'destroy'])
 | Authenticated.
 */
 Route::middleware('auth')->group(function () {
+    /*
+    | Seeker interactions (M9). These also define the audience for listing
+    | alerts, so an entry here is a standing statement of interest.
+    */
+    Route::prefix('property/{property}')->name('interact.')->group(function () {
+        Route::post('/save',    [InteractionController::class, 'toggleSave'])->name('save');
+        Route::post('/hide',    [InteractionController::class, 'toggleHide'])->name('hide');
+        Route::post('/rate',    [InteractionController::class, 'rate'])->name('rate');
+        Route::post('/report',  [InteractionController::class, 'report'])->name('report');
+        Route::post('/contact', [InteractionController::class, 'contact'])->name('contact');
+    });
+
+    Route::get('/account/notifications', [NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
+    Route::put('/account/notifications', [NotificationPreferenceController::class, 'update'])->name('notifications.update');
+
     Route::get('/verify', [VerificationController::class, 'show'])->name('verify.show');
     Route::post('/verify', [VerificationController::class, 'store'])
         ->middleware('throttle:5,10')       // identity checks cost money per call

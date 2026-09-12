@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Models\Order;
 use App\Models\ScanJob;
 use App\Models\TechnicianSlot;
+use App\Notifications\CaptureBooked;
 use App\Support\Audit;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -45,7 +46,7 @@ class ScheduleScan
             ]);
         }
 
-        return DB::transaction(function () use ($order, $slot, $property) {
+        $job = DB::transaction(function () use ($order, $slot, $property) {
             // Claim the capacity first. The where-clause is the lock: if another
             // booking got there first, this updates zero rows and we stop.
             $claimed = TechnicianSlot::whereKey($slot->getKey())
@@ -78,6 +79,12 @@ class ScheduleScan
 
             return $job;
         });
+
+        // After commit: a reminder about a visit that did not save is worse
+        // than one that arrives a second late.
+        $order->user->notify(new CaptureBooked($job->fresh()));
+
+        return $job;
     }
 
     /** What the lister is offered: real capacity, in their property's area. */

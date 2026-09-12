@@ -69,6 +69,16 @@ return [
         'unredeemed_reminder_days' => 3,
     ],
 
+    /*
+     * Notifications (M9).
+     */
+    'notifications' => [
+        // FR-M9-06: how long changes to one listing accumulate before a single
+        // alert goes out. Long enough that an agent correcting several fields
+        // produces one message; short enough that a price drop is still news.
+        'batch_window_minutes' => env('AGENTPRO_ALERT_WINDOW', 30),
+    ],
+
     'paystack' => [
         'secret_key'   => env('PAYSTACK_SECRET_KEY'),
         'public_key'   => env('PAYSTACK_PUBLIC_KEY'),

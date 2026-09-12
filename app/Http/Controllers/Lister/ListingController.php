@@ -203,7 +203,8 @@ class ListingController extends Controller
                 'price_period' => $unitData['price_period'],
             ]);
 
-        $priceChanged = (float) $unit->price !== (float) $unitData['price'];
+        $previousPrice = (float) $unit->price;
+        $priceChanged = $previousPrice !== (float) $unitData['price'];
 
         $unit->update([
             'price'          => $unitData['price'],
@@ -223,6 +224,12 @@ class ListingController extends Controller
                 'price_period' => $unitData['price_period'],
                 'effective_at' => now(),
             ]);
+        }
+
+        // FR-M9-05: a price move is the change seekers most want to hear
+        // about, and the only unit-level edit that counts as material.
+        if ($priceChanged && $unit->wasRecentlyCreated === false) {
+            app(\App\Actions\RecordListingChange::class)->fromPriceChange($unit->fresh(), $previousPrice);
         }
 
         // Fee lines are replaced wholesale — simpler than diffing, and the
