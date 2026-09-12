@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Lister\DashboardController;
 use App\Http\Controllers\Lister\ListingController;
+use App\Http\Controllers\Lister\MediaController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
@@ -68,5 +69,15 @@ Route::middleware('auth')->group(function () {
         Route::get('/listings/{property}/edit', [ListingController::class, 'edit'])->name('listings.edit');
         Route::put('/listings/{property}', [ListingController::class, 'update'])->name('listings.update');
         Route::post('/listings/{property}/submit', [ListingController::class, 'submit'])->name('listings.submit');
+
+        // Media (M3). Throttled: image processing is CPU-bound, and an
+        // unthrottled upload endpoint is a cheap way to exhaust a small VPS.
+        Route::middleware('throttle:30,1')->group(function () {
+            Route::post('/listings/{property}/photos', [MediaController::class, 'storePhotos'])->name('media.photos');
+            Route::post('/listings/{property}/video', [MediaController::class, 'storeVideo'])->name('media.video');
+        });
+        Route::post('/listings/{property}/media/{media}/cover', [MediaController::class, 'setCover'])->name('media.cover');
+        Route::post('/listings/{property}/media/reorder', [MediaController::class, 'reorder'])->name('media.reorder');
+        Route::delete('/listings/{property}/media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');
     });
 });

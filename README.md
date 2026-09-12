@@ -17,8 +17,18 @@ search, saved-search alerts, a property/unit inventory model.
 | MariaDB | **10.11.19** | installed. MySQL 8.0+ also works — see *Database engine* |
 | Composer | 2.x | installed per machine — not vendored in the repo |
 
-Extensions: `pdo_mysql`, `mbstring`, `openssl`, `fileinfo`, `gd` (image
-processing), `zip`.
+Extensions: `pdo_mysql`, `mbstring`, `openssl`, `fileinfo`, `exif`, `gd`, `zip`.
+
+> XAMPP ships `gd` and `zip` **commented out** in `php.ini`. Both are required —
+> `gd` does all image processing, and without it photo upload fails at runtime
+> rather than at boot. Uncomment `extension=gd` and `extension=zip`, then
+> restart PHP. A backup of the original is at `php.ini.bak-agentpro`.
+
+**FFmpeg is optional but recommended.** Without it, uploaded video is stored
+intact but never transcoded: the asset stays `pending`, the job logs
+`media.video.transcode_unavailable`, and nothing is lost — the job can be
+replayed once FFmpeg is installed. Point `FFMPEG_PATH` / `FFPROBE_PATH` at the
+binaries, or put them on `PATH`.
 
 ## Setup
 
@@ -143,6 +153,12 @@ one lister cannot touch another's draft, a draft 404s publicly, closed listings
 are excluded from default search, the move-in total sums correctly, and audit
 events cannot be altered.
 
+`MediaUploadTest` covers the upload pipeline — a disguised file is rejected by
+content sniffing, a real EXIF segment is spliced into the fixture and proven gone
+from every rendition, the responsive set is written, the difference hash matches
+the same photograph at another size and separates unrelated ones, and pending
+video stays off the public listing.
+
 `ModerationTest` covers the gate between submission and the public — the console
 is invisible to non-staff, approval stamps the display period from the decision
 (not the submission), a rejection cannot be saved without an actionable note,
@@ -156,8 +172,8 @@ Not yet implemented:
 - Identity-verification vendor integration — the interface and a dev stub exist
   (`app/Services/Identity/`), the real driver is bound in `AppServiceProvider`
   once PRD Q1 is settled
-- Media upload and the transcode queue (M3). Photos are currently attached
-  directly in the database for development
+- Video transcoding in practice — the job is written and dispatched, but needs
+  FFmpeg installed to produce the 720p/480p renditions and the poster frame
 - The rest of the admin console beyond moderation — user and KYC administration,
   taxonomies, coverage areas, technician roster. **Filament** is the intended
   tool for this routine CRUD. The moderation queue was deliberately hand-rolled

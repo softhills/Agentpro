@@ -56,7 +56,9 @@
                     <div class="photogrid">
                         @foreach ($entry['assets']->take(5) as $i => $photo)
                             <span>
-                                <x-placeholder :seed="$property->id + $i" />
+                                <x-property-image :asset="$photo" :seed="$property->id + $i"
+                                                  :alt="$property->title.' — photograph '.($i + 1)"
+                                                  rendition="{{ $i === 0 ? '1600' : '400' }}" />
                                 @if ($i === 4 && $entry['assets']->count() > 5)
                                     <span class="more">+{{ $entry['assets']->count() - 5 }} photos</span>
                                 @endif
@@ -64,7 +66,16 @@
                         @endforeach
                     </div>
                 @else
-                    <x-placeholder :seed="$property->id" />
+                    {{-- Video shows its generated poster frame; everything else
+                         falls back to the listing cover so the stage is never
+                         blank at rest (NFR-02). --}}
+                    @if ($kind === MediaKind::Video && $first?->posterUrl())
+                        <img src="{{ $first->posterUrl() }}" alt="{{ $property->title }} walkthrough"
+                             class="ph" loading="lazy" decoding="async">
+                    @else
+                        <x-property-image :asset="$property->coverImage()" :seed="$property->id"
+                                          :alt="$property->title" rendition="1600" />
+                    @endif
 
                     <span class="vchip">
                         <x-icon :name="$icons[$key] ?? 'photo'" />

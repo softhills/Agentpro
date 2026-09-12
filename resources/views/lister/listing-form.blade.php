@@ -238,7 +238,7 @@
             </div>
         </section>
 
-        <div class="formactions">
+        <div class="formactions" style="margin-bottom:0">
             <button type="submit" class="btn btn-blue">{{ $isEdit ? 'Save changes' : 'Save draft' }}</button>
             <a href="{{ route('lister.dashboard') }}" class="btn btn-ghost">Cancel</a>
             @if ($isEdit)
@@ -246,5 +246,112 @@
             @endif
         </div>
     </form>
+
+    @if ($isEdit)
+        {{-- Media lives outside the main form: uploads are multipart and post to
+             their own endpoints, so a half-finished listing draft is never lost
+             to a failed image upload, and vice versa. --}}
+        @php
+            $photos = $property->media->where('kind', 'photo')->sortBy('sort_order');
+            $video  = $property->media->firstWhere('kind', 'video');
+            $min    = (int) config('agentpro.media.min_photos');
+        @endphp
+
+        <section class="formsec formsec-required" style="margin-top:16px">
+            <h2>
+                Photographs
+                <span class="reqflag">{{ $min }} required</span>
+                <span class="mutedcount">{{ $photos->count() }} uploaded</span>
+            </h2>
+            <p class="secblurb">
+                JPEG, PNG or WebP, up to {{ round(config('agentpro.media.max_photo_kb') / 1024) }} MB each.
+                Every image is re-encoded on upload, which strips location data — your
+                address does not travel inside the file.
+            </p>
+
+            @if ($photos->isNotEmpty())
+                <div class="mediagrid">
+                    @foreach ($photos as $photo)
+                        <figure class="mediacard">
+                            <x-property-image :asset="$photo" :seed="$property->id"
+                                              :alt="'Photograph of '.$property->title" rendition="400" />
+                            @if ($photo->is_cover)
+                                <span class="coverflag">Cover</span>
+                            @endif
+                            <figcaption>
+                                @unless ($photo->is_cover)
+                                    <form method="POST" action="{{ route('lister.media.cover', [$property, $photo]) }}">
+                                        @csrf
+                                        <button type="submit" class="linkbtn">Make cover</button>
+                                    </form>
+                                @endunless
+                                <form method="POST" action="{{ route('lister.media.destroy', [$property, $photo]) }}"
+                                      onsubmit="return confirm('Remove this photograph?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="linkbtn danger">Remove</button>
+                                </form>
+                            </figcaption>
+                        </figure>
+                    @endforeach
+                </div>
+            @else
+                <p class="fhint">No photographs yet. A listing cannot be submitted without {{ $min }}.</p>
+            @endif
+
+            <form method="POST" action="{{ route('lister.media.photos', $property) }}"
+                  enctype="multipart/form-data" class="uploadrow">
+                @csrf
+                <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp"
+                       multiple required class="finput">
+                <button type="submit" class="btn btn-blue">Upload</button>
+            </form>
+        </section>
+
+        <section class="formsec" style="margin-top:16px">
+            <h2>Walkthrough video <span class="mutedcount">optional · one per listing</span></h2>
+            <p class="secblurb">
+                MP4, MOV, WebM or MKV, up to {{ round(config('agentpro.media.max_video_kb') / 1024) }} MB.
+                Video is reviewed before it appears on the listing, and never autoplays
+                for seekers.
+            </p>
+
+            @if ($video)
+                <div class="videorow">
+                    <div>
+                        <strong>Uploaded{{ $video->durationLabel() ? ' · '.$video->durationLabel() : '' }}</strong>
+                        <p class="fhint" style="margin-top:2px">
+                            @if ($video->moderation_state === 'pending')
+                                Awaiting review — not yet visible on the listing.
+                            @elseif ($video->moderation_state === 'rejected')
+                                Not approved. Remove it and upload a replacement.
+                            @else
+                                Approved and live on the listing.
+                            @endif
+                            @if (empty($video->renditions))
+                                <br>Not yet processed into streaming sizes.
+                            @endif
+                        </p>
+                    </div>
+                    <form method="POST" action="{{ route('lister.media.destroy', [$property, $video]) }}"
+                          onsubmit="return confirm('Remove this video?')">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="btn btn-ghost btn-sm">Remove</button>
+                    </form>
+                </div>
+            @else
+                <form method="POST" action="{{ route('lister.media.video', $property) }}"
+                      enctype="multipart/form-data" class="uploadrow">
+                    @csrf
+                    <input type="file" name="video" accept="video/mp4,video/quicktime,video/webm,video/x-matroska"
+                           required class="finput">
+                    <button type="submit" class="btn btn-blue">Upload video</button>
+                </form>
+            @endif
+        </section>
+    @else
+        <p class="formnote" style="margin-top:14px">
+            Save the draft first — photographs and video can be added once the listing exists.
+        </p>
+    @endif
 </div>
 @endsection

@@ -62,7 +62,7 @@
         @endphp
 
         <article class="listrow">
-            <div class="listthumb"><x-placeholder :seed="$property->id" /></div>
+            <div class="listthumb"><x-property-image :asset="$property->coverImage()" :seed="$property->id" :alt="$property->title" rendition="400" /></div>
 
             <div class="listmain">
                 <div class="listtop">

@@ -10,7 +10,8 @@
 
 <article class="card" data-pin="{{ $property->uuid }}">
     <a href="{{ route('property.show', $property) }}" class="media" aria-label="{{ $property->title }}">
-        <x-placeholder :seed="$property->id" />
+        <x-property-image :asset="$property->coverImage()" :seed="$property->id"
+                          :alt="$property->title" rendition="800" />
 
         {{-- Status pill, top-left. --}}
         <span @class(['pill', 'pill-status', 'pill-sale' => $property->intent === 'sale', 'pill-closed' => $closed])>
