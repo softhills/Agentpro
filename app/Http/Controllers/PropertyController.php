@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\LifecycleState;
+use App\Models\Property;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+class PropertyController extends Controller
+{
+    public function show(Property $property)
+    {
+        // A draft or rejected listing is not merely hidden from search — it must
+        // 404 on direct URL access too, or the uuid becomes a bypass (SEC-03).
+        if (! in_array($property->lifecycle_state->value, LifecycleState::publiclyVisible(), true)) {
+            throw new NotFoundHttpException();
+        }
+
+        $property->load([
+            'units.feeLines',
+            'units.priceHistory',
+            'media',
+            'titleClaims',
+            'realsureRecords.officer:id,name',
+            'amenities',
+            'area',
+            'lister:id,name,verification_state,category',
+        ]);
+
+        return view('pages.show', [
+            'property' => $property,
+            'unit'     => $property->headlineUnit(),
+        ]);
+    }
+}
