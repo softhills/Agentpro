@@ -53,4 +53,27 @@ return [
         'approval_hours' => 6,
         'fraud_report_hours' => 4,
     ],
+
+    /*
+     * 3D capture scheduling (M4).
+     *
+     * Q4 is still open on the reschedule and no-show policy, so the numbers live
+     * here rather than being hard-coded into a comparison somewhere — settling
+     * the policy should be a config change, not a code change.
+     */
+    'scan' => [
+        'slot_hours'              => 2,
+        'reschedule_notice_hours' => 24,
+        // How long a paid-but-unscheduled entitlement waits before the lister is
+        // chased about it (FR-M4-07).
+        'unredeemed_reminder_days' => 3,
+    ],
+
+    'paystack' => [
+        'secret_key'   => env('PAYSTACK_SECRET_KEY'),
+        'public_key'   => env('PAYSTACK_PUBLIC_KEY'),
+        'base_url'     => env('PAYSTACK_BASE_URL', 'https://api.paystack.co'),
+        // Development fallback secret for the fake gateway's signatures.
+        'fake_secret'  => env('PAYSTACK_FAKE_SECRET', 'fake_secret'),
+    ],
 ];

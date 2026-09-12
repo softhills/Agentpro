@@ -8,6 +8,10 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Lister\DashboardController;
 use App\Http\Controllers\Lister\ListingController;
 use App\Http\Controllers\Lister\MediaController;
+use App\Http\Controllers\Lister\SandboxCheckoutController;
+use App\Http\Controllers\Lister\ScanController;
+use App\Http\Controllers\Technician\AssignmentController;
+use App\Http\Controllers\Webhooks\PaystackWebhookController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +28,22 @@ Route::get('/search/pins', [SearchController::class, 'pins'])
     ->name('search.pins');
 
 Route::get('/property/{property}', [PropertyController::class, 'show'])->name('property.show');
+
+/*
+| Payment webhook (FR-M4-04, SEC-05).
+|
+| Outside the auth and CSRF groups by necessity — the caller is Paystack, not a
+| browser session. Its authenticity comes from the HMAC signature on the raw
+| body, which is checked before anything is acted on.
+*/
+Route::post('/webhooks/paystack', PaystackWebhookController::class)
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    // Every delivery is recorded before its signature is checked, which is what
+    // makes a rejected run visible afterwards — but it also means an attacker
+    // sending unique event ids could stuff the table. Generous enough for a
+    // provider's genuine retry storm, tight enough to make that pointless.
+    ->middleware('throttle:120,1')
+    ->name('webhooks.paystack');
 
 /*
 | Guest only.
@@ -79,5 +99,30 @@ Route::middleware('auth')->group(function () {
         Route::post('/listings/{property}/media/{media}/cover', [MediaController::class, 'setCover'])->name('media.cover');
         Route::post('/listings/{property}/media/reorder', [MediaController::class, 'reorder'])->name('media.reorder');
         Route::delete('/listings/{property}/media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');
+    });
+
+    /*
+    | 3D capture purchase and scheduling (M4).
+    */
+    Route::name('scan.')->group(function () {
+        Route::get('/dashboard/listings/{property}/3d', [ScanController::class, 'show'])->name('offer');
+        Route::post('/dashboard/listings/{property}/3d', [ScanController::class, 'checkout'])
+            ->middleware('throttle:10,1')->name('checkout');
+        Route::get('/orders/{order}/return', [ScanController::class, 'returned'])->name('return');
+        Route::get('/orders/{order}/schedule', [ScanController::class, 'schedule'])->name('schedule');
+        Route::post('/orders/{order}/schedule', [ScanController::class, 'book'])->name('book');
+
+        // Stands in for the hosted payment form in local development only.
+        Route::get('/orders/{order}/sandbox', SandboxCheckoutController::class)
+            ->name('sandbox');
+    });
+
+    /*
+    | Field tool for capture technicians (FR-M4-09).
+    */
+    Route::middleware('staff:technician')->prefix('technician')->name('technician.')->group(function () {
+        Route::get('/assignments', [AssignmentController::class, 'index'])->name('assignments');
+        Route::post('/assignments/{job}/attend', [AssignmentController::class, 'attend'])->name('attend');
+        Route::post('/assignments/{job}/capture', [AssignmentController::class, 'capture'])->name('capture');
     });
 });

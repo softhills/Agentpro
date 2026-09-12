@@ -24,6 +24,15 @@ Extensions: `pdo_mysql`, `mbstring`, `openssl`, `fileinfo`, `exif`, `gd`, `zip`.
 > rather than at boot. Uncomment `extension=gd` and `extension=zip`, then
 > restart PHP. A backup of the original is at `php.ini.bak-agentpro`.
 
+**Paystack** is optional locally. With `PAYSTACK_SECRET_KEY` set — their test
+keys are fine — the real integration runs in any environment. Without it, local
+and testing fall back to a fake gateway that signs webhooks with the same
+HMAC-SHA512 scheme, so signature verification is exercised for real rather than
+bypassed; a non-local environment with no key refuses to start a payment at all.
+The fake does not mark anything paid on its own: `/orders/{order}/sandbox` shows
+the signed webhook body and the `curl` to send it, so the real
+pay → webhook → confirm sequence is what gets tested.
+
 **FFmpeg is optional but recommended.** Without it, uploaded video is stored
 intact but never transcoded: the asset stays `pending`, the job logs
 `media.video.transcode_unavailable`, and nothing is lost — the job can be
@@ -159,6 +168,14 @@ from every rendition, the responsive set is written, the difference hash matches
 the same photograph at another size and separates unrelated ones, and pending
 video stays off the public listing.
 
+`ScanPurchaseTest` covers the only revenue path in R1, concentrating on the ways
+money and delivery come apart — an ineligible property cannot reach checkout,
+the price comes from configuration and not the request, returning from the
+gateway confirms nothing, a bad signature is rejected and recorded, a replayed
+webhook is a no-op, a short or failed transaction never credits the order, a
+full slot cannot be double-booked, and a paid-but-unbooked capture is surfaced
+rather than lost.
+
 `ModerationTest` covers the gate between submission and the public — the console
 is invisible to non-staff, approval stamps the display period from the decision
 (not the submission), a rejection cannot be saved without an actionable note,
@@ -180,7 +197,8 @@ Not yet implemented:
   instead: FR-M12-02 wants a purpose-built side-by-side review view (content,
   media, declared title, fee breakdown, duplicate flags on one screen), which
   generic CRUD scaffolding does poorly
-- Paystack checkout, webhooks and the scan scheduling workflow (M4, M11)
+- Refunds and daily settlement reconciliation (FR-M11-05, FR-M11-06). Orders
+  carry the fields; the operator screens are not built
 - Real map library in place of the SVG mock; `/search/pins` already returns the
   production payload
 - Saved-search matcher and notification fan-out (M5, M9)

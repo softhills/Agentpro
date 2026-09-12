@@ -68,7 +68,53 @@ class DatabaseSeeder extends Seeder
             'verification_state' => 'verified',
         ]);
 
+        $technician = User::create([
+            'uuid' => Str::uuid(),
+            'name' => 'Capture Team — Lagos',
+            'email' => 'technician@example.test',
+            'password' => Hash::make('password'),
+            'category' => 'seeker',
+            'is_staff' => true,
+            'staff_role' => 'technician',
+            'verification_state' => 'verified',
+        ]);
+
         $this->seedProperties($agent, $developer, $officer);
+        $this->seedTechnicianSlots($technician);
+    }
+
+    /**
+     * Bookable capacity for the next fortnight (FR-M4-05).
+     *
+     * Deliberately thin — two visits a day per area, which is roughly what one
+     * technician can actually do in Lagos traffic. Risk R2 is that a calendar
+     * offering more than the field team can service turns the only paid feature
+     * in R1 into a queue of apologies.
+     */
+    private function seedTechnicianSlots(User $technician): void
+    {
+        $areas = Area::scanCoverage()->get();
+
+        foreach ($areas as $area) {
+            for ($day = 1; $day <= 14; $day++) {
+                $date = now()->addDays($day);
+
+                if ($date->isSunday()) {
+                    continue;
+                }
+
+                foreach (['09:00:00', '13:00:00'] as $start) {
+                    \App\Models\TechnicianSlot::create([
+                        'area_id'       => $area->id,
+                        'technician_id' => $technician->id,
+                        'slot_date'     => $date->toDateString(),
+                        'slot_start'    => $start,
+                        'capacity'      => 1,
+                        'booked'        => 0,
+                    ]);
+                }
+            }
+        }
     }
 
     private function seedAreas(): void

@@ -27,9 +27,13 @@ class DashboardController extends Controller
             ->orderByDesc('updated_at')
             ->get();
 
+        $scanOffer = app(\App\Actions\RequestScanUpgrade::class);
+
         // FR-M2-08: the lister sees days remaining, not just an expiry date —
         // a date alone does not prompt anyone to renew.
-        $properties->each(function (Property $property) use ($submitter) {
+        $properties->each(function (Property $property) use ($submitter, $scanOffer) {
+            $property->scanOffer = $scanOffer->isEligible($property);
+
             $property->daysRemaining = $property->expires_at
                 ? (int) now()->startOfDay()->diffInDays($property->expires_at->startOfDay(), false)
                 : null;
@@ -44,6 +48,14 @@ class DashboardController extends Controller
         return view('lister.dashboard', [
             'user'       => $user,
             'properties' => $properties,
+            // FR-M4-07: paid, not yet booked. Surfaced first on the dashboard,
+            // because this is money taken for something not yet delivered.
+            'unredeemed' => \App\Models\Order::where('user_id', $user->id)
+                ->where('item_type', 'scan_3d')
+                ->where('state', 'paid')
+                ->whereDoesntHave('scanJob')
+                ->with('property:id,uuid,title')
+                ->get(),
             'counts'     => [
                 'published' => $properties->where('lifecycle_state.value', 'published')->count(),
                 'draft'     => $properties->whereIn('lifecycle_state.value', ['draft', 'rejected'])->count(),

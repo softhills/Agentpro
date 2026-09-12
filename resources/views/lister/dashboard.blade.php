@@ -46,6 +46,19 @@
         </div>
     @endunless
 
+    {{-- FR-M4-07: a paid capture with no date booked must never sit silently.
+         It is money taken for something not yet delivered, so it leads. --}}
+    @foreach ($unredeemed as $order)
+        <div class="alert alert-warn">
+            <strong>Your 3D capture is paid for and waiting</strong>
+            <p style="margin:4px 0 10px">
+                {{ $order->property?->title }} — choose a visit date whenever you are ready.
+                Nothing expires.
+            </p>
+            <a href="{{ route('scan.schedule', $order) }}" class="btn btn-navy btn-sm">Choose a date</a>
+        </div>
+    @endforeach
+
     <div class="tiles">
         <div class="tile"><span class="n">{{ $counts['published'] }}</span><span class="l">Published</span></div>
         <div class="tile"><span class="n">{{ $counts['review'] }}</span><span class="l">In review</span></div>
@@ -117,6 +130,10 @@
 
                 @if (in_array($state->value, ['published', 'sold', 'rented'], true))
                     <a href="{{ route('property.show', $property) }}" class="btn btn-ghost btn-sm">View</a>
+                @endif
+
+                @if ($property->scanOffer)
+                    <a href="{{ route('scan.offer', $property) }}" class="btn btn-ghost btn-sm">Add 3D tour</a>
                 @endif
 
                 @can('submit', $property)
