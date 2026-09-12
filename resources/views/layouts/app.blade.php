@@ -56,8 +56,25 @@
       <a href="#">Agents</a>
     </nav>
     <div class="navright">
-      <a href="#" style="font-weight:700;font-size:14px;color:var(--navy)">Sign in</a>
-      <a href="#" class="btn btn-blue btn-sm">List a property</a>
+      @guest
+        <a href="{{ route('login') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Sign in</a>
+        <a href="{{ route('register') }}" class="btn btn-blue btn-sm">List a property</a>
+      @else
+        @if (auth()->user()->canList())
+          <a href="{{ route('lister.dashboard') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Your listings</a>
+        @endif
+        {{-- Verification state is surfaced in the chrome, not buried in the
+             dashboard: a lister whose checks are pending should not have to go
+             looking for the reason submission is refused. --}}
+        @if (auth()->user()->canList() && ! auth()->user()->isVerified())
+          <a href="{{ route('verify.show') }}" class="navflag">Verify</a>
+        @endif
+        <form method="POST" action="{{ route('logout') }}" style="display:inline">
+          @csrf
+          <button type="submit" class="navlogout">Sign out</button>
+        </form>
+        <span class="avatar" title="{{ auth()->user()->name }}">{{ auth()->user()->initials() }}</span>
+      @endguest
     </div>
   </div>
 </header>

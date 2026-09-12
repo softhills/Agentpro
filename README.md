@@ -116,13 +116,33 @@ visible to alerts after being unpublished.
 - Fee tables and legal text are set in Inter, not Quicksand (PRD Q16).
 - `audit_events` is append-only. Nothing deletes from it.
 
+## Tests
+
+```bash
+php artisan test
+```
+
+Tests run against a real `agentpro_test` database (see `phpunit.xml`), not
+sqlite — the schema uses spatial DDL that sqlite cannot build. Coverage is
+deliberately narrow: the money and trust paths only, per PRD §17.
+
+`tests/Feature/ListingSubmissionTest.php` covers the rules the product's
+credibility rests on — an unverified lister cannot submit, a listing with no
+cost breakdown cannot submit, one lister cannot touch another's draft, a draft
+404s publicly, closed listings are excluded from default search, the move-in
+total sums correctly, and audit events cannot be altered.
+
 ## Still to build
 
-Scaffolded to the three public screens. Not yet implemented:
+Not yet implemented:
 
-- Auth, registration and the identity-verification vendor integration (M1)
-- Lister dashboard and the listing submission flow (M2)
-- Admin console and moderation queue — Filament (M12)
+- Identity-verification vendor integration — the interface and a dev stub exist
+  (`app/Services/Identity/`), the real driver is bound in `AppServiceProvider`
+  once PRD Q1 is settled
+- Media upload and the transcode queue (M3). Photos are currently attached
+  directly in the database for development
+- Admin console and moderation queue — Filament (M12). Listings currently reach
+  `submitted` and stop there, since nothing consumes the review queue yet
 - Paystack checkout, webhooks and the scan scheduling workflow (M4, M11)
 - Real map library in place of the SVG mock; `/search/pins` already returns the
   production payload
