@@ -180,16 +180,43 @@ img{max-width:100%;display:block}
 .empty strong{display:block;color:var(--navy);font-size:17px;margin-bottom:6px}
 
 .mapwrap{position:relative;background:#E8EDF4;border-left:1px solid var(--line)}
-.mapwrap .base{position:absolute;inset:0;width:100%;height:100%}
-.mapctl{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:3}
-.mapctl button{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:16px;cursor:pointer;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.drawbtn{position:absolute;top:12px;left:12px;z-index:3;background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:8px 13px;font-family:var(--q);font-weight:700;font-size:12.5px;color:var(--navy);display:flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(0,0,0,.1);cursor:pointer}
-.drawbtn svg{width:14px;height:14px;color:var(--blue)}
-.mappin{position:absolute;transform:translate(-50%,-100%);font-family:var(--q);font-weight:700;font-size:12px;background:#fff;color:var(--navy);border:1.5px solid var(--navy);border-radius:var(--r-pill);padding:5px 11px;white-space:nowrap;box-shadow:0 2px 6px rgba(31,42,78,.2);cursor:pointer;z-index:2;font-variant-numeric:tabular-nums}
-.mappin::after{content:"";position:absolute;left:50%;bottom:-6px;width:8px;height:8px;background:#fff;border-right:1.5px solid var(--navy);border-bottom:1.5px solid var(--navy);transform:translateX(-50%) rotate(45deg)}
-.mappin.act{background:var(--blue);color:#fff;border-color:var(--blue);z-index:4}
-.mappin.act::after{background:var(--blue);border-color:var(--blue)}
-.maplabel{position:absolute;font-weight:700;font-size:11.5px;color:#6E7A93;letter-spacing:.04em;text-transform:uppercase;pointer-events:none}
+#search-map{position:absolute;inset:0}
+#search-map.map-loading::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,.35);
+  pointer-events:none;transition:opacity .15s}
+.mapnote{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;
+  font-family:var(--i);font-size:14px;color:var(--slate)}
+
+/* Markers are buttons, so they are reachable by keyboard and screen reader. */
+.mappin{font-family:var(--q);font-weight:700;font-size:12px;background:#fff;color:var(--navy);
+  border:1.5px solid var(--navy);border-radius:var(--r-pill);padding:5px 11px;white-space:nowrap;
+  box-shadow:0 2px 6px rgba(31,42,78,.22);cursor:pointer;font-variant-numeric:tabular-nums;
+  line-height:1.1;transition:transform .12s,background .12s}
+.mappin::after{content:"";position:absolute;left:50%;bottom:-6px;width:8px;height:8px;background:#fff;
+  border-right:1.5px solid var(--navy);border-bottom:1.5px solid var(--navy);
+  transform:translateX(-50%) rotate(45deg)}
+.mappin:hover,.mappin.act{background:var(--blue);color:#fff;border-color:var(--blue);
+  transform:scale(1.06);z-index:4}
+.mappin:hover::after,.mappin.act::after{background:var(--blue);border-color:var(--blue)}
+/* A verified listing is worth spotting on the map, not only in the list. */
+.mappin.sure-pin{border-color:var(--sure)}
+.mappin.sure-pin::after{border-color:var(--sure)}
+
+.mapcluster{font-family:var(--q);font-weight:700;font-size:14px;width:44px;height:44px;border-radius:50%;
+  background:var(--blue);color:#fff;border:3px solid rgba(62,87,227,.25);background-clip:padding-box;
+  cursor:pointer;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.mapcluster:hover{background:var(--blue-dark)}
+
+.card-flash{box-shadow:0 0 0 2px var(--blue), 0 8px 24px rgba(31,42,78,.18)!important}
+
+/* Leaflet divIcons have no intrinsic size, so the marker element must not be
+   clipped or offset by the default icon box. */
+.leaflet-div-icon{background:none;border:0}
+.leaflet-marker-icon .mappin,.leaflet-marker-icon .mapcluster{transform:translate(-50%,-100%)}
+.leaflet-marker-icon .mapcluster{transform:translate(-50%,-50%)}
+.leaflet-container{font-family:var(--q)}
+.leaflet-control-attribution{font-family:var(--i);font-size:10.5px}
+.reshead-title{font-family:var(--q);font-weight:700;font-size:17px;margin:0;color:var(--navy)}
+.reshead-title .cnt{font-weight:600;color:var(--slate);font-size:13.5px}
 
 /* ------------------------------------------------------------ detail (M3/6/7) */
 .crumbs{padding:14px 0;font-size:13px;color:var(--slate);font-weight:600;display:flex;gap:7px;align-items:center;background:var(--white);border-bottom:1px solid var(--line);flex-wrap:wrap}

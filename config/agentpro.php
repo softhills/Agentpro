@@ -70,6 +70,28 @@ return [
     ],
 
     /*
+     * Map (FR-M5-02).
+     *
+     * The default tile source is OpenStreetMap's own raster service, which is
+     * fine for development and NOT acceptable for production: their tile usage
+     * policy prohibits heavy or commercial use, and they are entitled to block
+     * traffic that ignores it. Before launch, point tile_url at a provider with
+     * a contract — MapTiler, Stadia, or self-hosted Protomoaps — and update the
+     * attribution to match. See the map section of the README.
+     */
+    'map' => [
+        'tile_url'    => env('AGENTPRO_TILE_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
+        'attribution' => env('AGENTPRO_TILE_ATTRIBUTION', '© OpenStreetMap contributors'),
+        'max_zoom'    => env('AGENTPRO_MAP_MAX_ZOOM', 19),
+
+        // Opens over Lagos Island / Lekki rather than a national view, because
+        // an empty viewport is a worse first impression than no map (risk R9).
+        'default_lat'  => env('AGENTPRO_MAP_LAT', 6.4450),
+        'default_lng'  => env('AGENTPRO_MAP_LNG', 3.4550),
+        'default_zoom' => env('AGENTPRO_MAP_ZOOM', 12),
+    ],
+
+    /*
      * Notifications (M9).
      */
     'notifications' => [

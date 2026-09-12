@@ -56,6 +56,8 @@ class PropertySearch
             'north' => ['nullable', 'numeric', 'between:-90,90'],
             'west'  => ['nullable', 'numeric', 'between:-180,180'],
             'east'  => ['nullable', 'numeric', 'between:-180,180'],
+            // Decides whether the map gets individual pins or clusters.
+            'zoom'  => ['nullable', 'integer', 'between:1,22'],
         ]));
     }
 
@@ -209,6 +211,42 @@ class PropertySearch
                                  ->orderByDesc('published_at'),
             default => $query->orderByDesc('published_at'),
         };
+    }
+
+    /**
+     * Aggregated map markers for a zoomed-out viewport (FR-M5-02, PRD §17).
+     *
+     * Grouping happens in SQL, so a viewport covering the whole of Lagos returns
+     * a few dozen cluster rows rather than several thousand listings the browser
+     * would then have to cluster itself. That is the difference between the map
+     * being usable on a mid-range Android over 4G and not.
+     *
+     * The grid is derived from zoom: each step halves the cell, which keeps
+     * cluster counts roughly stable as the seeker zooms rather than collapsing
+     * everything into one bubble or exploding into noise.
+     */
+    public function clusters(int $zoom): array
+    {
+        // At zoom 11 a cell is ~0.04 degrees; each zoom level halves it.
+        $precision = max(0.0009, 0.04 / (2 ** max(0, $zoom - 11)));
+
+        $rows = $this->builder()
+            ->reorder()
+            ->selectRaw('COUNT(*) AS listing_count')
+            ->selectRaw('AVG(lat) AS lat')
+            ->selectRaw('AVG(lng) AS lng')
+            ->selectRaw('MIN(properties.id) AS sample_id')
+            ->selectRaw('ROUND(lat / ?, 0) AS cell_y', [$precision])
+            ->selectRaw('ROUND(lng / ?, 0) AS cell_x', [$precision])
+            ->groupBy('cell_y', 'cell_x')
+            ->limit(400)
+            ->get();
+
+        return $rows->map(fn ($row) => [
+            'lat'   => (float) $row->lat,
+            'lng'   => (float) $row->lng,
+            'count' => (int) $row->listing_count,
+        ])->all();
     }
 
     /**

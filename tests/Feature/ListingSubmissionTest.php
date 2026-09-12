@@ -204,11 +204,14 @@ class ListingSubmissionTest extends TestCase
             'published_at' => now(),
         ]);
 
-        $this->getJson(route('search.pins'))
+        // zoom 16 so the endpoint returns individual pins rather than clusters —
+        // cluster markers deliberately carry no listing identity, so an
+        // assertion about a specific uuid has to be made at pin zoom.
+        $this->getJson(route('search.pins', ['zoom' => 16]))
             ->assertOk()
             ->assertJsonMissing(['id' => $property->uuid]);
 
-        $this->getJson(route('search.pins', ['include_closed' => 1]))
+        $this->getJson(route('search.pins', ['zoom' => 16, 'include_closed' => 1]))
             ->assertOk()
             ->assertJsonFragment(['id' => $property->uuid]);
     }

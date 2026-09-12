@@ -120,6 +120,28 @@ The previous install is preserved at `C:\xampp\mysql-10.4-backup` (285 MB) and
 dumps are in `storage/backups/`. Delete the backup folder once you are satisfied
 everything works.
 
+## Map
+
+Leaflet 1.9.4, vendored in `public/vendor/leaflet/`. Raster tiles do not need a
+WebGL renderer, so this is 145KB rather than MapLibre's 918KB on a page with a
+1.2MB budget (NFR-02), and it works on devices without WebGL — the device class
+NFR-01 is written for. Vendored rather than CDN-loaded because search is the
+product's front door and should not stop working because a third party is
+unreachable.
+
+Markers are aggregated **in SQL**, not in the browser: `/search/pins` returns
+clusters below zoom 14 and individual price pins above it, so a city-wide
+viewport sends a few dozen rows instead of several thousand. Panning swaps the
+result list as an HTML fragment rather than re-rendering the page, and the URL
+is kept in step so a panned view is shareable and survives a reload.
+
+> **The default tile source is not production-ready.** It points at
+> OpenStreetMap's own raster service, whose usage policy prohibits heavy or
+> commercial use — they are entitled to block traffic that ignores it. Before
+> launch set `AGENTPRO_TILE_URL` to a provider with a contract (MapTiler,
+> Stadia, or self-hosted Protomaps) and update `AGENTPRO_TILE_ATTRIBUTION` to
+> match.
+
 ## Architecture
 
 ```
@@ -179,6 +201,12 @@ one lister cannot touch another's draft, a draft 404s publicly, closed listings
 are excluded from default search, the move-in total sums correctly, and audit
 events cannot be altered.
 
+`MapSearchTest` covers what the map depends on server-side — a zoomed-out
+viewport returns aggregated clusters rather than a row per listing, zooming in
+returns individual pins, the viewport and filters both apply to markers, drafts
+never appear on the map, and the result list can be fetched as a fragment
+without page chrome.
+
 `MediaUploadTest` covers the upload pipeline — a disguised file is rejected by
 content sniffing, a real EXIF segment is spliced into the fixture and proven gone
 from every rendition, the responsive set is written, the difference hash matches
@@ -230,8 +258,6 @@ Not yet implemented:
   generic CRUD scaffolding does poorly
 - Refunds and daily settlement reconciliation (FR-M11-05, FR-M11-06). Orders
   carry the fields; the operator screens are not built
-- Real map library in place of the SVG mock; `/search/pins` already returns the
-  production payload
 - Web push and SMS transports. Both are declared as channels and currently fall
   back to the in-app inbox rather than failing
 

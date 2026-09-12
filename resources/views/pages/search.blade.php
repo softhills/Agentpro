@@ -74,12 +74,15 @@
 <div class="split">
     <div class="results">
         <div class="reshead">
-            <h1>{{ request('q') ?: 'All areas' }}</h1>
-            <span class="cnt">{{ $results->total() }} verified {{ Str::plural('listing', $results->total()) }}</span>
+            <h1>{{ request('q') ?: 'Property search' }}</h1>
             <div class="right">
                 <form method="GET" style="display:contents">
                     @foreach (request()->except('sort', 'page') as $k => $v)
-                        <input type="hidden" name="{{ $k }}" value="{{ is_array($v) ? implode(',', $v) : $v }}">
+                        @if (is_array($v))
+                            @foreach ($v as $item)<input type="hidden" name="{{ $k }}[]" value="{{ $item }}">@endforeach
+                        @else
+                            <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                        @endif
                     @endforeach
                     <select class="minisel" name="sort" onchange="this.form.submit()">
                         <option value="newest" @selected(request('sort', 'newest') === 'newest')>Newest first</option>
@@ -91,10 +94,11 @@
             </div>
         </div>
 
-        {{-- FR-M5-07: promoted to R1. This prompt is the loop that brings a
-             seeker back before they have found anything. --}}
         <x-flash />
 
+        {{-- FR-M5-07: the loop that brings a seeker back before they have found
+             anything. Sits outside the swappable list so panning the map does
+             not make it flicker. --}}
         <div class="savebar">
             <x-icon name="bell" />
             <p>
@@ -109,13 +113,9 @@
             @auth
                 <form method="POST" action="{{ route('saved-searches.store') }}">
                     @csrf
-                    {{-- The criteria travel as the current query string, so what
-                         gets saved is exactly what is on screen. --}}
                     @foreach (request()->query() as $key => $value)
                         @if (is_array($value))
-                            @foreach ($value as $item)
-                                <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
-                            @endforeach
+                            @foreach ($value as $item)<input type="hidden" name="{{ $key }}[]" value="{{ $item }}">@endforeach
                         @else
                             <input type="hidden" name="{{ $key }}" value="{{ $value }}">
                         @endif
@@ -127,90 +127,38 @@
             @endauth
         </div>
 
-        <div class="reslist">
-            @forelse ($results as $property)
-                <x-property-card :property="$property" />
-            @empty
-                <p class="empty" style="grid-column:1/-1">
-                    <strong>Nothing matches yet</strong>
-                    Try widening the price range, or clearing a filter.
-                </p>
-            @endforelse
+        {{-- Swapped wholesale by the map when the viewport moves. --}}
+        <div id="search-results">
+            @include('partials.result-list', ['results' => $results])
         </div>
-
-        <div style="margin-top:18px">{{ $results->links() }}</div>
     </div>
 
-    {{-- Map pane. The real map library replaces this SVG; the pin markup, the
-         pairing behaviour and the pins endpoint are already the production
-         contract. --}}
+    {{-- FR-M5-02: the real map. Markers are fetched from /search/pins, which
+         returns clusters when zoomed out and individual price pins close in —
+         the aggregation happens in SQL so a city-wide viewport does not ship
+         thousands of rows to a phone (NFR-02). --}}
     <div class="mapwrap">
-        <svg class="base" viewBox="0 0 500 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-            <rect width="500" height="600" fill="#EDF1F6"/>
-            <path d="M0 430 Q120 400 240 432 T500 418 L500 600 L0 600Z" fill="#BBD4E8"/>
-            <g stroke="#DCE3EC" stroke-width="14" fill="none" stroke-linecap="round">
-                <path d="M-10 120 H510"/><path d="M-10 250 H510"/><path d="M-10 360 H510"/>
-                <path d="M90 -10 V430"/><path d="M250 -10 V440"/><path d="M395 -10 V424"/>
-            </g>
-            <g stroke="#FFFFFF" stroke-width="9" fill="none" stroke-linecap="round">
-                <path d="M-10 120 H510"/><path d="M-10 250 H510"/><path d="M-10 360 H510"/>
-                <path d="M90 -10 V430"/><path d="M250 -10 V440"/><path d="M395 -10 V424"/>
-            </g>
-            <g fill="#E2E8F0">
-                <rect x="110" y="140" width="52" height="42" rx="3"/><rect x="176" y="140" width="58" height="42" rx="3"/>
-                <rect x="110" y="196" width="120" height="38" rx="3"/><rect x="272" y="140" width="100" height="90" rx="3"/>
-                <rect x="110" y="268" width="58" height="70" rx="3"/><rect x="182" y="268" width="52" height="70" rx="3"/>
-                <rect x="272" y="268" width="110" height="70" rx="3"/><rect x="410" y="140" width="70" height="90" rx="3"/>
-            </g>
-        </svg>
-
-        <span class="maplabel" style="left:26px;top:180px">Lagos</span>
-        <span class="maplabel" style="left:214px;top:452px;color:#7C93AC">Lagoon</span>
-
-        <button type="button" class="drawbtn"><x-icon name="draw" />Draw area</button>
-        <div class="mapctl">
-            <button type="button" aria-label="Zoom in">+</button>
-            <button type="button" aria-label="Zoom out">&minus;</button>
-        </div>
-
-        @foreach ($pins as $i => $pin)
-            <button type="button" class="mappin" data-pin="{{ $pin['id'] }}"
-                    style="left:{{ 18 + (($i * 23) % 62) }}%;top:{{ 20 + (($i * 31) % 58) }}%">
-                {{ \App\Support\Money::naira($pin['price'], compact: true) }}
-            </button>
-        @endforeach
+        <div id="search-map" data-config="{{ json_encode($mapConfig) }}"></div>
+        <noscript>
+            <p class="mapnote">
+                The map needs JavaScript. The listings are all in the panel beside it.
+            </p>
+        </noscript>
     </div>
 </div>
 
+@push('head')
+<link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}">
+@endpush
+
 @push('scripts')
-<script>
-(function () {
-    // Card <-> pin pairing. The interaction that makes a two-pane search read as
-    // one thing rather than two.
-    function link(on) {
-        return function (event) {
-            var id = event.currentTarget.dataset.pin;
-
-            document.querySelectorAll('[data-pin="' + CSS.escape(id) + '"]').forEach(function (node) {
-                if (node.classList.contains('mappin')) {
-                    node.classList.toggle('act', on);
-                } else {
-                    node.style.boxShadow = on
-                        ? '0 0 0 2px #3E57E3, 0 8px 24px rgba(31,42,78,.18)'
-                        : '';
-                }
-            });
-        };
-    }
-
-    document.querySelectorAll('[data-pin]').forEach(function (node) {
-        node.addEventListener('mouseenter', link(true));
-        node.addEventListener('mouseleave', link(false));
-        node.addEventListener('focus', link(true));
-        node.addEventListener('blur', link(false));
-    });
-})();
-</script>
+{{-- Leaflet, vendored. Raster tiles do not need a WebGL renderer, so this is
+     145KB instead of 918KB and works on devices without WebGL — which is the
+     device class NFR-01 is written for. Vendored rather than CDN-loaded because
+     search is the product's front door and should not depend on a third party
+     being reachable. --}}
+<script src="{{ asset('vendor/leaflet/leaflet.js') }}"></script>
+<script src="{{ asset('js/search-map.js') }}"></script>
 @endpush
 
 @endsection
