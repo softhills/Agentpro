@@ -421,20 +421,25 @@ class DatabaseSeeder extends Seeder
                 'effective_at' => $publishedAt,
             ]);
 
-            // Fees hang off the primary unit in the seed; in production every
-            // unit carries its own breakdown.
-            if ($unit->is_primary) {
-                foreach ($row['fees'] as $j => [$label, $amount, $calc, $rate, $refundable, $payee]) {
-                    $unit->feeLines()->create([
-                        'label' => $label,
-                        'amount' => $amount,
-                        'calc_type' => $calc,
-                        'percentage_rate' => $rate,
-                        'is_refundable' => $refundable,
-                        'payee' => $payee,
-                        'sort_order' => $j,
-                    ]);
-                }
+            // Every unit carries its own breakdown, not just the primary one.
+            // FR-M7-01 is a per-unit rule, so seeding only the headline unit
+            // produces inventory the platform's own compliance metric correctly
+            // reports as non-compliant.
+            foreach ($row['fees'] as $j => [$label, $amount, $calc, $rate, $refundable, $payee]) {
+                // Percentage-based fees scale with the unit's own price.
+                $scaled = $rate !== null
+                    ? round($u['price'] * ($rate / 100))
+                    : $amount;
+
+                $unit->feeLines()->create([
+                    'label' => $label,
+                    'amount' => $scaled,
+                    'calc_type' => $calc,
+                    'percentage_rate' => $rate,
+                    'is_refundable' => $refundable,
+                    'payee' => $payee,
+                    'sort_order' => $j,
+                ]);
             }
         }
 

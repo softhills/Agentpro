@@ -10,6 +10,19 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+
+{{-- Applied before the stylesheet paints. Deferring this to the end of the body
+     means a dark-theme user gets a white flash on every navigation. --}}
+<script>
+(function () {
+    try {
+        var saved = localStorage.getItem('agentpro-theme');
+        var dark = saved ? saved === 'dark'
+            : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+    } catch (e) { /* private mode: fall through to the light default */ }
+})();
+</script>
 @stack('head')
 </head>
 <body>
@@ -56,6 +69,15 @@
       <a href="#">Agents</a>
     </nav>
     <div class="navright">
+      <button type="button" class="themetoggle" data-theme-toggle
+              aria-label="Switch between light and dark">
+        <svg class="t-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+        </svg>
+        <svg class="t-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
+        </svg>
+      </button>
       @guest
         <a href="{{ route('login') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Sign in</a>
         <a href="{{ route('register') }}" class="btn btn-blue btn-sm">List a property</a>
@@ -88,7 +110,7 @@
 
 <footer class="foot">
   <div class="container in">
-    <strong style="color:#fff;font-size:15px">Agentpro</strong>
+    <strong style="color:var(--on-navy);font-size:15px">Agentpro</strong>
     <a href="#">RealSure</a><a href="#">Areas</a><a href="#">Agents</a><a href="#">Terms</a><a href="#">Privacy</a>
     <p class="legal">
       Title information shown on listings is declared by the lister. Agentpro makes no
@@ -97,6 +119,20 @@
     </p>
   </div>
 </footer>
+
+<script>
+(function () {
+    var root = document.documentElement;
+
+    document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var dark = root.getAttribute('data-theme') === 'dark';
+            root.setAttribute('data-theme', dark ? 'light' : 'dark');
+            try { localStorage.setItem('agentpro-theme', dark ? 'light' : 'dark'); } catch (e) {}
+        });
+    });
+})();
+</script>
 
 @stack('scripts')
 </body>

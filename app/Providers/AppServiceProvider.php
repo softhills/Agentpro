@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Property;
+use App\Models\User;
 use App\Policies\PropertyPolicy;
 use App\Services\Identity\IdentityVerifier;
 use App\Services\Identity\StubVerifier;
@@ -13,6 +14,7 @@ use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\PaystackGateway;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -83,6 +85,20 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Property::class, PropertyPolicy::class);
+
+        /*
+         * Counts for the admin sidebar badges.
+         *
+         * Bound to the layout rather than repeated in every admin controller,
+         * so a new admin screen cannot ship without them and quietly lose the
+         * "something is waiting" signal.
+         */
+        View::composer('layouts.admin', function ($view) {
+            $view->with([
+                'queueDepth' => Property::whereIn('lifecycle_state', ['submitted', 'under_review'])->count(),
+                'pendingUsers' => User::where('verification_state', 'pending')->count(),
+            ]);
+        });
 
         // SEC-13: behind Cloudflare the app sees plain HTTP, so generated URLs
         // must be forced to https outside local or they mix-content on the CDN.

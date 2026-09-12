@@ -1,6 +1,12 @@
 <?php
 
+use App\Http\Controllers\Admin\AuditController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\ListingAdminController;
 use App\Http\Controllers\Admin\ModerationController;
+use App\Http\Controllers\Admin\OperationsController;
+use App\Http\Controllers\Admin\OrderAdminController;
+use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\VerificationController;
@@ -108,6 +114,21 @@ Route::middleware('auth')->group(function () {
     | existence of the console is not confirmed to ordinary accounts.
     */
     Route::middleware('staff:moderator')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/', AdminDashboardController::class)->name('dashboard');
+
+        Route::get('/listings', [ListingAdminController::class, 'index'])->name('listings');
+        Route::get('/people', [UserAdminController::class, 'index'])->name('users');
+        Route::put('/people/{user}/verification', [UserAdminController::class, 'updateVerification'])->name('users.verify');
+
+        Route::get('/orders', [OrderAdminController::class, 'index'])->name('orders');
+        Route::post('/orders/{order}/refund', [OrderAdminController::class, 'refund'])->name('orders.refund');
+
+        Route::get('/operations', [OperationsController::class, 'index'])->name('operations');
+        Route::put('/areas/{area}/coverage', [OperationsController::class, 'toggleCoverage'])->name('areas.coverage');
+        Route::post('/areas/{area}/slots', [OperationsController::class, 'addSlots'])->name('areas.slots');
+
+        Route::get('/audit', [AuditController::class, 'index'])->name('audit');
+
         Route::get('/queue', [ModerationController::class, 'queue'])->name('queue');
         Route::get('/queue/{property}', [ModerationController::class, 'review'])->name('review');
         Route::post('/queue/{property}/approve', [ModerationController::class, 'approve'])->name('approve');

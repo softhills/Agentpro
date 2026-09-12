@@ -1,19 +1,12 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'Moderation queue — Agentpro')
 
-@section('content')
+@section('admin_title', 'Review queue')
+@section('admin_lede', 'Oldest first, so the submissions closest to breaching the SLA are not starved.')
+
+@section('admin_content')
 @php use App\Support\Money; @endphp
-
-<div class="container dash">
-    <div class="dashhead">
-        <div>
-            <h1>Moderation queue</h1>
-            <p>Decisions within {{ $slaHours }} working hours · oldest first</p>
-        </div>
-    </div>
-
-    <x-flash />
 
     <nav class="qfilters" aria-label="Queue filter">
         @foreach ([
@@ -75,5 +68,4 @@
     @endforelse
 
     <div style="margin-top:18px">{{ $properties->links() }}</div>
-</div>
 @endsection

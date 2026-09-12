@@ -56,12 +56,12 @@
             </label>
 
             <label @class(['fsel', 'on' => request('realsure')])>
-                <input type="checkbox" name="realsure" value="1" @checked(request('realsure')) style="accent-color:#fff">
+                <input type="checkbox" name="realsure" value="1" @checked(request('realsure')) style="accent-color:var(--on-navy)">
                 RealSure only
             </label>
 
             <label @class(['fsel', 'on' => request('has_video')])>
-                <input type="checkbox" name="has_video" value="1" @checked(request('has_video')) style="accent-color:#fff">
+                <input type="checkbox" name="has_video" value="1" @checked(request('has_video')) style="accent-color:var(--on-navy)">
                 Has video
             </label>
 
