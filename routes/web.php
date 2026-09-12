@@ -15,6 +15,7 @@ use App\Http\Controllers\Lister\ScanController;
 use App\Http\Controllers\Technician\AssignmentController;
 use App\Http\Controllers\Webhooks\PaystackWebhookController;
 use App\Http\Controllers\PropertyController;
+use App\Http\Controllers\SavedSearchController;
 use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
 
@@ -83,6 +84,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/report',  [InteractionController::class, 'report'])->name('report');
         Route::post('/contact', [InteractionController::class, 'contact'])->name('contact');
     });
+
+    /*
+    | Saved searches (FR-M5-07) — the loop that brings a seeker back before
+    | they have found anything.
+    */
+    Route::get('/account/saved-searches', [SavedSearchController::class, 'index'])->name('saved-searches.index');
+    Route::post('/saved-searches', [SavedSearchController::class, 'store'])
+        ->middleware('throttle:20,1')->name('saved-searches.store');
+    Route::put('/saved-searches/{savedSearch}', [SavedSearchController::class, 'update'])->name('saved-searches.update');
+    Route::delete('/saved-searches/{savedSearch}', [SavedSearchController::class, 'destroy'])->name('saved-searches.destroy');
 
     Route::get('/account/notifications', [NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
     Route::put('/account/notifications', [NotificationPreferenceController::class, 'update'])->name('notifications.update');

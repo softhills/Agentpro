@@ -93,6 +93,8 @@
 
         {{-- FR-M5-07: promoted to R1. This prompt is the loop that brings a
              seeker back before they have found anything. --}}
+        <x-flash />
+
         <div class="savebar">
             <x-icon name="bell" />
             <p>
@@ -104,7 +106,25 @@
                     request('q') ?: null,
                 ])->filter()->implode(' · ') ?: 'this search' }}</span>
             </p>
-            <button type="button" class="btn btn-blue btn-sm">Save search</button>
+            @auth
+                <form method="POST" action="{{ route('saved-searches.store') }}">
+                    @csrf
+                    {{-- The criteria travel as the current query string, so what
+                         gets saved is exactly what is on screen. --}}
+                    @foreach (request()->query() as $key => $value)
+                        @if (is_array($value))
+                            @foreach ($value as $item)
+                                <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                            @endforeach
+                        @else
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endif
+                    @endforeach
+                    <button type="submit" class="btn btn-blue btn-sm">Save search</button>
+                </form>
+            @else
+                <a href="{{ route('login') }}" class="btn btn-blue btn-sm">Save search</a>
+            @endauth
         </div>
 
         <div class="reslist">

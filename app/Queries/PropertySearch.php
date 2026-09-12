@@ -59,6 +59,23 @@ class PropertySearch
         ]));
     }
 
+    /**
+     * The validated criteria, with empties removed.
+     *
+     * Saving a search stores what comes out of here rather than the raw query
+     * string, so a saved search cannot contain a filter the search itself would
+     * reject, and the two definitions cannot drift apart.
+     *
+     * @return array<string,mixed>
+     */
+    public function filters(): array
+    {
+        return array_filter(
+            $this->filters,
+            fn ($value) => $value !== null && $value !== '' && $value !== []
+        );
+    }
+
     public function builder(): Builder
     {
         $f = $this->filters;

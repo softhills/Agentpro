@@ -33,8 +33,10 @@ The fake does not mark anything paid on its own: `/orders/{order}/sandbox` shows
 the signed webhook body and the `curl` to send it, so the real
 pay → webhook → confirm sequence is what gets tested.
 
-**Notifications** need a queue worker (`php artisan queue:work`) and the
-scheduler (`php artisan schedule:work`) for batched listing alerts. Without the
+**Notifications and saved searches** need a queue worker
+(`php artisan queue:work`) and the scheduler (`php artisan schedule:work`) —
+the scheduler closes batched listing-alert windows and runs saved searches
+(every fifteen minutes for `instant`, 08:00 for `daily`). Without the
 worker nothing is sent; without the scheduler, alerts accumulate in their window
 and never close. Mail goes to `storage/logs/laravel.log` under the default
 `MAIL_MAILER=log`. WhatsApp logs what it would send until a Meta business
@@ -138,9 +140,17 @@ the same block (price, bedrooms, floor, availability) lives on the unit. A singl
 dwelling is a property with exactly one unit, so every query has one shape.
 
 **`PropertySearch` is the only place that decides visibility.** The search page,
-the map pin endpoint, the sitemap and the saved-search matcher all route through
-it. If they diverged, a listing could appear on the map and 404 on click, or stay
-visible to alerts after being unpublished.
+the map pin endpoint and the saved-search matcher all route through it, and
+saved criteria are validated by its own rules. If they diverged, a seeker could
+be alerted about a listing that 404s when they click it — or one they are not
+allowed to see, since visibility is decided in that same query.
+
+**Saved searches track reported listings, not a timestamp.** A listing published
+last week at ₦15M that drops to ₦11M today becomes a match without its
+`published_at` moving, so a watermark would never report it — and a price drop
+into range is the most valuable alert this feature sends. `saved_search_matches`
+records what has been reported, which also makes de-duplication exact across an
+unpublish/republish.
 
 ## Conventions
 
@@ -183,6 +193,13 @@ webhook is a no-op, a short or failed transaction never credits the order, a
 full slot cannot be double-booked, and a paid-but-unbooked capture is surfaced
 rather than lost.
 
+`SavedSearchTest` covers the retention loop — existing matches are baselined
+rather than blasted out on the first run, a listing published afterwards is
+reported, **a price drop into range is reported** (the case a timestamp
+watermark cannot see), nothing is reported twice even across an
+unpublish/republish, drafts never leak, and a lister is not alerted about their
+own listing.
+
 `NotificationTest` covers who gets told what — quiet hours including the
 overnight window that wraps past midnight, WhatsApp and SMS staying off unless
 chosen, only interacting users being alerted (never the lister, never someone
@@ -215,8 +232,6 @@ Not yet implemented:
   carry the fields; the operator screens are not built
 - Real map library in place of the SVG mock; `/search/pins` already returns the
   production payload
-- Saved-search matching (M5). The notification side is built; nothing yet runs
-  new listings against saved criteria
 - Web push and SMS transports. Both are declared as channels and currently fall
   back to the in-app inbox rather than failing
 

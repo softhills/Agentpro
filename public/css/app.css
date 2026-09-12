@@ -509,3 +509,8 @@ textarea.finput{line-height:1.55;resize:vertical}
   .feegrid{grid-template-columns:1fr 1fr}
   .feehead{display:none}
 }
+
+/* saved searches (FR-M5-07) */
+.savedrow{grid-template-columns:minmax(0,1fr) auto}
+.savedrow .listacts{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px}
+.savedrow .minisel{padding:7px 10px}

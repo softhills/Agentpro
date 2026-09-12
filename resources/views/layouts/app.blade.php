@@ -65,6 +65,8 @@
         @endif
         @if (auth()->user()->canList())
           <a href="{{ route('lister.dashboard') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Your listings</a>
+        @else
+          <a href="{{ route('saved-searches.index') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Saved searches</a>
         @endif
         {{-- Verification state is surfaced in the chrome, not buried in the
              dashboard: a lister whose checks are pending should not have to go
