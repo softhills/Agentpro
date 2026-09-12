@@ -60,6 +60,9 @@
         <a href="{{ route('login') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Sign in</a>
         <a href="{{ route('register') }}" class="btn btn-blue btn-sm">List a property</a>
       @else
+        @if (auth()->user()->isStaff('moderator'))
+          <a href="{{ route('admin.queue') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Queue</a>
+        @endif
         @if (auth()->user()->canList())
           <a href="{{ route('lister.dashboard') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Your listings</a>
         @endif

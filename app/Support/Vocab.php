@@ -69,6 +69,36 @@ final class Vocab
         'financing'     => 'Financing',
     ];
 
+    /**
+     * FR-M2-06 / FR-M12-01: the reason-code catalogue.
+     *
+     * A closed list rather than free text, because reject reasons are the raw
+     * material for two things beyond the individual decision: telling a lister
+     * what to fix, and telling the business which part of the submission flow is
+     * failing listers at scale. Free text answers neither.
+     */
+    public const REJECT_REASONS = [
+        'incomplete_fees'      => 'Cost breakdown incomplete or implausible',
+        'poor_media'           => 'Photographs missing, unusable or not of this property',
+        'title_mismatch'       => 'Declared title does not match the documents',
+        'wrong_location'       => 'Location or address is wrong',
+        'duplicate'            => 'Duplicate of an existing listing',
+        'suspected_fraud'      => 'Suspected fraudulent listing',
+        'price_implausible'    => 'Price is implausible for the area',
+        'description_quality'  => 'Description is inadequate or misleading',
+        'prohibited_content'   => 'Contains prohibited or offensive content',
+    ];
+
+    /** FR-M2-07: taking a live listing down. */
+    public const UNPUBLISH_REASONS = [
+        'lister_request'   => 'Requested by the lister',
+        'no_longer_available' => 'Property is no longer available',
+        'upheld_report'    => 'Report from a seeker upheld',
+        'suspected_fraud'  => 'Suspected fraudulent listing',
+        'title_dispute'    => 'Title dispute raised',
+        'policy_breach'    => 'Breach of listing policy',
+    ];
+
     /** FR-M6-07 */
     public const REPORT_REASONS = [
         'fraudulent'     => 'Listing appears fraudulent',

@@ -137,11 +137,17 @@ Tests run against a real `agentpro_test` database (see `phpunit.xml`), not
 sqlite — the schema uses spatial DDL that sqlite cannot build. Coverage is
 deliberately narrow: the money and trust paths only, per PRD §17.
 
-`tests/Feature/ListingSubmissionTest.php` covers the rules the product's
-credibility rests on — an unverified lister cannot submit, a listing with no
-cost breakdown cannot submit, one lister cannot touch another's draft, a draft
-404s publicly, closed listings are excluded from default search, the move-in
-total sums correctly, and audit events cannot be altered.
+`ListingSubmissionTest` covers the rules the product's credibility rests on — an
+unverified lister cannot submit, a listing with no cost breakdown cannot submit,
+one lister cannot touch another's draft, a draft 404s publicly, closed listings
+are excluded from default search, the move-in total sums correctly, and audit
+events cannot be altered.
+
+`ModerationTest` covers the gate between submission and the public — the console
+is invisible to non-staff, approval stamps the display period from the decision
+(not the submission), a rejection cannot be saved without an actionable note,
+unpublishing removes a live listing, every decision is attributed on the audit
+trail, and duplicates are flagged rather than blocked.
 
 ## Still to build
 
@@ -152,8 +158,12 @@ Not yet implemented:
   once PRD Q1 is settled
 - Media upload and the transcode queue (M3). Photos are currently attached
   directly in the database for development
-- Admin console and moderation queue — Filament (M12). Listings currently reach
-  `submitted` and stop there, since nothing consumes the review queue yet
+- The rest of the admin console beyond moderation — user and KYC administration,
+  taxonomies, coverage areas, technician roster. **Filament** is the intended
+  tool for this routine CRUD. The moderation queue was deliberately hand-rolled
+  instead: FR-M12-02 wants a purpose-built side-by-side review view (content,
+  media, declared title, fee breakdown, duplicate flags on one screen), which
+  generic CRUD scaffolding does poorly
 - Paystack checkout, webhooks and the scan scheduling workflow (M4, M11)
 - Real map library in place of the SVG mock; `/search/pins` already returns the
   production payload

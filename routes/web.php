@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ModerationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\VerificationController;
@@ -46,6 +47,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/verify', [VerificationController::class, 'store'])
         ->middleware('throttle:5,10')       // identity checks cost money per call
         ->name('verify.store');
+
+    /*
+    | Moderation console (M12). Staff only — 404 to everyone else, so the
+    | existence of the console is not confirmed to ordinary accounts.
+    */
+    Route::middleware('staff:moderator')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/queue', [ModerationController::class, 'queue'])->name('queue');
+        Route::get('/queue/{property}', [ModerationController::class, 'review'])->name('review');
+        Route::post('/queue/{property}/approve', [ModerationController::class, 'approve'])->name('approve');
+        Route::post('/queue/{property}/reject', [ModerationController::class, 'reject'])->name('reject');
+        Route::post('/queue/{property}/unpublish', [ModerationController::class, 'unpublish'])->name('unpublish');
+    });
 
     Route::prefix('dashboard')->name('lister.')->group(function () {
         Route::get('/', DashboardController::class)->name('dashboard');
