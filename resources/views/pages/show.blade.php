@@ -115,17 +115,35 @@
             @endif
 
             @if ($property->realsureRecords->isNotEmpty())
+                @php $recorded = $property->realsureRecords->keyBy('component'); @endphp
                 <section class="panel">
                     <h2><x-icon name="shield" />What RealSure checked</h2>
                     <div class="surelist">
-                        @foreach ($property->realsureRecords as $record)
-                            {{-- An unchecked component is shown, not hidden. Knowing no
-                                 valuation was commissioned is information too. --}}
-                            <div @class(['sureitem', 'no' => ! $record->completed])>
-                                <x-icon :name="$record->completed ? 'check' : 'minus'"
-                                        :stroke-width="$record->completed ? '2.5' : '2'" />
-                                {{ $record->label() }}{{ $record->completed ? '' : ' — not commissioned' }}
-                                <span class="dt">{{ $record->completed_on?->format('j M Y') ?? '—' }}</span>
+                        {{--
+                            Every component in the vocabulary, not only the rows
+                            that happen to exist.
+
+                            An officer records what they did; there is no reason
+                            for them to create a row saying "we did not
+                            commission a valuation". But to a seeker the absence
+                            of a record and an explicit "not done" are the same
+                            fact, and showing only the completed ones would turn
+                            this panel into a list of ticks — which reads as a
+                            full audit and is the opposite of what FR-M6-02
+                            asks for. A badge that does not say what was checked
+                            is worth nothing, and one that hides what was not
+                            checked is worse than nothing.
+                        --}}
+                        @foreach (\App\Support\Vocab::REALSURE_COMPONENTS as $key => $label)
+                            @php
+                                $record = $recorded[$key] ?? null;
+                                $done = (bool) $record?->completed;
+                            @endphp
+                            <div @class(['sureitem', 'no' => ! $done])>
+                                <x-icon :name="$done ? 'check' : 'minus'"
+                                        :stroke-width="$done ? '2.5' : '2'" />
+                                {{ $label }}{{ $done ? '' : ' — not commissioned' }}
+                                <span class="dt">{{ $record?->completed_on?->format('j M Y') ?? '—' }}</span>
                             </div>
                         @endforeach
                     </div>

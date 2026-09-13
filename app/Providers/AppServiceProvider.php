@@ -153,6 +153,16 @@ class AppServiceProvider extends ServiceProvider
                 'settlementIssues' => Settlement::where('reconciliation_state', 'discrepancy')->count(),
                 // Blocked on a person, not a provider, so it belongs on a badge.
                 'payoutsWaiting' => Payout::where('state', 'requested')->count(),
+                /*
+                 * RealSure bought and not yet delivered (FR-M6-01). Money taken
+                 * for work nobody has started is the one thing on this sidebar
+                 * that is already a broken promise rather than a pending task.
+                 */
+                'realsureOutstanding' => Property::query()
+                    ->where('lifecycle_state', 'published')
+                    ->whereNull('realsure_verified_at')
+                    ->whereHas('orders', fn ($q) => $q->where('item_type', 'realsure')->where('state', 'paid'))
+                    ->count(),
             ]);
         });
 

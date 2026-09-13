@@ -110,6 +110,8 @@
 
 @yield('content')
 
+@include('partials.consent')
+
 <footer class="foot">
   <div class="container in">
     <strong style="color:var(--on-navy);font-size:15px">Agentpro</strong>

@@ -10,6 +10,7 @@ use App\Models\Refund;
 use App\Models\ScanJob;
 use App\Models\Settlement;
 use App\Models\User;
+use App\Queries\Funnel;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -49,7 +50,18 @@ class AdminMetrics
             ->whereHas('media', fn ($q) => $q->where('kind', 'video')->where('moderation_state', 'approved'))
             ->count();
 
-        return ['tours' => $withTour, 'videos' => $withVideo, 'target_tours' => 400];
+        /*
+         * The objective is "remote viewing replaces a physical trip", and the
+         * count of listings carrying a tour does not measure that at all — a
+         * tour nobody opens replaces nothing. Dwell is the half that does, and
+         * until M13 there was no way to know it.
+         */
+        return [
+            'tours'        => $withTour,
+            'videos'       => $withVideo,
+            'target_tours' => 400,
+            'dwell'        => (new Funnel)->tourDwell(),
+        ];
     }
 
     /**
@@ -245,16 +257,21 @@ class AdminMetrics
         ];
     }
 
-    /** O5 — detail views that turn into a contact attempt. */
+    /**
+     * O5 — detail views that turn into a contact attempt.
+     *
+     * This returned null for the life of the project before M13, and not
+     * because there was no traffic: `view_count` was a column nothing ever
+     * incremented, so the denominator was structurally zero and the objective
+     * the release is judged on could not be read. It is a real number now.
+     *
+     * Counted over the reporting window rather than all time. A lifetime rate
+     * moves so slowly that a change in the product is invisible in it, which
+     * makes it useless as the thing you steer by.
+     */
     private function contactRate(): ?float
     {
-        $views = (int) Property::sum('view_count');
-
-        if ($views === 0) {
-            return null;
-        }
-
-        return round(Interaction::where('kind', 'contact')->count() / $views * 100, 1);
+        return (new Funnel)->seeker()['contact_rate'];
     }
 
     /** Recent activity, for the "what just happened" panel. */

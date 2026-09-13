@@ -203,6 +203,59 @@ return [
     ],
 
     /*
+     * RealSure (M6).
+     *
+     * What it takes to earn the badge. These are the two numbers that decide
+     * what "Agentpro has conducted extra verification on the property" is
+     * actually worth, so they belong where the business can see and change
+     * them — but changing them downward is a decision about the product's
+     * central claim, not a tuning knob.
+     */
+    'realsure' => [
+        /*
+         * How many completed verification components the badge needs.
+         *
+         * Counted from Vocab::REALSURE_VERIFICATION only. Photography, floor
+         * plans and the 3D tour are services the lister bought; they establish
+         * nothing about the property, and a badge earned on the strength of a
+         * drone flight would say "verified" about a listing nobody checked.
+         */
+        'minimum_verification_components' => env('AGENTPRO_REALSURE_MINIMUM', 2),
+
+        /*
+         * Whether title verification specifically is mandatory.
+         *
+         * On by default because the standing disclaimer under every listing
+         * names that component by name — it tells a buyer that Agentpro asserts
+         * nothing about the title unless this exact check was done. A badge
+         * granted without it would contradict the sentence printed beneath it.
+         */
+        'require_title_verification' => env('AGENTPRO_REALSURE_REQUIRE_TITLE', true),
+    ],
+
+    /*
+     * Analytics (M13).
+     */
+    'analytics' => [
+        /*
+         * How long raw events are kept before the daily rollup is all that
+         * survives.
+         *
+         * This is a privacy setting as much as a storage one. Raw events are
+         * the only rows describing what a person did minute by minute, and
+         * NDPA's minimisation principle says they should not outlive the
+         * purpose. Ninety days covers a full quarter — long enough to compare
+         * this month with the last two, which is the longest look-back any
+         * screen offers — and the daily figures behind every report are
+         * unaffected, because they are computed before the prune.
+         */
+        'retention_days' => env('AGENTPRO_ANALYTICS_RETENTION_DAYS', 90),
+
+        // The window the lister's per-listing screen and the admin funnel show.
+        'window_days' => env('AGENTPRO_ANALYTICS_WINDOW_DAYS', 30),
+    ],
+
+    /*
      * Access and erasure (FR-M1-09, NDPA 2023).
      *
      * @see \App\Support\PersonalData for what an erasure does to each table and

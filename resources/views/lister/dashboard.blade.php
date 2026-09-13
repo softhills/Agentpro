@@ -135,6 +135,15 @@
                     <a href="{{ route('property.show', $property) }}" class="btn btn-ghost btn-sm">View</a>
                 @endif
 
+                {{-- FR-M13-01. Offered only once a listing has been on the
+                     market: a draft has no performance to report, and a link to
+                     a screen of zeroes reads as a broken feature. --}}
+                @if ($property->published_at)
+                    <a href="{{ route('lister.listings.analytics', $property) }}" class="btn btn-ghost btn-sm">
+                        Performance
+                    </a>
+                @endif
+
                 @if ($property->scanOffer)
                     <a href="{{ route('scan.offer', $property) }}" class="btn btn-ghost btn-sm">Add 3D tour</a>
                 @endif

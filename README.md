@@ -73,6 +73,7 @@ Seeded accounts — all password `password`:
 | `tunde@example.test` | Verified seller's agent |
 | `ngozi@example.test` | Verified developer |
 | `realsure@example.test` | Admin — the whole console |
+| `officer@example.test` | RealSure Officer — only the badge console, to show the role gate working |
 | `finance@example.test` | Admin — a second one, so a large refund can be approved |
 | `technician@example.test` | Capture technician |
 
@@ -292,6 +293,79 @@ billed and never delivered. Transactional messages go on a separate cleared
 route, and using it for marketing is what gets a sender ID banned — which is why
 saved-search alerts deliberately have no `toSms()` at all.
 
+**The RealSure badge is granted, never derived.** It would be easy to light it
+up the moment a component is ticked, and wrong: the ten components in FR-M6-02
+include photography and floor plans, which are services the lister bought
+rather than anything that was checked, so a badge earned by a drone flight
+would say "verified" about a listing nobody verified. `Vocab` splits the ten
+into verification and production for exactly that one decision; only the first
+group counts towards the badge, and title verification is mandatory because the
+standing disclaimer under every listing names that component specifically — a
+badge granted without it would contradict the sentence printed beneath it.
+Granting is a separate, deliberate act by an officer, recorded in the audit log
+with the components it rested on.
+
+It also comes off the same way it goes on. A revocation needs a reason, the
+lister is told (they paid for it), and withdrawing a verification check that a
+granted badge depended on revokes the badge automatically — leaving that to
+whoever remembers is how a listing ends up asserting something nobody stands
+behind. The officer console lives at `/realsure` under its own
+`staff:realsure_officer` gate rather than inside `/admin`, because deciding
+whether a listing may be published and deciding what Agentpro is willing to
+assert about it are different powers that should not imply one another.
+
+**The public badge panel lists all ten components, not the recorded ones.** An
+officer records what they did; there is no reason for them to create a row
+saying "we did not commission a valuation". But to a seeker the absence of a
+record and an explicit "not done" are the same fact, and rendering only the
+completed rows would turn the panel into a list of ticks that reads as a full
+audit. A badge that does not say what was checked is worth nothing, and one
+that hides what was *not* checked is worse than nothing.
+
+**Consent draws the line between counting and following.** FR-M13-04 says no
+non-essential tracking before consent, and the difficult part is not the banner
+— it is that a reading too broad leaves the lister's analytics permanently
+empty, and one too narrow makes the banner a lie. The line here: counting that
+an event happened, with nothing attached that could identify anyone, produces a
+number, and a number is not personal data — so totals are recorded for
+everyone, which is what keeps "viewed 340 times" true rather than
+"340 times by the minority who accepted cookies". Following one person across
+requests needs an identifier that persists, which is tracking on any honest
+reading, so the visitor id is written only after an explicit yes and declining
+actively clears it. Consent therefore does not switch analytics on and off; it
+switches the visitor id on and off, and only journey-level analysis degrades.
+Every report that depends on journeys states what share of traffic it could
+see, because a conversion rate measured over consenting visitors alone is not
+the site's conversion rate.
+
+**The lister funnel is derived, not instrumented.** Register, verify, submit,
+publish, upgrade are all already timestamps on `users`, `properties` and
+`orders`, so recording them again would create a second version of the truth
+that drifts the first time a code path writes one and not the other. It is
+computed at read time in `app/Queries/Funnel.php`, which also makes it complete
+for all time rather than only as far back as the event retention window, and
+unaffected by consent — there is nothing to consent to in counting your own
+customers. Only the seeker funnel needs recorded events, because none of its
+steps leaves a trace anywhere else.
+
+**A view counter is only worth having if a lister believes it**, so almost
+everything in `app/Support/Analytics.php` is a subtraction: known crawlers
+excluded, reloads collapsed to one view per session, drafts uncounted before
+the 404, and map panning not mistaken for searching — the map refetches the
+result list on every drag, and counting those would report one seeker who moved
+the map twenty times as twenty searches. Recording also never throws: a listing
+that 500s because a counter could not be written would be the measurement
+destroying the thing it measured.
+
+**Raw events are pruned, and the rollup is what allows it.** `analytics_daily`
+exists as much for data minimisation as for speed — raw behavioural events are
+the only rows describing what somebody did minute by minute, and they are kept
+90 days. The rollup recomputes whole days rather than accumulating, so running
+it twice produces the same numbers as running it once. Dwell is a median, not a
+mean: one tab left open for an hour drags a mean past objective O2's 90-second
+target on its own, and the resulting figure would say the tour is working when
+nobody watched it.
+
 **Erasure is anonymisation, not a delete, and `PersonalData` is where that is
 decided.** Orders, refunds, payouts, ledger entries and the audit trail all hang
 off the account row and all have to be kept — revenue and anti-money-laundering
@@ -402,6 +476,20 @@ hold on new bank details, the name that comes from the bank and not the form,
 nobody approving their own payout, the balance being spoken for at request time,
 and the three different endings a transfer has — paid, failed, and reversed days
 later, which has to put money back on a ledger that already spent it.
+
+`RealsureTest` is almost entirely about what must not be possible: a badge
+earned on photography alone, a badge without the title check, a lister badging
+their own listing, a badge that outlives the verification underneath it, and a
+badge that cannot be taken off again. The console's own access is covered too —
+it was built on top of a live bug where a RealSure Officer got a 404 on every
+screen in the admin area, including the one named after their job.
+
+`AnalyticsTest` is mostly about what must *not* be counted — crawlers, reloads,
+drafts, map panning — because those are what make a view count believable, and
+about holding the consent line in both directions: totals survive a refusal and
+the visitor id does not. It also covers the two failure modes that would be
+invisible otherwise: rolling up twice must not double the numbers, and a
+dropped `analytics_events` table must not take the listing page down with it.
 
 `PrivacyTest` divides unevenly on purpose. The export is mostly about what it
 must *not* contain — another person's details, our own secrets, an unmasked

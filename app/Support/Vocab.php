@@ -61,6 +61,47 @@ final class Vocab
         'hd_photography'         => 'High-definition photography',
     ];
 
+    /**
+     * Which of those components are verification, and which are production.
+     *
+     * FR-M6-02 lists all ten together and the listing page shows them together,
+     * because a buyer wants to see everything that was done. The distinction
+     * exists for one specific decision: what is enough to earn the badge.
+     *
+     * "A REALSURE listing means that Agentpro has conducted extra verification
+     * on the property." Sending a photographer is a service the lister bought;
+     * it establishes nothing about the property that was not already visible.
+     * A badge granted on the strength of drone footage alone would say
+     * "verified" about a listing nobody checked, which is the one failure that
+     * would make the mark worthless — and the mark is the product.
+     *
+     * So the badge is gated on the first group. The second still appears on the
+     * listing, still carries a date and an officer, and is still worth showing.
+     *
+     * @var list<string>
+     */
+    public const REALSURE_VERIFICATION = [
+        'title_verification',
+        'search_report',
+        'regulatory_compliance',
+        'community_investigation',
+        'valuation',
+        'legal_documentation',
+    ];
+
+    /** @var list<string> */
+    public const REALSURE_PRODUCTION = [
+        'floor_plans',
+        'immersive_capture',
+        'drone_photography',
+        'hd_photography',
+    ];
+
+    public static function isVerificationComponent(string $component): bool
+    {
+        return in_array($component, self::REALSURE_VERIFICATION, true);
+    }
+
     /** FR-M2-04. 'price_drop' is derived from price history, never chosen. */
     public const TAGS = [
         'special_offer' => 'Special offer',

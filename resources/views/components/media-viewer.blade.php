@@ -25,7 +25,8 @@
 @endphp
 
 @if ($default)
-<div class="viewer" data-viewer>
+{{-- The uuid, never the id: this attribute is in the page source (SEC-10). --}}
+<div class="viewer" data-viewer data-property="{{ $property->uuid }}">
     <div class="vtabs" role="tablist" aria-label="Property media">
         @foreach ($available as $key => $entry)
             @php $first = $entry['assets']->first(); @endphp
@@ -174,8 +175,90 @@
         viewer.querySelectorAll('.gate').forEach(function (gate) {
             gate.addEventListener('click', function () {
                 gate.setAttribute('aria-busy', 'true');
+                openedTour(gate.dataset.kind);
             });
         });
+
+        /*
+         * FR-M13-01 and objective O2.
+         *
+         * Opening the gate and then staying with it are the only two things on
+         * this page the server cannot see — it served the listing and heard
+         * nothing more — so "median tour dwell time" has to be reported from
+         * here or not measured at all.
+         *
+         * Timed from the click rather than from page load, because the question
+         * is how long the tour held someone, not how long the tab was open.
+         */
+        var openedAt = null;
+        var reportedFor = null;
+
+        function openedTour(kind) {
+            if (kind !== 'tour_3d' || openedAt !== null) return;
+
+            openedAt = Date.now();
+            reportedFor = kind;
+            send('tour_open', null);
+        }
+
+        function reportDwell() {
+            if (openedAt === null) return;
+
+            var seconds = Math.round((Date.now() - openedAt) / 1000);
+            openedAt = null;
+
+            // Under two seconds is a misclick, and a pile of one-second
+            // readings would drag the median towards zero and hide a tour that
+            // genuinely holds people.
+            if (seconds >= 2) send('tour_dwell', Math.min(seconds, 3600));
+        }
+
+        /*
+         * visibilitychange, not unload. Mobile browsers routinely kill a
+         * backgrounded tab without ever firing unload, which on a phone-first
+         * platform would lose most readings — and the ones it lost would be the
+         * long ones, biasing the median downwards.
+         */
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden') reportDwell();
+        });
+
+        function send(name, value) {
+            // The token travels in the JSON body rather than the query string.
+            // Laravel reads CSRF from the JSON payload for a JSON request, and
+            // a token in a URL ends up in access logs and referrers.
+            var body = JSON.stringify({
+                _token: '{{ csrf_token() }}',
+                name: name,
+                property: viewer.dataset.property,
+                value: value,
+                context: reportedFor
+            });
+
+            // sendBeacon survives the page going away; fetch does not. The
+            // fallback with keepalive covers browsers without it.
+            try {
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon(
+                        '{{ route('events') }}',
+                        new Blob([body], { type: 'application/json' })
+                    );
+                    return;
+                }
+            } catch (e) { /* fall through */ }
+
+            try {
+                fetch('{{ route('events') }}', {
+                    method: 'POST',
+                    keepalive: true,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: body
+                });
+            } catch (e) { /* analytics never breaks a page */ }
+        }
     });
 })();
 </script>

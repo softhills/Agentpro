@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\LifecycleState;
 use App\Models\Property;
+use App\Support\Analytics;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class PropertyController extends Controller
@@ -15,6 +16,13 @@ class PropertyController extends Controller
         if (! in_array($property->lifecycle_state->value, LifecycleState::publiclyVisible(), true)) {
             throw new NotFoundHttpException();
         }
+
+        /*
+         * FR-M13-01. Recorded after the 404 check above, so a probe for a draft
+         * uuid cannot inflate anybody's numbers, and before the page is built,
+         * so a slow render does not lose the view.
+         */
+        Analytics::listingViewed($property);
 
         $property->load([
             'units.feeLines',

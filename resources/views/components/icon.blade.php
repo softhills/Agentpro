@@ -28,6 +28,8 @@
         'minus'   => '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
         'naira'   => '<path d="M7 19V5l10 14V5"/><path d="M4 10h16M4 14h16"/>',
         'chevron' => '<path d="m6 9 6 6 6-6"/>',
+        // Bars descending left to right — a funnel, not a growth chart.
+        'chart'   => '<path d="M4 5h16M6 10h12M9 15h6M11 20h2"/>',
     ];
 @endphp
 <svg {{ $attributes->merge(['viewBox' => '0 0 24 24', 'fill' => 'none', 'stroke' => 'currentColor', 'stroke-width' => '2', 'aria-hidden' => 'true']) }}>

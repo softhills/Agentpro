@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Amenity;
 use App\Models\Area;
 use App\Queries\PropertySearch;
+use App\Support\Analytics;
 use Illuminate\Http\Request;
 
 class SearchController extends Controller
@@ -26,6 +27,20 @@ class SearchController extends Controller
                 'fragment' => true,
             ]);
         }
+
+        /*
+         * FR-M13-02, the top of the seeker funnel — and recorded here rather
+         * than above the fragment check on purpose. Panning a map fires a
+         * fragment request per movement, so counting those would report a
+         * seeker who dragged the map twenty times as twenty searches and make
+         * every rate below this step meaningless.
+         *
+         * The result count rides along because a search returning nothing is
+         * the most actionable number on this screen: it says where supply is
+         * missing, which is objective O4's whole problem.
+         */
+        Analytics::record(Analytics::SEARCH);
+        Analytics::record(Analytics::RESULTS, value: $results->total());
 
         return view('pages.search', [
             'results'   => $results,

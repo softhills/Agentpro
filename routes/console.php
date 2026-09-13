@@ -57,3 +57,15 @@ Schedule::command('agentpro:reconcile-settlements')
 Schedule::command('agentpro:run-data-requests')
     ->hourly()
     ->withoutOverlapping();
+
+/*
+ | M13: fold yesterday's events into daily totals, then prune the raw ones.
+ |
+ | At 03:00 rather than midnight. Rolling up a day the moment it ends races
+ | every event still being written by somebody browsing at 23:59:59, and the
+ | pruning at the end of this job competes with live traffic for locks — both
+ | arguments point at the quietest hour rather than the neatest one.
+ */
+Schedule::command('agentpro:roll-up-analytics')
+    ->dailyAt('03:00')
+    ->withoutOverlapping();

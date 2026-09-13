@@ -79,6 +79,18 @@ class Property extends Model
         return $this->hasMany(RealsureRecord::class);
     }
 
+    /**
+     * Things bought against this listing — a 3D capture, a RealSure engagement.
+     *
+     * The inverse already existed on Order; this side is what lets a queue ask
+     * "has this been paid for and not delivered", which is the only question
+     * that should ever sort work to the top.
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
     public function amenities(): BelongsToMany
     {
         return $this->belongsToMany(Amenity::class)->orderBy('sort_order');

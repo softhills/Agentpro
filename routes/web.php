@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AnalyticsController as AdminAnalyticsController;
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ListingAdminController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Admin\PayoutAdminController;
 use App\Http\Controllers\Admin\SettlementAdminController;
 use App\Http\Controllers\Admin\TaxonomyController;
 use App\Http\Controllers\Admin\UserAdminController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\VerificationController;
@@ -17,6 +19,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InteractionController;
 use App\Http\Controllers\NotificationPreferenceController;
 use App\Http\Controllers\Lister\DashboardController;
+use App\Http\Controllers\Lister\ListingAnalyticsController;
 use App\Http\Controllers\Lister\ListingController;
 use App\Http\Controllers\Lister\MediaController;
 use App\Http\Controllers\Lister\PayoutController;
@@ -25,6 +28,7 @@ use App\Http\Controllers\Lister\ScanController;
 use App\Http\Controllers\Technician\AssignmentController;
 use App\Http\Controllers\Webhooks\PaystackWebhookController;
 use App\Http\Controllers\PrivacyController;
+use App\Http\Controllers\Realsure\ConsoleController as RealsureConsoleController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SavedSearchController;
@@ -49,6 +53,21 @@ Route::get('/search/pins', [SearchController::class, 'pins'])
     ->name('search.pins');
 
 Route::get('/property/{property}', [PropertyController::class, 'show'])->name('property.show');
+
+/*
+| Consent and the analytics beacon (M13). Public, because the seeker funnel
+| starts before anybody has an account and the banner has to work for guests.
+|
+| The beacon is throttled hard. It is the only untrusted way into the event
+| store, and the damage it could do is not a breach but a corrupted median —
+| far cheaper to cap than to detect afterwards. Two tour opens and a handful of
+| dwell readings a minute is more than genuine use produces.
+*/
+Route::post('/consent', [AnalyticsController::class, 'consent'])
+    ->middleware('throttle:20,1')->name('consent');
+
+Route::post('/events', [AnalyticsController::class, 'event'])
+    ->middleware('throttle:30,1')->name('events');
 
 /*
 | Payment webhook (FR-M4-04, SEC-05).
@@ -212,6 +231,11 @@ Route::middleware('auth')->group(function () {
         Route::put('/areas/{area}/coverage', [OperationsController::class, 'toggleCoverage'])->name('areas.coverage');
         Route::post('/areas/{area}/slots', [OperationsController::class, 'addSlots'])->name('areas.slots');
 
+        // FR-M13-02/03: where people fall out of each funnel. Moderator-level,
+        // like the rest of the reporting — it carries no money and no personal
+        // detail, only counts.
+        Route::get('/analytics', AdminAnalyticsController::class)->name('analytics');
+
         Route::get('/audit', [AuditController::class, 'index'])->name('audit');
 
         Route::get('/queue', [ModerationController::class, 'queue'])->name('queue');
@@ -226,6 +250,11 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/listings/create', [ListingController::class, 'create'])->name('listings.create');
         Route::post('/listings', [ListingController::class, 'store'])->name('listings.store');
+        // FR-M13-01. Behind the same policy as editing: how a listing is
+        // performing is commercially sensitive to the lister.
+        Route::get('/listings/{property}/analytics', ListingAnalyticsController::class)
+            ->name('listings.analytics');
+
         Route::get('/listings/{property}/edit', [ListingController::class, 'edit'])->name('listings.edit');
         Route::put('/listings/{property}', [ListingController::class, 'update'])->name('listings.update');
         Route::post('/listings/{property}/submit', [ListingController::class, 'submit'])->name('listings.submit');
@@ -265,6 +294,26 @@ Route::middleware('auth')->group(function () {
         // Stands in for the hosted payment form in local development only.
         Route::get('/orders/{order}/sandbox', SandboxCheckoutController::class)
             ->name('sandbox');
+    });
+
+    /*
+    | RealSure Officer console (FR-M6-01 to FR-M6-03).
+    |
+    | Its own gate, outside the /admin group, for a reason that was a live bug
+    | until now: the admin area is gated on `staff:moderator`, and a RealSure
+    | Officer is not a moderator, so an account with that role got a 404 on
+    | every screen in the console — including the one named after their job.
+    | Granting a trust badge is also not a moderation decision: the moderator
+    | decides whether a listing may be published, the officer decides what
+    | Agentpro is willing to assert about it, and those are different powers
+    | that should not imply one another.
+    */
+    Route::middleware('staff:realsure_officer')->prefix('realsure')->name('realsure.')->group(function () {
+        Route::get('/', [RealsureConsoleController::class, 'index'])->name('queue');
+        Route::get('/{property}', [RealsureConsoleController::class, 'show'])->name('record');
+        Route::post('/{property}/component', [RealsureConsoleController::class, 'record'])->name('component');
+        Route::post('/{property}/grant', [RealsureConsoleController::class, 'grant'])->name('grant');
+        Route::post('/{property}/revoke', [RealsureConsoleController::class, 'revoke'])->name('revoke');
     });
 
     /*

@@ -88,6 +88,26 @@ class DatabaseSeeder extends Seeder
             'verification_state' => 'verified',
         ]);
 
+        /*
+         * A real RealSure Officer, with only that role (FR-M6-01).
+         *
+         * `realsure@example.test` above is an admin, so it can open the console
+         * but sees the whole sidebar and proves nothing about the role itself.
+         * This account is how the interesting half is demonstrable: granting a
+         * trust badge without being a moderator, and a console that offers only
+         * the one section its holder can actually open.
+         */
+        User::create([
+            'uuid' => Str::uuid(),
+            'name' => 'Adaeze Okonkwo',
+            'email' => 'officer@example.test',
+            'password' => Hash::make('password'),
+            'category' => 'seeker',
+            'is_staff' => true,
+            'staff_role' => 'realsure_officer',
+            'verification_state' => 'verified',
+        ]);
+
         $technician = User::create([
             'uuid' => Str::uuid(),
             'name' => 'Capture Team — Lagos',

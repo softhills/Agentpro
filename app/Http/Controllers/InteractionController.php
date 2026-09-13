@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Interaction;
 use App\Models\Property;
+use App\Support\Analytics;
 use App\Support\Audit;
 use App\Support\Vocab;
 use Illuminate\Http\Request;
@@ -97,6 +98,16 @@ class InteractionController extends Controller
         ]);
 
         $this->record($request, $property, 'contact', ['contact_mode' => $data['mode']]);
+
+        /*
+         * Recorded twice, and not by mistake. The interaction above is the
+         * standing relationship — unique per person and listing, which is what
+         * makes this seeker an audience for alerts about it. That uniqueness is
+         * also why it cannot answer FR-M13-01: someone who rings and then
+         * messages overwrites their own row, so the table knows the latest mode
+         * rather than how many initiations there were by which route.
+         */
+        Analytics::record(Analytics::CONTACT, $property, context: $data['mode']);
 
         return response()->json(['recorded' => true]);
     }

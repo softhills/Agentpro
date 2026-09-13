@@ -896,3 +896,87 @@ textarea.finput{line-height:1.55;resize:vertical}
 .bankcard strong{font-family:var(--q);font-weight:700;font-size:14px;color:var(--heading)}
 .bankcard .sub{font-variant-numeric:tabular-nums}
 .bankcard > :last-child{margin-left:auto}
+
+/* ----------------------------------------------------------------- analytics
+   M13. Two chart shapes, both CSS rather than a library: a horizontal funnel
+   and a daily bar column. Neither is worth 60KB of charting JavaScript on a
+   phone-first platform (NFR-02), and both stay legible with styles disabled. */
+.funnel{list-style:none;margin:0;padding:0;display:grid;gap:9px;counter-reset:step}
+.funnel li{position:relative;display:grid;
+  grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name num" "drop drop";
+  gap:2px 14px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface);overflow:hidden}
+/* The bar sits behind the text rather than beside it, so a long step name never
+   squeezes the measure into an unreadable sliver. */
+.funnelbar{position:absolute;inset:0 auto 0 0;width:var(--w,0);
+  background:var(--blue);opacity:.13;pointer-events:none}
+.funnelname{grid-area:name;position:relative;font-family:var(--q);font-weight:700;
+  font-size:14px;color:var(--heading)}
+.funnelnum{grid-area:num;position:relative;font-family:var(--q);font-weight:700;
+  font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
+.funneldrop{grid-area:drop;position:relative;font-family:var(--i);font-size:12px;color:var(--slate)}
+.funneldrop:empty{display:none}
+
+/* Daily views. Bars, not a line: at this volume a line invites reading a trend
+   into noise, and a day with nothing in it should look empty rather than look
+   like part of a slope. */
+.spark{display:flex;align-items:flex-end;gap:2px;height:120px;padding:12px 14px;
+  border:1px solid var(--line);border-radius:11px;background:var(--surface)}
+.sparkbar{flex:1 1 0;min-width:2px;height:var(--h,0);min-height:2px;border-radius:2px 2px 0 0;
+  background:var(--blue);opacity:.8}
+.sparkbar[style*="--h:0%"]{background:var(--line);opacity:1}
+.sparkaxis{display:flex;justify-content:space-between;margin:7px 2px 0;
+  font-family:var(--m);font-size:11px;color:var(--slate-2)}
+
+/* ------------------------------------------------------------------- consent
+   FR-M1-02. Both choices are the same button: the default is already
+   essential-only, so nothing here needs to push anyone towards yes, and a
+   banner whose decline is grey six-point text collects consent worth nothing. */
+.consent{position:sticky;bottom:0;z-index:40;background:var(--surface);
+  border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(0,0,0,.07)}
+.consent-in{max-width:1180px;margin:0 auto;padding:15px 22px;
+  display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px}
+.consent-copy{margin:0;flex:1 1 380px;font-family:var(--i);font-size:13px;
+  line-height:1.55;color:var(--ink);max-width:74ch}
+.consent-copy a{color:var(--blue)}
+.consent-acts{display:flex;gap:9px;flex:0 0 auto}
+.consent-acts form{margin:0}
+@media (max-width:560px){
+  .consent-acts{width:100%}
+  .consent-acts form,.consent-acts .btn{flex:1 1 0;width:100%}
+}
+
+/* ------------------------------------------------------------------ realsure
+   M6. The officer's console. Progress is two figures rather than one, because
+   only verification moves a listing towards the badge — "4 of 10" would hide
+   whether the four were checks or photographs. */
+.surerow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;
+  padding:13px 15px;margin-bottom:8px;border:1px solid var(--line);border-radius:11px;
+  background:var(--surface);text-decoration:none;color:inherit}
+.surerow:hover{border-color:var(--line-strong,var(--slate-2));background:var(--surface-2)}
+.surerow-main{flex:1 1 240px;min-width:0;display:grid;gap:2px}
+.surerow-main b{font-family:var(--q);font-weight:700;font-size:14px;color:var(--heading)}
+.surerow-prog{display:flex;gap:16px;flex:0 0 auto}
+.progline{display:grid;gap:1px;text-align:right}
+.progline em{font-style:normal;font-family:var(--m);font-size:9.5px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--slate-2)}
+.progline b{font-family:var(--q);font-weight:700;font-size:15px;color:var(--slate);
+  font-variant-numeric:tabular-nums}
+.progline b.okink{color:var(--sure)}
+.surerow-state{flex:0 0 auto;min-width:84px;text-align:right}
+
+/* One component. Collapsed by default unless it has been completed, so the
+   sheet opens showing what was done rather than ten identical empty forms. */
+.surecomp{border:1px solid var(--line);border-radius:11px;background:var(--surface);
+  margin-bottom:8px;overflow:hidden}
+.surecomp summary{display:flex;align-items:center;gap:10px;padding:12px 15px;cursor:pointer;
+  list-style:none}
+.surecomp summary::-webkit-details-marker{display:none}
+.surecomp summary:hover{background:var(--surface-2)}
+.surecomp summary svg{width:17px;height:17px;flex:none;color:var(--slate-2)}
+.surecomp[open] summary{border-bottom:1px solid var(--line)}
+.surecomp-name{flex:1 1 auto;font-family:var(--q);font-weight:700;font-size:14px;color:var(--heading)}
+.surecomp-state{font-family:var(--i);font-size:12.5px;color:var(--slate);white-space:nowrap}
+.surecomp-state em{font-style:normal;color:var(--slate-2);display:block;font-size:11.5px}
+.surecomp .taxform{margin:14px 15px 15px;max-width:520px}
+.surecomp .prefrow{margin-bottom:2px}
