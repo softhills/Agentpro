@@ -102,6 +102,26 @@ class DatabaseSeeder extends Seeder
         $this->seedProperties($agent, $developer, $officer);
         $this->seedTechnicianSlots($technician);
         $this->seedCommerce($agent, $officer, $technician);
+        $this->seedLedger($agent, $developer, $officer);
+    }
+
+    /**
+     * Supply-side incentives (FR-M11-07, objective O4).
+     *
+     * Deliberately no bank details and no payouts: an account has to be added
+     * by the lister and then sits through a security hold, and seeding one
+     * would skip the control the whole feature is built around.
+     */
+    private function seedLedger(User $agent, User $developer, User $admin): void
+    {
+        \App\Support\Ledger::record($agent, 'credit', 75000, 'listing_incentive',
+            'Launch incentive - 5 verified listings in August', null, $admin->id);
+
+        \App\Support\Ledger::record($agent, 'credit', 25000, 'referral',
+            'Referred Ngozi Balogun', null, $admin->id);
+
+        \App\Support\Ledger::record($developer, 'credit', 50000, 'listing_incentive',
+            'Launch incentive - Maitama and Wuse II', null, $admin->id);
     }
 
     /**

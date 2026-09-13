@@ -26,7 +26,8 @@
             // rather than being shown and then refused.
             if (auth()->user()?->isStaff('admin')) {
                 array_splice($sections, 5, 0, [
-                    ['admin.settlements', 'Settlements', 'naira', $settlementIssues ?? null],
+                    ['admin.payouts',     'Payouts',     'naira', $payoutsWaiting ?? null],
+                    ['admin.settlements', 'Settlements', 'cube',  $settlementIssues ?? null],
                 ]);
             }
         @endphp

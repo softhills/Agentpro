@@ -5,6 +5,8 @@ namespace App\Services\Payments;
 use App\Models\Order;
 use App\Models\Refund;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * Development driver. Never bind this outside local and testing.
@@ -187,6 +189,145 @@ class FakeGateway implements PaymentGateway
                 );
             })
             ->all();
+    }
+
+    // ------------------------------------------------------------- payouts
+
+    /**
+     * A handful of real Nigerian bank codes.
+     *
+     * Real ones rather than invented ones, so a developer typing a test account
+     * is exercising the same code paths and string lengths production will.
+     */
+    public function banks(): array
+    {
+        return [
+            '044' => 'Access Bank',
+            '063' => 'Access Bank (Diamond)',
+            '050' => 'Ecobank Nigeria',
+            '070' => 'Fidelity Bank',
+            '011' => 'First Bank of Nigeria',
+            '214' => 'First City Monument Bank',
+            '058' => 'Guaranty Trust Bank',
+            '076' => 'Polaris Bank',
+            '221' => 'Stanbic IBTC Bank',
+            '232' => 'Sterling Bank',
+            '032' => 'Union Bank of Nigeria',
+            '033' => 'United Bank For Africa',
+            '215' => 'Unity Bank',
+            '035' => 'Wema Bank',
+            '057' => 'Zenith Bank',
+            '999992' => 'OPay',
+            '999991' => 'PalmPay',
+            '50211' => 'Kuda Bank',
+            '100004' => 'Moniepoint',
+        ];
+    }
+
+    /**
+     * Resolves any well-formed NUBAN, and refuses everything else.
+     *
+     * It cannot know a real account holder, so it returns a stable made-up name
+     * derived from the number — stable because the flow compares the resolved
+     * name against the lister's identity, and a name that changed on every call
+     * would make that check untestable.
+     *
+     * Refusing malformed numbers matters more than it looks: a development
+     * driver that accepts anything hides the one bug that costs money here, an
+     * unresolvable account saved as a payout destination.
+     */
+    public function resolveAccount(string $accountNumber, string $bankCode): ?ResolvedAccount
+    {
+        if (! preg_match('/^\d{10}$/', $accountNumber) || ! isset($this->banks()[$bankCode])) {
+            return null;
+        }
+
+        // 0000000000 is reserved here as "the bank does not know this number",
+        // so the refusal path can be exercised on demand.
+        if ($accountNumber === '0000000000') {
+            return null;
+        }
+
+        /*
+         * Development convenience, and the only part of this class that reaches
+         * for the session: it answers with the name of whoever is adding the
+         * account, so the name-matching path can be walked through locally. A
+         * real bank obviously does not do this, which is why anything that
+         * depends on the resolved name stubs the gateway rather than trusting
+         * what comes back here.
+         */
+        return new ResolvedAccount(
+            accountNumber: $accountNumber,
+            accountName: Str::upper(auth()->user()?->name ?? 'TEST ACCOUNT '.substr($accountNumber, -4)),
+            bankCode: $bankCode,
+            bankName: $this->banks()[$bankCode],
+        );
+    }
+
+    public function createRecipient(string $accountNumber, string $bankCode, string $accountName): string
+    {
+        return 'RCP_fake_'.substr(hash('sha256', $bankCode.$accountNumber), 0, 16);
+    }
+
+    /**
+     * Accepted, not delivered — as a real provider answers.
+     *
+     * Nigerian bank transfers are not instant and can be reversed days later, so
+     * a fake that reported success here would let code ship that treats
+     * submission as arrival, and the whole reversal path would never run
+     * locally.
+     */
+    public function transfer(string $recipientCode, float $amount, string $reference, string $reason): TransferResult
+    {
+        if ($amount > ($this->balance() ?? 0)) {
+            throw new RuntimeException('Insufficient balance on the integration.');
+        }
+
+        return new TransferResult(
+            status: 'pending',
+            transferCode: 'TRF_fake_'.substr(hash('sha256', $reference), 0, 16),
+            reference: $reference,
+            amountMinor: (int) round($amount * 100),
+        );
+    }
+
+    /** Completes a minute after submission, so the polling path can be watched. */
+    public function fetchTransfer(string $transferCodeOrReference): ?TransferResult
+    {
+        $payout = \App\Models\Payout::where('provider_transfer_code', $transferCodeOrReference)
+            ->orWhere('provider_reference', $transferCodeOrReference)
+            ->first();
+
+        if (! $payout) {
+            return null;
+        }
+
+        $done = $payout->submitted_at !== null && $payout->submitted_at->addMinute()->isPast();
+
+        return new TransferResult(
+            status: $done ? 'success' : 'pending',
+            transferCode: $payout->provider_transfer_code,
+            reference: $payout->provider_reference,
+            amountMinor: (int) round((float) $payout->amount * 100),
+        );
+    }
+
+    /**
+     * Whatever has settled, less what has already been paid out.
+     *
+     * Derived from the database rather than invented, for the same reason the
+     * settlements are: so the balance shown in development is one a developer
+     * can reason about, and so "you cannot pay out more than you have" is a
+     * constraint that actually bites locally.
+     */
+    public function balance(): ?float
+    {
+        $in = (float) Order::whereIn('state', ['paid', 'partially_refunded'])->sum('amount')
+            - (float) Order::sum('refunded_amount');
+
+        $out = (float) \App\Models\Payout::whereIn('state', ['submitted', 'paid'])->sum('amount');
+
+        return max(0, round($in - $out, 2));
     }
 
     public function name(): string

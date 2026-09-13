@@ -75,5 +75,43 @@ interface PaymentGateway
      */
     public function settlementTransactions(string $providerSettlementId): array;
 
+    /**
+     * Nigerian banks and their codes, for the account form.
+     *
+     * @return array<string,string> code => name
+     */
+    public function banks(): array;
+
+    /**
+     * Ask the bank who owns an account number (FR-M11-07).
+     *
+     * The one call that makes a payout destination checkable. Returns null when
+     * the bank does not recognise the number, which must be treated as "do not
+     * save this account" rather than as a transient error.
+     */
+    public function resolveAccount(string $accountNumber, string $bankCode): ?ResolvedAccount;
+
+    /** Register a destination with the provider; returns its handle. */
+    public function createRecipient(string $accountNumber, string $bankCode, string $accountName): string;
+
+    /**
+     * Send money out.
+     *
+     * `$reference` is ours and must be unique per payout: it is the only thing
+     * standing between a retried submission and a second transfer.
+     */
+    public function transfer(string $recipientCode, float $amount, string $reference, string $reason): TransferResult;
+
+    public function fetchTransfer(string $transferCodeOrReference): ?TransferResult;
+
+    /**
+     * Spendable balance, in naira, or null if it cannot be read.
+     *
+     * Checked before sending. A transfer against an empty float fails at the
+     * provider anyway, but it fails after the payout has been recorded as sent,
+     * which is a worse place to find out.
+     */
+    public function balance(): ?float;
+
     public function name(): string;
 }

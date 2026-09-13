@@ -148,6 +148,29 @@ return [
     ],
 
     /*
+     * Payouts to listers (FR-M11-07).
+     *
+     * The only movement of money in this system with a destination somebody
+     * chose, so the numbers here are safety limits rather than conveniences.
+     */
+    'payouts' => [
+        // How long new or changed bank details are held before anything can be
+        // sent to them. Long enough that the message warning the real owner has
+        // been seen; short enough that an honest lister is not left waiting a
+        // week. This is the single most effective control against an account
+        // takeover, so shortening it is a real decision, not a tuning knob.
+        'account_hold_hours' => env('AGENTPRO_PAYOUT_HOLD_HOURS', 24),
+
+        // Transfers cost a flat fee, so a trickle of tiny payouts costs more in
+        // charges than it moves.
+        'minimum' => env('AGENTPRO_PAYOUT_MINIMUM', 5000),
+
+        // Past this, a transfer has stopped being in progress and started being
+        // something to chase.
+        'stale_after_days' => env('AGENTPRO_PAYOUT_STALE_DAYS', 3),
+    ],
+
+    /*
      * Refunds (FR-M11-05).
      *
      * A refund can only travel back along the transaction that paid it, so the

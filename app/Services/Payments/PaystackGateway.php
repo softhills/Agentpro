@@ -189,6 +189,143 @@ class PaystackGateway implements PaymentGateway
         return $out;
     }
 
+    // ------------------------------------------------------------- payouts
+
+    /** @return array<string,string> */
+    public function banks(): array
+    {
+        $response = $this->client()->get('/bank', ['currency' => 'NGN', 'perPage' => 100]);
+
+        if (! $response->successful() || ! ($response['status'] ?? false)) {
+            return [];
+        }
+
+        return collect($response['data'] ?? [])
+            ->pluck('name', 'code')
+            ->sort()
+            ->all();
+    }
+
+    /**
+     * FR-M11-07. The bank's own answer, which is the only thing that makes a
+     * payout destination checkable.
+     *
+     * A 4xx here means the number is wrong, not that the call failed — the
+     * distinction matters, because a transient failure should be retried and a
+     * wrong account number must never be saved.
+     */
+    public function resolveAccount(string $accountNumber, string $bankCode): ?ResolvedAccount
+    {
+        $response = $this->client()->get('/bank/resolve', [
+            'account_number' => $accountNumber,
+            'bank_code'      => $bankCode,
+        ]);
+
+        if (! $response->successful() || ! ($response['status'] ?? false)) {
+            return null;
+        }
+
+        return new ResolvedAccount(
+            accountNumber: (string) ($response['data']['account_number'] ?? $accountNumber),
+            accountName: (string) ($response['data']['account_name'] ?? ''),
+            bankCode: $bankCode,
+            bankName: $this->banks()[$bankCode] ?? '',
+        );
+    }
+
+    public function createRecipient(string $accountNumber, string $bankCode, string $accountName): string
+    {
+        $response = $this->client()->post('/transferrecipient', [
+            'type'           => 'nuban',
+            'name'           => $accountName,
+            'account_number' => $accountNumber,
+            'bank_code'      => $bankCode,
+            'currency'       => 'NGN',
+        ]);
+
+        if (! $response->successful() || ! ($response['status'] ?? false)) {
+            throw new RuntimeException(
+                'Paystack would not register that account: '.($response->json('message') ?: 'no reason given')
+            );
+        }
+
+        return (string) $response['data']['recipient_code'];
+    }
+
+    /**
+     * Throws rather than returning a failure object.
+     *
+     * A transfer that quietly did not happen is the worst outcome available
+     * here: the payout would be recorded as sent, the ledger debited, and
+     * nobody would find out until the lister asked where their money was.
+     */
+    public function transfer(string $recipientCode, float $amount, string $reference, string $reason): TransferResult
+    {
+        $response = $this->client()->post('/transfer', [
+            'source'    => 'balance',
+            'amount'    => (int) round($amount * 100),
+            'recipient' => $recipientCode,
+            'reason'    => $reason,
+            // Ours, and unique per payout. Paystack rejects a duplicate, which
+            // is exactly the protection wanted: a retried submission cannot
+            // become a second transfer.
+            'reference' => $reference,
+        ]);
+
+        if (! $response->successful() || ! ($response['status'] ?? false)) {
+            Log::error('paystack.transfer_failed', [
+                'reference' => $reference,
+                'status'    => $response->status(),
+                'body'      => $response->json('message'),
+            ]);
+
+            throw new RuntimeException(
+                'Paystack refused the transfer: '.($response->json('message') ?: 'no reason given')
+            );
+        }
+
+        return $this->toTransfer($response['data']);
+    }
+
+    public function fetchTransfer(string $transferCodeOrReference): ?TransferResult
+    {
+        $response = $this->client()->get('/transfer/'.urlencode($transferCodeOrReference));
+
+        if (! $response->successful() || ! ($response['status'] ?? false)) {
+            return null;
+        }
+
+        return $this->toTransfer($response['data']);
+    }
+
+    public function balance(): ?float
+    {
+        $response = $this->client()->get('/balance');
+
+        if (! $response->successful() || ! ($response['status'] ?? false)) {
+            return null;
+        }
+
+        foreach ($response['data'] ?? [] as $row) {
+            if (($row['currency'] ?? null) === 'NGN') {
+                return ((int) $row['balance']) / 100;
+            }
+        }
+
+        return null;
+    }
+
+    private function toTransfer(array $data): TransferResult
+    {
+        return new TransferResult(
+            status: (string) ($data['status'] ?? 'pending'),
+            transferCode: $data['transfer_code'] ?? null,
+            reference: $data['reference'] ?? null,
+            amountMinor: (int) ($data['amount'] ?? 0),
+            failureReason: $data['failure_reason'] ?? ($data['message'] ?? null),
+        );
+    }
+
     public function name(): string
     {
         return 'paystack';

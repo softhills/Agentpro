@@ -12,9 +12,12 @@
             <h1>Your listings</h1>
             <p>{{ $user->categoryLabel() }} · {{ $user->name }}</p>
         </div>
-        @can('create', App\Models\Property::class)
-            <a href="{{ route('lister.listings.create') }}" class="btn btn-blue">Add a listing</a>
-        @endcan
+        <div class="dashactions">
+            <a href="{{ route('lister.payouts') }}" class="btn btn-ghost">Getting paid</a>
+            @can('create', App\Models\Property::class)
+                <a href="{{ route('lister.listings.create') }}" class="btn btn-blue">Add a listing</a>
+            @endcan
+        </div>
     </div>
 
     <x-flash />

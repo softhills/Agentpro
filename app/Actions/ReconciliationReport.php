@@ -18,6 +18,8 @@ final class ReconciliationReport
         public int $unsettledOrders = 0,
         public int $refundsPolled = 0,
         public int $refundsResolved = 0,
+        public int $payoutsPolled = 0,
+        public int $payoutsResolved = 0,
         public int $discrepancies = 0,
         /** @var string[] */
         public array $problems = [],
@@ -34,7 +36,8 @@ final class ReconciliationReport
     public function summary(): string
     {
         return sprintf(
-            '%d settlements, %d transactions (%d matched, %d unmatched); %d paid orders unsettled; %d refunds polled, %d resolved.',
+            '%d settlements, %d transactions (%d matched, %d unmatched); %d paid orders unsettled; '
+            .'%d refunds polled, %d resolved; %d payouts polled, %d resolved.',
             $this->settlements,
             $this->transactions,
             $this->matched,
@@ -42,6 +45,8 @@ final class ReconciliationReport
             $this->unsettledOrders,
             $this->refundsPolled,
             $this->refundsResolved,
+            $this->payoutsPolled,
+            $this->payoutsResolved,
         );
     }
 }

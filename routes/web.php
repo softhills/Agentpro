@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ListingAdminController;
 use App\Http\Controllers\Admin\ModerationController;
 use App\Http\Controllers\Admin\OperationsController;
 use App\Http\Controllers\Admin\OrderAdminController;
+use App\Http\Controllers\Admin\PayoutAdminController;
 use App\Http\Controllers\Admin\SettlementAdminController;
 use App\Http\Controllers\Admin\TaxonomyController;
 use App\Http\Controllers\Admin\UserAdminController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\NotificationPreferenceController;
 use App\Http\Controllers\Lister\DashboardController;
 use App\Http\Controllers\Lister\ListingController;
 use App\Http\Controllers\Lister\MediaController;
+use App\Http\Controllers\Lister\PayoutController;
 use App\Http\Controllers\Lister\SandboxCheckoutController;
 use App\Http\Controllers\Lister\ScanController;
 use App\Http\Controllers\Technician\AssignmentController;
@@ -150,6 +152,18 @@ Route::middleware('auth')->group(function () {
             Route::post('/refunds/{refund}/approve', [OrderAdminController::class, 'approveRefund'])->name('refunds.approve');
             Route::post('/refunds/{refund}/cancel', [OrderAdminController::class, 'cancelRefund'])->name('refunds.cancel');
 
+            /*
+            | Payouts (FR-M11-07). The one place money leaves to a destination
+            | somebody chose, so every action here is admin-only and approval is
+            | always by a second person — there is no threshold that skips it.
+            */
+            Route::get('/payouts', [PayoutAdminController::class, 'index'])->name('payouts');
+            Route::post('/payouts/credit', [PayoutAdminController::class, 'credit'])->name('payouts.credit');
+            Route::post('/payouts/{payout}/approve', [PayoutAdminController::class, 'approve'])->name('payouts.approve');
+            Route::post('/payouts/{payout}/cancel', [PayoutAdminController::class, 'cancel'])->name('payouts.cancel');
+            Route::post('/payouts/{payout}/return', [PayoutAdminController::class, 'returnToLedger'])->name('payouts.return');
+            Route::post('/payout-accounts/{account}/approve', [PayoutAdminController::class, 'approveAccount'])->name('payout-accounts.approve');
+
             Route::get('/settlements', [SettlementAdminController::class, 'index'])->name('settlements');
             Route::post('/settlements/reconcile', [SettlementAdminController::class, 'reconcile'])
                 // The provider's API is the expensive part, not ours.
@@ -204,6 +218,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/listings/{property}/media/{media}/cover', [MediaController::class, 'setCover'])->name('media.cover');
         Route::post('/listings/{property}/media/reorder', [MediaController::class, 'reorder'])->name('media.reorder');
         Route::delete('/listings/{property}/media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');
+
+        /*
+        | Being paid (FR-M11-07). A lister asks; an admin approves. Self-service
+        | in both directions would make a stolen login worth the balance.
+        */
+        Route::get('/payouts', [PayoutController::class, 'index'])->name('payouts');
+        Route::post('/payouts/account', [PayoutController::class, 'storeAccount'])
+            ->middleware('throttle:6,1')->name('payouts.account');
+        Route::post('/payouts/request', [PayoutController::class, 'requestPayout'])
+            ->middleware('throttle:10,1')->name('payouts.request');
     });
 
     /*

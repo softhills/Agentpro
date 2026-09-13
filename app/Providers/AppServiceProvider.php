@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Payout;
 use App\Models\Property;
 use App\Models\Refund;
 use App\Models\Settlement;
@@ -150,6 +151,8 @@ class AppServiceProvider extends ServiceProvider
                 // not on a provider, so it belongs on the badge.
                 'refundsWaiting' => Refund::where('state', 'requested')->count(),
                 'settlementIssues' => Settlement::where('reconciliation_state', 'discrepancy')->count(),
+                // Blocked on a person, not a provider, so it belongs on a badge.
+                'payoutsWaiting' => Payout::where('state', 'requested')->count(),
             ]);
         });
 

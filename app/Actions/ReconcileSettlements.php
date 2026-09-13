@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Models\Order;
+use App\Models\Payout;
 use App\Models\Refund;
 use App\Models\Settlement;
 use App\Models\SettlementTransaction;
@@ -44,6 +45,7 @@ class ReconcileSettlements
     public function __construct(
         private PaymentGateway $gateway,
         private IssueRefund $refunds,
+        private IssuePayout $payouts,
     ) {}
 
     public function run(?Carbon $from = null, ?Carbon $to = null): ReconciliationReport
@@ -80,6 +82,7 @@ class ReconcileSettlements
 
         $report->unsettledOrders = $this->unsettledOrders()->count();
         $this->pollRefunds($report);
+        $this->pollPayouts($report);
 
         Audit::record('settlement.reconciled', null, [], [
             'from'          => $from->toDateString(),
@@ -296,6 +299,47 @@ class ReconcileSettlements
                     'Refund %s has been with the provider for %d days.',
                     $refund->uuid,
                     (int) $refund->submitted_at->diffInDays(now()),
+                );
+            }
+        }
+    }
+
+    /**
+     * Ask the provider about every payout still in flight (FR-M11-07).
+     *
+     * More important than the refund poll, for one reason: a transfer can be
+     * *reversed* days after it left, and a reversal nobody applies leaves the
+     * lister's ledger short by money the bank has already given back. The
+     * webhook covers it on a good day; this covers the day the webhook is lost.
+     */
+    private function pollPayouts(ReconciliationReport $report): void
+    {
+        $inFlight = Payout::where('state', 'submitted')
+            ->whereNotNull('provider_reference')
+            ->get();
+
+        foreach ($inFlight as $payout) {
+            $report->payoutsPolled++;
+
+            try {
+                $result = $this->gateway->fetchTransfer(
+                    $payout->provider_transfer_code ?: $payout->provider_reference
+                );
+            } catch (\Throwable $e) {
+                $report->problems[] = 'Payout '.$payout->uuid.': '.$e->getMessage();
+
+                continue;
+            }
+
+            if ($result && $this->payouts->settle($payout, $result)) {
+                $report->payoutsResolved++;
+            }
+
+            if ($payout->fresh()->isStuck()) {
+                $report->problems[] = sprintf(
+                    'Payout %s has been with the bank for %d days.',
+                    $payout->uuid,
+                    (int) $payout->submitted_at->diffInDays(now()),
                 );
             }
         }

@@ -101,6 +101,27 @@ class User extends Authenticatable
         return $role === null || $this->staff_role === $role || $this->staff_role === 'admin';
     }
 
+    public function payoutAccounts(): HasMany
+    {
+        return $this->hasMany(PayoutAccount::class);
+    }
+
+    public function payouts(): HasMany
+    {
+        return $this->hasMany(Payout::class);
+    }
+
+    public function ledgerEntries(): HasMany
+    {
+        return $this->hasMany(LedgerEntry::class);
+    }
+
+    /** The one destination money may currently be sent to, if any. */
+    public function activePayoutAccount(): ?PayoutAccount
+    {
+        return $this->payoutAccounts()->where('is_active', true)->latest('id')->first();
+    }
+
     /** Human label for the account category. */
     public function categoryLabel(): string
     {

@@ -3,9 +3,11 @@
 namespace App\Actions;
 
 use App\Models\PaymentEvent;
+use App\Models\Payout;
 use App\Models\Refund;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\RefundResult;
+use App\Services\Payments\TransferResult;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -29,6 +31,7 @@ class ReceivePaymentWebhook
         private PaymentGateway $gateway,
         private ConfirmPayment $payments,
         private IssueRefund $refunds,
+        private IssuePayout $payouts,
     ) {}
 
     /**
@@ -59,9 +62,11 @@ class ReceivePaymentWebhook
             return false;
         }
 
-        return str_starts_with($eventType, 'refund.')
-            ? $this->routeRefund($event, $eventType, $payload)
-            : $this->routeCharge($event, $payload);
+        return match (true) {
+            str_starts_with($eventType, 'refund.')   => $this->routeRefund($event, $eventType, $payload),
+            str_starts_with($eventType, 'transfer.') => $this->routeTransfer($event, $eventType, $payload),
+            default                                  => $this->routeCharge($event, $payload),
+        };
     }
 
     private function routeCharge(PaymentEvent $event, array $payload): bool
@@ -117,6 +122,50 @@ class ReceivePaymentWebhook
             currency: (string) ($data['currency'] ?? $refund->currency),
             expectedAt: isset($data['expected_at']) ? Carbon::parse($data['expected_at']) : null,
             failureReason: $data['refund_note'] ?? null,
+        ));
+    }
+
+    /**
+     * Outbound transfer outcomes (FR-M11-07).
+     *
+     * Matched on our own reference rather than the provider's transfer code:
+     * the reference is minted before the transfer is attempted, so it exists
+     * even for a transfer whose creation response never reached us — which is
+     * exactly the case where knowing the outcome matters most.
+     */
+    private function routeTransfer(PaymentEvent $event, string $eventType, array $payload): bool
+    {
+        $data = $payload['data'] ?? [];
+
+        $payout = Payout::where('provider_reference', $data['reference'] ?? '')
+            ->orWhere('provider_transfer_code', $data['transfer_code'] ?? '')
+            ->first();
+
+        if (! $payout) {
+            Log::warning('payment.webhook.unmatched_transfer', [
+                'event'     => $eventType,
+                'reference' => $data['reference'] ?? null,
+            ]);
+            $event->update(['processed_at' => now()]);
+
+            return false;
+        }
+
+        $event->update(['processed_at' => now()]);
+
+        $status = (string) ($data['status'] ?? match ($eventType) {
+            'transfer.success'  => 'success',
+            'transfer.failed'   => 'failed',
+            'transfer.reversed' => 'reversed',
+            default             => 'pending',
+        });
+
+        return $this->payouts->settle($payout, new TransferResult(
+            status: $status,
+            transferCode: $data['transfer_code'] ?? $payout->provider_transfer_code,
+            reference: $data['reference'] ?? $payout->provider_reference,
+            amountMinor: (int) ($data['amount'] ?? round((float) $payout->amount * 100)),
+            failureReason: $data['reason'] ?? ($data['message'] ?? null),
         ));
     }
 

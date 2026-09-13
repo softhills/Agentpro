@@ -108,6 +108,11 @@ SMS is `SMS_DRIVER=log` by default. Set it to `termii` with a key and a sender
 ID registered with Termii to send for real. WhatsApp logs until there is a Meta
 business account with approved templates.
 
+Payouts need Paystack's Transfers API enabled on the integration, and its
+per-transfer OTP turned off — nothing here can read a one-time code, so a
+transfer that comes back `otp` is logged and left for a person rather than
+treated as pending.
+
 **The service worker does not register under `php artisan serve` on Windows.**
 The built-in PHP server is single-threaded — six concurrent requests to it here
 were served strictly one at a time — and registering a worker needs a second
@@ -210,6 +215,32 @@ the map pin endpoint and the saved-search matcher all route through it, and
 saved criteria are validated by its own rules. If they diverged, a seeker could
 be alerted about a listing that 404s when they click it — or one they are not
 allowed to see, since visibility is decided in that same query.
+
+**Payouts are the only money with a destination somebody chose.** Everything
+else moves into the business or back along the transaction that brought it in,
+where the worst a stolen admin session can do is give money back to the people
+who paid it. A payout goes wherever the account details say, which invents an
+attack the rest of the system does not have: take over a lister's login, change
+the bank details, withdraw. Three controls answer it, and they are the feature —
+the transfer itself is one API call.
+
+The account name comes from the bank's resolve endpoint, never from the form; a
+new or changed account is held for `payouts.account_hold_hours` before anything
+can be sent to it, with a warning to the contact details *already on file*; and
+a bank name that does not match the verified identity waits for a person. Every
+payout needs a second admin with no threshold that skips it, unlike refunds.
+
+**What is owed is a ledger, not a column.** A stored balance drifts, and
+afterwards there is no way to say which number was right or where the difference
+came from. `App\Support\Ledger` sums append-only entries — a correction is
+another entry, never an edit — so a lister's statement explains itself line by
+line. Money comes off the ledger when a payout is *requested*, not when it is
+sent, or two requests can each be for the whole balance.
+
+One deliberate asymmetry: a failed *webhook* returns the money automatically, but
+a transfer call that **throws** does not. That call may have reached the provider
+before it failed, so crediting the balance could pay the same money twice. It
+goes back when a person has established what actually happened.
 
 **A taxonomy slug is a foreign key held in other people's data.** Amenities and
 areas are filtered by slug, not id — `PropertySearch` does
@@ -329,6 +360,12 @@ who hid the listing), several changes batching into one message, cosmetic edits
 queueing nothing, every email carrying a way out, and every channel a
 notification can route to being resolvable from the container.
 
+`PayoutTest` is almost entirely about the controls rather than the transfer: the
+hold on new bank details, the name that comes from the bank and not the form,
+nobody approving their own payout, the balance being spoken for at request time,
+and the three different endings a transfer has — paid, failed, and reversed days
+later, which has to put money back on a ledger that already spent it.
+
 `TaxonomyTest` is mostly about that: renaming a slug carries saved searches with
 it and the rewritten search still returns its listing; merging keeps the
 listings and handles the one tagged with both terms, which would otherwise
@@ -375,8 +412,13 @@ Not yet implemented:
 - A real WhatsApp sender. The channel and template contract exist; it logs until
   there is a Meta business account with approved templates, which have to be
   submitted weeks before they can be sent
-- Payouts to listers. Reconciliation covers money coming *in*; there is no
-  disbursement side, because R1 has nothing to disburse
+- **What earns a lister a payout.** The disbursement side is built and the ledger
+  takes credits from anywhere, but R1 sells services *to* listers and collects no
+  money on their behalf, so the only live source is an admin-granted credit —
+  a launch or referral incentive (objective O4). If listings ever carry a
+  commission, a booking deposit or rent collection, those become
+  `Ledger::record(...)` calls at the point the obligation arises and nothing
+  below them changes. **This is an open product decision, not a technical gap.**
 
 ## Open decisions blocking build
 
