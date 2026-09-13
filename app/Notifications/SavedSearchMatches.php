@@ -19,6 +19,16 @@ class SavedSearchMatches extends AgentproNotification
     /** @param Collection<int,\App\Models\Property> $properties */
     public function __construct(public SavedSearch $search, public Collection $properties) {}
 
+    /**
+     * Deliberately no SMS.
+     *
+     * This is discovery content, not something about the reader's own account,
+     * and it is the highest-volume message the platform sends. On Nigerian
+     * networks that matters beyond the cost: routing it over the DND-cleared
+     * route is precisely the abuse that gets a sender ID blocked, and routing
+     * it over the ordinary one means it is billed and silently dropped for
+     * every subscriber who has opted out. Push carries it for nothing.
+     */
     protected function preferredChannels(): array
     {
         return ['push', 'email'];

@@ -118,6 +118,11 @@
 }
 
 *{box-sizing:border-box}
+/* The UA rule for [hidden] is a plain `display:none`, so any component that
+   sets its own display — .btn is inline-flex — silently outranks it and the
+   element stays on screen. Found the hard way: the push button kept showing
+   after the script had hidden it. */
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{
   margin:0;background:var(--paper);color:var(--ink);
@@ -719,6 +724,25 @@ textarea.finput{line-height:1.55;resize:vertical}
 .refundbox summary::-webkit-details-marker{display:none}
 .slotform{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:13px;align-items:end}
 .slotform .btn{align-self:end}
+
+/* Push and SMS settings (M9) ----------------------------------------------- */
+
+.pushdevice{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin-top:4px}
+.pushstatus{font-family:var(--i);font-size:13px;color:var(--slate)}
+.pushstatus-ok{color:var(--ok-ink);font-weight:600}
+.pushstatus-warn{color:var(--warn-ink)}
+
+.prefnote{margin:11px 0 0;font-family:var(--i);font-size:12.5px;color:var(--slate);line-height:1.55}
+.prefnote-warn{padding:10px 12px;border-radius:9px;max-width:62ch;
+  background:var(--warn-soft);border:1px solid var(--warn-line);color:var(--warn-ink)}
+.prefnote a{color:inherit;text-decoration:underline}
+
+.devicelist{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:8px}
+.devicelist li{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.devicelist strong{display:block;font-family:var(--q);font-weight:700;font-size:13.5px;color:var(--ink)}
+.devicelist small{display:block;font-family:var(--i);font-size:11.5px;color:var(--slate-2);margin-top:1px}
+.devicelist form{margin:0}
 
 /* Refunds and settlement (M11) --------------------------------------------- */
 

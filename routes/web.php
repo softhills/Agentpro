@@ -22,6 +22,7 @@ use App\Http\Controllers\Lister\ScanController;
 use App\Http\Controllers\Technician\AssignmentController;
 use App\Http\Controllers\Webhooks\PaystackWebhookController;
 use App\Http\Controllers\PropertyController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SavedSearchController;
 use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
@@ -104,6 +105,21 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/account/notifications', [NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
     Route::put('/account/notifications', [NotificationPreferenceController::class, 'update'])->name('notifications.update');
+
+    /*
+    | Browser push registration (FR-M9-08).
+    |
+    | Kept inside the CSRF group on purpose. These endpoints decide where a
+    | person's notifications are delivered, so an exemption would let another
+    | site point somebody's alerts at an attacker's endpoint — see the note in
+    | public/sw.js about why the service worker does not re-register.
+    */
+    Route::get('/account/push/key', [PushSubscriptionController::class, 'key'])->name('push.key');
+    Route::post('/account/push/subscribe', [PushSubscriptionController::class, 'store'])
+        ->middleware('throttle:30,1')->name('push.subscribe');
+    Route::post('/account/push/unsubscribe', [PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
+    Route::delete('/account/push/devices/{subscription}', [PushSubscriptionController::class, 'forget'])
+        ->name('push.forget');
 
     Route::get('/verify', [VerificationController::class, 'show'])->name('verify.show');
     Route::post('/verify', [VerificationController::class, 'store'])

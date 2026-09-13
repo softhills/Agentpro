@@ -9,8 +9,15 @@ use App\Models\User;
 use App\Policies\PropertyPolicy;
 use App\Services\Identity\IdentityVerifier;
 use App\Services\Identity\StubVerifier;
+use App\Services\Messaging\LogSmsSender;
 use App\Services\Messaging\LogWhatsAppSender;
+use App\Services\Messaging\SmsSender;
+use App\Services\Messaging\TermiiSender;
 use App\Services\Messaging\WhatsAppSender;
+use App\Services\Push\LogWebPush;
+use App\Services\Push\StandardWebPush;
+use App\Services\Push\Vapid;
+use App\Services\Push\WebPushSender;
 use App\Services\Payments\FakeGateway;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\PaystackGateway;
@@ -56,6 +63,46 @@ class AppServiceProvider extends ServiceProvider
             // approved templates exist. Until then every environment logs what
             // it would have sent rather than pretending to deliver it.
             return new LogWhatsAppSender();
+        });
+
+        /*
+         * Web push (FR-M9-08).
+         *
+         * Falls back to the logging driver when no VAPID keys are configured,
+         * in any environment — including production. That is deliberate and is
+         * the opposite of the payment gateway's rule below, because the
+         * consequences are opposite: a missing payment gateway must stop the
+         * application, while a missing push key should cost a convenience, not
+         * an outage. Everything still reaches the inbox and the email.
+         */
+        $this->app->bind(WebPushSender::class, function () {
+            if (! Vapid::isConfigured()) {
+                return new LogWebPush();
+            }
+
+            return new StandardWebPush(Vapid::fromConfig());
+        });
+
+        /*
+         * SMS (FR-M9-08).
+         *
+         * Same reasoning: an unconfigured gateway logs rather than throws. The
+         * one thing it must not do is silently succeed at nothing, which is why
+         * LogSmsSender still rejects an unusable number.
+         */
+        $this->app->bind(SmsSender::class, function () {
+            $driver = (string) config('agentpro.sms.driver');
+            $apiKey = (string) config('agentpro.sms.termii.api_key');
+
+            if ($driver === 'termii' && $apiKey !== '') {
+                return new TermiiSender(
+                    $apiKey,
+                    (string) config('agentpro.sms.termii.sender_id'),
+                    (string) config('agentpro.sms.termii.base_url'),
+                );
+            }
+
+            return new LogSmsSender();
         });
 
         /*

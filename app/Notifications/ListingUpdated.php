@@ -17,6 +17,8 @@ class ListingUpdated extends AgentproNotification
     /** @param list<string> $changes */
     public function __construct(public Property $property, public array $changes) {}
 
+    /** No SMS: high volume, and about a listing the seeker is browsing rather
+     *  than about their own account. See SavedSearchMatches for the reasoning. */
     protected function preferredChannels(): array
     {
         return ['push', 'email'];

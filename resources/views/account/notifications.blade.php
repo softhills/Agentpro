@@ -17,9 +17,9 @@
             </p>
             @foreach ([
                 'email' => ['Email', 'Receipts, decisions and listing updates.'],
-                'push' => ['Push', 'Browser alerts while you are signed in.'],
+                'push' => ['Push', 'Alerts from your browser, even when Agentpro is closed.'],
                 'whatsapp' => ['WhatsApp', 'Time-sensitive things only, using approved templates.'],
-                'sms' => ['SMS', 'Fallback when nothing else reaches you.'],
+                'sms' => ['SMS', 'A text about your own listings and account — never search results.'],
             ] as $key => [$label, $blurb])
                 <label class="prefrow">
                     <input type="hidden" name="{{ $key }}" value="0">
@@ -27,6 +27,46 @@
                     <span><strong>{{ $label }}</strong><small>{{ $blurb }}</small></span>
                 </label>
             @endforeach
+
+            {{--
+                A switch that cannot work is worse than no switch. SMS needs a
+                number we can actually reach, so the gap is stated here rather
+                than discovered when a message never arrives.
+            --}}
+            @if ($preferences->enabled('sms') && ! $smsNumber)
+                <p class="prefnote prefnote-warn">
+                    SMS is on, but there is no usable Nigerian mobile number on your account,
+                    so nothing can be sent. Add one on
+                    <a href="{{ route('verify.show') }}">your account details</a>.
+                </p>
+            @elseif ($smsNumber)
+                <p class="prefnote">Texts go to {{ $smsNumber }}.</p>
+            @endif
+        </section>
+
+        {{--
+            Push is per browser, not per account, so it cannot be a checkbox on
+            a form that was submitted from somewhere else. Someone who turned it
+            on at the office and is now on their phone needs to see both facts.
+        --}}
+        <section class="formsec" data-push>
+            <h2>This device</h2>
+            <p class="secblurb">
+                The switch above is for your whole account. Push also has to be allowed
+                by each browser you use, one at a time.
+            </p>
+
+            <div class="pushdevice">
+                <button type="button" class="btn btn-ghost btn-sm" data-push-toggle="on">Checking…</button>
+                <span class="pushstatus" data-push-status>Checking this browser…</span>
+            </div>
+
+            @if (! $preferences->enabled('push'))
+                <p class="prefnote prefnote-warn">
+                    Push is switched off for your account above, so this device will not
+                    receive anything until you turn it back on.
+                </p>
+            @endif
         </section>
 
         <section class="formsec">
@@ -69,5 +109,39 @@
 
         <button type="submit" class="btn btn-blue">Save settings</button>
     </form>
+
+    @if ($devices->isNotEmpty())
+        <section class="formsec">
+            <h2>Devices receiving push</h2>
+            <p class="secblurb">
+                Anything listed here can receive your notifications. Remove one you no longer
+                use — an old phone is still listening until you do.
+            </p>
+            <ul class="devicelist">
+                @foreach ($devices as $device)
+                    <li>
+                        <span>
+                            <strong>{{ $device->deviceLabel() }}</strong>
+                            <small>
+                                added {{ $device->created_at->diffForHumans() }}
+                                @if ($device->last_used_at)
+                                    · last used {{ $device->last_used_at->diffForHumans() }}
+                                @endif
+                            </small>
+                        </span>
+                        <form method="POST" action="{{ route('push.forget', $device) }}">
+                            @csrf @method('DELETE')
+                            <button class="linkbtn">Remove</button>
+                        </form>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
 </div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/push.js') }}" defer></script>
+@endpush

@@ -102,6 +102,52 @@ return [
     ],
 
     /*
+     * Web push (FR-M9-08).
+     *
+     * There is no vendor and no account: the browser hands us an endpoint that
+     * already names its own push service, and the same signed request works
+     * against Google, Mozilla and Microsoft. The keys below are ours, generated
+     * once with `php artisan agentpro:push-keys`, and they identify this
+     * application to those services. Changing them invalidates every existing
+     * subscription, so they belong in the environment and not in a deployment
+     * script that might regenerate them.
+     */
+    'push' => [
+        'public_key'  => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+        // How a push service reaches an operator if this application starts
+        // misbehaving. Required by RFC 8292, and a real address.
+        'subject'     => env('VAPID_SUBJECT', 'mailto:ops@agentpro.ng'),
+        // How long the push service should hold a message for a browser that is
+        // offline. Two days: a listing decision is still worth seeing on
+        // Monday, and nothing here is worth a week.
+        'ttl'         => env('AGENTPRO_PUSH_TTL', 172800),
+        // Consecutive failures before a subscription is dropped. A push service
+        // having a bad afternoon must not unsubscribe the user base.
+        'give_up_after' => env('AGENTPRO_PUSH_GIVE_UP', 10),
+    ],
+
+    /*
+     * SMS (FR-M9-08).
+     *
+     * The only channel billed per message, and per *segment* rather than per
+     * message at that — see App\Support\SmsText. Two segments is the ceiling:
+     * an SMS here is a nudge towards the app, and anything longer is an email
+     * that went to the wrong place.
+     */
+    'sms' => [
+        'driver'       => env('SMS_DRIVER', 'log'),
+        'max_segments' => env('AGENTPRO_SMS_MAX_SEGMENTS', 2),
+        'termii' => [
+            'api_key'   => env('TERMII_API_KEY'),
+            // Must be pre-registered with Termii; an unregistered sender ID is
+            // silently replaced or the message is dropped.
+            'sender_id' => env('TERMII_SENDER_ID', 'Agentpro'),
+            'base_url'  => env('TERMII_BASE_URL', 'https://api.ng.termii.com'),
+        ],
+    ],
+
+    /*
      * Refunds (FR-M11-05).
      *
      * A refund can only travel back along the transaction that paid it, so the

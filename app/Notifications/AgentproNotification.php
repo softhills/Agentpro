@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use App\Channels\SmsChannel;
+use App\Channels\WebPushChannel;
 use App\Channels\WhatsAppChannel;
 use App\Support\NotificationPreferences;
 use Illuminate\Bus\Queueable;
@@ -50,6 +52,31 @@ abstract class AgentproNotification extends Notification implements ShouldQueue
         return null;
     }
 
+    /**
+     * The push payload the service worker will render.
+     *
+     * Defaulted from the inbox entry, which already carries exactly the four
+     * things a notification needs: a title, a line of body, somewhere to go and
+     * a type. Requiring every notification to write this out again would
+     * guarantee they drift apart, and push is free to send — unlike SMS and
+     * WhatsApp, which stay opt-in per notification for that reason.
+     *
+     * `tag` is what stops alerts stacking: a second push with the same tag
+     * replaces the first, so "3 new for Ikoyi" supersedes "2 new for Ikoyi"
+     * rather than sitting beneath it.
+     */
+    public function toPush(object $notifiable): array
+    {
+        $data = $this->toArray($notifiable);
+
+        return [
+            'title' => $data['title'] ?? config('app.name'),
+            'body'  => $data['body'] ?? '',
+            'url'   => $data['url'] ?? route('home'),
+            'tag'   => $data['type'] ?? 'agentpro',
+        ];
+    }
+
     final public function via(object $notifiable): array
     {
         $preferences = NotificationPreferences::for($notifiable);
@@ -60,8 +87,8 @@ abstract class AgentproNotification extends Notification implements ShouldQueue
 
         $channels = $preferences->resolve($this->preferredChannels(), $this->isUrgent());
 
-        // Deduplicated: push and SMS currently fall back to the inbox, which is
-        // already in the list, and a repeated driver would deliver twice.
+        // Deduplicated in case a mapping ever collapses two preferences onto
+        // one driver; a repeated driver would deliver the same message twice.
         return array_values(array_unique(array_merge(
             ['database'],
             array_map(fn (string $c) => $this->driverFor($c), $channels)
@@ -105,9 +132,12 @@ abstract class AgentproNotification extends Notification implements ShouldQueue
         return match ($channel) {
             'email'    => 'mail',
             'whatsapp' => WhatsAppChannel::class,
-            // Web push and SMS are not wired yet. Routing them to the inbox
-            // rather than a missing driver keeps the message reaching the user
-            // instead of throwing on send.
+            'push'     => WebPushChannel::class,
+            'sms'      => SmsChannel::class,
+            // Unreachable while CHANNELS and this map agree, and deliberately
+            // the inbox rather than a throw: a preference key that outran this
+            // match should cost a less direct delivery, not a failed job after
+            // the email has already gone.
             default    => 'database',
         };
     }

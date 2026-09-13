@@ -11,7 +11,7 @@ class CaptureBooked extends AgentproNotification
 
     protected function preferredChannels(): array
     {
-        return ['email', 'push', 'whatsapp'];
+        return ['email', 'push', 'whatsapp', 'sms'];
     }
 
     /** Somebody has to be there to let the technician in, so this cuts through. */
@@ -42,6 +42,21 @@ class CaptureBooked extends AgentproNotification
                 'when' => $this->job->scheduled_for->format('l j F, g:ia'),
             ],
         ];
+    }
+
+    /**
+     * The one notification that most earns an SMS: somebody has to be standing
+     * at a gate on a particular morning, and a lister who is not online that
+     * day still needs to know. No link — the date and the address are the
+     * whole message, and a URL would cost half the allowance to repeat what is
+     * already in the email.
+     */
+    public function toSms(object $notifiable): string
+    {
+        return 'Agentpro: your 3D capture is booked for '
+            .$this->job->scheduled_for->format('D j M, g:ia').' at '
+            .$this->job->property->address_line
+            .'. Someone must be there to let the technician in (about 2 hours).';
     }
 
     public function toArray(object $notifiable): array

@@ -10,7 +10,7 @@ class VerificationDecided extends AgentproNotification
 
     protected function preferredChannels(): array
     {
-        return ['email', 'push'];
+        return ['email', 'push', 'sms'];
     }
 
     /** Publishing is blocked until this lands, so it does not wait for morning. */
@@ -35,6 +35,16 @@ class VerificationDecided extends AgentproNotification
             ->line($this->reason ?: 'The details did not match our records.')
             ->line('Check that the name on your account matches your document exactly, then try again.')
             ->action('Try again', route('verify.show')), $notifiable);
+    }
+
+    /** Nothing can be listed until this lands, so it goes to the phone. */
+    public function toSms(object $notifiable): string
+    {
+        return $this->state === 'verified'
+            ? 'Agentpro: your identity is verified. You can now submit listings for review.'
+            : 'Agentpro: we could not verify your identity. '
+                .($this->reason ?: 'The details did not match.')
+                .' Try again at '.route('verify.show');
     }
 
     public function toArray(object $notifiable): array

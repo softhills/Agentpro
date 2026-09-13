@@ -18,7 +18,7 @@ class ListingReturned extends AgentproNotification
 
     protected function preferredChannels(): array
     {
-        return ['email', 'push'];
+        return ['email', 'push', 'sms'];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -32,6 +32,13 @@ class ListingReturned extends AgentproNotification
             ->line('Resubmit whenever you are ready — there is no limit on attempts.');
 
         return $this->withUnsubscribe($mail, $notifiable);
+    }
+
+    /** The lister is blocked until they act, so this is worth a phone buzz. */
+    public function toSms(object $notifiable): string
+    {
+        return 'Agentpro: "'.$this->property->title.'" needs changes before it can go live. '
+            .$this->note.' Edit it at '.route('lister.listings.edit', $this->property);
     }
 
     public function toArray(object $notifiable): array

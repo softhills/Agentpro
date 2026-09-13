@@ -11,7 +11,7 @@ class ListingApproved extends AgentproNotification
 
     protected function preferredChannels(): array
     {
-        return ['email', 'push', 'whatsapp'];
+        return ['email', 'push', 'whatsapp', 'sms'];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -36,6 +36,12 @@ class ListingApproved extends AgentproNotification
                 'listing' => $this->property->title,
             ],
         ];
+    }
+
+    public function toSms(object $notifiable): string
+    {
+        return 'Agentpro: "'.$this->property->title.'" is now live. '
+            .route('property.show', $this->property);
     }
 
     public function toArray(object $notifiable): array

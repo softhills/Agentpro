@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PushSubscription;
 use App\Support\Audit;
 use App\Support\NotificationPreferences;
+use App\Support\PhoneNumber;
 use Illuminate\Http\Request;
 
 class NotificationPreferenceController extends Controller
@@ -12,6 +14,14 @@ class NotificationPreferenceController extends Controller
     {
         return view('account.notifications', [
             'preferences' => NotificationPreferences::for($request->user()),
+            // Push is granted per browser, so the account-level switch above is
+            // only half the story; this is the other half.
+            'devices' => PushSubscription::where('user_id', $request->user()->id)
+                ->orderByDesc('last_used_at')->orderByDesc('id')->get(),
+            // Shown as we would dial it, and null when the stored number is not
+            // one an SMS can reach — which is worth saying out loud rather than
+            // leaving as a switch that silently does nothing.
+            'smsNumber' => PhoneNumber::national($request->user()->phone),
         ]);
     }
 

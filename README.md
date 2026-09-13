@@ -91,6 +91,35 @@ php artisan agentpro:reconcile-settlements
 
 ---
 
+## Notifications
+
+Email and the in-app inbox work out of the box. The other three need setting up:
+
+```bash
+php artisan agentpro:push-keys     # prints a VAPID pair for .env
+```
+
+Leave `VAPID_PUBLIC_KEY` blank and push logs what it would have sent instead of
+failing — a missing key costs a convenience, not an outage, and the inbox and
+email still arrive. Replacing a live pair invalidates every existing
+subscription, because browsers subscribe to a specific application server key.
+
+SMS is `SMS_DRIVER=log` by default. Set it to `termii` with a key and a sender
+ID registered with Termii to send for real. WhatsApp logs until there is a Meta
+business account with approved templates.
+
+**The service worker does not register under `php artisan serve` on Windows.**
+The built-in PHP server is single-threaded — six concurrent requests to it here
+were served strictly one at a time — and registering a worker needs a second
+connection while the page still holds the first, so the browser reports "an
+unknown error occurred when fetching the script". Nothing is wrong with the
+script or the route; serve the app through Apache, Nginx, or any multi-worker
+server and registration works. Everything else on the push path (encryption,
+signing, storage, pruning) is exercised by the test suite and does not depend on
+this.
+
+---
+
 ## Database engine
 
 The schema uses a `POINT` column with a `SPATIAL` index for viewport search.
@@ -196,6 +225,31 @@ out of the business — but it can destroy revenue. Under
 `agentpro.refunds.dual_approval_above` an admin refunds directly; over it, a
 *different* admin has to approve. Moderators cannot refund at all.
 
+**Push is encrypted to the browser, not to us.** Web push has no vendor and no
+account: the browser hands over an endpoint that already names its own push
+service, and one signed request works against Google, Mozilla and Microsoft.
+The body is encrypted with a key only that browser holds (RFC 8291), which is
+why `PushPayload` cannot be simplified away — and why it is tested against the
+RFC's published vector rather than by round-tripping itself. Getting the key
+schedule wrong does not throw and does not fail the request: the push service
+returns 201 and the browser silently discards a message it cannot read.
+
+No `minishlink/web-push`. It wants `ext-gmp`, which is not in a stock XAMPP, and
+adding an extension requirement to the deployment is the cost this project was
+set up to avoid. Core PHP has everything: openssl for P-256 and AES-GCM,
+`hash_hkdf` for the key schedule.
+
+**SMS is billed per segment, and the boundary is not where anyone expects.**
+Plain ASCII gets 160 characters; one character outside GSM 03.38 — a pasted
+curly apostrophe, an en dash, a ₦ sign — re-encodes the whole message and drops
+the allowance to 70. `SmsText` normalises the copy before measuring it, so
+"₦7,500,000 — Ikoyi" costs one segment rather than three. On Nigerian networks
+there is a second constraint: subscribers opt out of promotional traffic at the
+network (DND), so anything sent on the ordinary route to them is accepted,
+billed and never delivered. Transactional messages go on a separate cleared
+route, and using it for marketing is what gets a sender ID banned — which is why
+saved-search alerts deliberately have no `toSms()` at all.
+
 **Saved searches track reported listings, not a timestamp.** A listing published
 last week at ₦15M that drops to ₦11M today becomes a match without its
 `published_at` moving, so a watermark would never report it — and a price drop
@@ -264,6 +318,18 @@ who hid the listing), several changes batching into one message, cosmetic edits
 queueing nothing, every email carrying a way out, and every channel a
 notification can route to being resolvable from the container.
 
+`WebPushTest` leads with the RFC 8291 test vector, encrypted and decrypted, and
+checks the VAPID token verifies against the key browsers are given and that its
+audience is the endpoint's *origin* rather than the endpoint. It also covers the
+operational half: a 410 prunes the subscription, a 503 does not, re-registering
+the same endpoint does not duplicate it, and one account cannot unsubscribe
+another's device.
+
+`SmsTest` covers the two silent ways to waste money — a number that is billed
+and undeliverable, and a message that costs three segments because of one
+character nobody looked at — plus the rule that discovery notifications are
+never sent by SMS.
+
 `RefundTest` and `ReconciliationTest` cover the money that moves after a sale.
 Almost every case is a disagreement, because agreement is not what reconciliation
 is for: a payout containing money no order accounts for, an order marked paid
@@ -289,14 +355,13 @@ Not yet implemented:
   once PRD Q1 is settled
 - Video transcoding in practice — the job is written and dispatched, but needs
   FFmpeg installed to produce the 720p/480p renditions and the poster frame
-- The rest of the admin console beyond moderation — user and KYC administration,
-  taxonomies, coverage areas, technician roster. **Filament** is the intended
-  tool for this routine CRUD. The moderation queue was deliberately hand-rolled
-  instead: FR-M12-02 wants a purpose-built side-by-side review view (content,
-  media, declared title, fee breakdown, duplicate flags on one screen), which
-  generic CRUD scaffolding does poorly
-- Web push and SMS transports. Both are declared as channels and currently fall
-  back to the in-app inbox rather than failing
+- Taxonomy administration — amenities and property types are still seeded rather
+  than editable. The rest of the console (dashboard, review queue, listings,
+  people and KYC, orders and refunds, settlements, coverage and capacity, audit)
+  is built
+- A real WhatsApp sender. The channel and template contract exist; it logs until
+  there is a Meta business account with approved templates, which have to be
+  submitted weeks before they can be sent
 - Payouts to listers. Reconciliation covers money coming *in*; there is no
   disbursement side, because R1 has nothing to disburse
 
