@@ -28,6 +28,12 @@ class Area extends Model
         return $this->hasMany(Property::class);
     }
 
+    /** Bookable 3D capture capacity in this area (FR-M4-05). */
+    public function technicianSlots(): HasMany
+    {
+        return $this->hasMany(TechnicianSlot::class);
+    }
+
     /** FR-M4-02: 3D capture is only offered inside an active coverage area. */
     public function scopeScanCoverage($q)
     {

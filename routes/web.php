@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ModerationController;
 use App\Http\Controllers\Admin\OperationsController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\SettlementAdminController;
+use App\Http\Controllers\Admin\TaxonomyController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -157,6 +158,20 @@ Route::middleware('auth')->group(function () {
             Route::post('/settlement-transactions/{transaction}/confirm', [SettlementAdminController::class, 'confirmTransaction'])
                 ->name('settlements.confirm');
         });
+
+        /*
+        | Amenities and areas (FR-M12-06). Moderator-level: adding "Borehole" to
+        | the amenity list is an editorial decision, not a financial one.
+        */
+        Route::get('/taxonomy', [TaxonomyController::class, 'index'])->name('taxonomy');
+        Route::post('/taxonomy/amenities', [TaxonomyController::class, 'storeAmenity'])->name('amenities.store');
+        Route::put('/taxonomy/amenities/{amenity}', [TaxonomyController::class, 'updateAmenity'])->name('amenities.update');
+        Route::post('/taxonomy/amenities/{amenity}/merge', [TaxonomyController::class, 'mergeAmenity'])->name('amenities.merge');
+        Route::delete('/taxonomy/amenities/{amenity}', [TaxonomyController::class, 'destroyAmenity'])->name('amenities.destroy');
+        Route::post('/taxonomy/areas', [TaxonomyController::class, 'storeArea'])->name('areas.store');
+        Route::put('/taxonomy/areas/{area}', [TaxonomyController::class, 'updateArea'])->name('areas.update');
+        Route::post('/taxonomy/areas/{area}/merge', [TaxonomyController::class, 'mergeArea'])->name('areas.merge');
+        Route::delete('/taxonomy/areas/{area}', [TaxonomyController::class, 'destroyArea'])->name('areas.destroy');
 
         Route::get('/operations', [OperationsController::class, 'index'])->name('operations');
         Route::put('/areas/{area}/coverage', [OperationsController::class, 'toggleCoverage'])->name('areas.coverage');

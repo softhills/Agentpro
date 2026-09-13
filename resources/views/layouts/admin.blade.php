@@ -18,6 +18,7 @@
                 ['admin.users',      'People',     'check',  $pendingUsers ?? null],
                 ['admin.orders',     'Orders',     'phone',  $refundsWaiting ?? null],
                 ['admin.operations', 'Coverage & capacity', 'pin', null],
+                ['admin.taxonomy',   'Amenities & areas', 'area', null],
                 ['admin.audit',      'Audit log',  'plan',   null],
             ];
 

@@ -725,6 +725,43 @@ textarea.finput{line-height:1.55;resize:vertical}
 .slotform{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:13px;align-items:end}
 .slotform .btn{align-self:end}
 
+/* Taxonomy administration (M12) --------------------------------------------- */
+
+.taxblock{margin-bottom:34px}
+.taxblock > h2{font-family:var(--q);font-weight:700;font-size:20px;color:var(--heading);margin:0 0 5px}
+.taxblock .panelhint{margin-bottom:14px}
+.taxblock .panelhint a{color:var(--blue);text-decoration:underline}
+
+.taxgroup{display:flex;align-items:baseline;gap:9px;margin:20px 0 8px;
+  font-family:var(--m);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--slate-2)}
+.taxgroup em{font-style:normal;font-family:var(--i);letter-spacing:0;text-transform:none;
+  font-size:11px;color:var(--slate-2);background:var(--surface-2);border-radius:20px;padding:1px 8px}
+
+.addbox{margin-bottom:16px}
+.addbox summary{display:inline-flex;cursor:pointer;list-style:none}
+.addbox summary::-webkit-details-marker{display:none}
+.addbox[open] summary{margin-bottom:14px}
+
+.taxform{display:grid;gap:12px;max-width:420px;padding:16px 18px;
+  border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.taxform-tight{gap:8px;margin-top:8px;padding:12px 13px;max-width:260px}
+.taxform .fhint{margin:0}
+
+/* Each row can open three panels; they stack rather than fight for width. */
+.taxactions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px;min-width:210px}
+.taxactions form{margin:0}
+.linkbtn-bad{color:var(--bad-ink)}
+
+.vocabgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}
+.vocab{padding:15px 17px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.vocab h3{display:flex;align-items:baseline;gap:8px;margin:0 0 10px;
+  font-family:var(--q);font-weight:700;font-size:14px;color:var(--heading)}
+.vocab h3 em{font-style:normal;font-family:var(--i);font-size:11px;color:var(--slate-2)}
+.vocab dl{margin:0;display:grid;gap:6px}
+.vocab dl > div{display:grid;gap:1px}
+.vocab dt{font-family:var(--m);font-size:10.5px;color:var(--slate-2)}
+.vocab dd{margin:0;font-family:var(--i);font-size:12.5px;color:var(--ink)}
+
 /* Push and SMS settings (M9) ----------------------------------------------- */
 
 .pushdevice{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin-top:4px}

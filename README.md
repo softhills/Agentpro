@@ -211,6 +211,17 @@ saved criteria are validated by its own rules. If they diverged, a seeker could
 be alerted about a listing that 404s when they click it — or one they are not
 allowed to see, since visibility is decided in that same query.
 
+**A taxonomy slug is a foreign key held in other people's data.** Amenities and
+areas are filtered by slug, not id — `PropertySearch` does
+`where('slug', $slug)` — and a saved search stores the criteria it was built
+from, slugs included. So renaming a slug in place breaks nothing loudly and
+every saved search quietly: they still run and return a different set of
+results from the one the seeker asked for. `RetagTaxonomy` owns every such
+change and rewrites the references in the same transaction. It is also why
+merging exists and why deleting a term in use is refused: the pivot cascades, so
+deleting an amenity would strip it from every listing carrying it with no error
+and no record of which ones.
+
 **Money is confirmed by the provider, never asserted locally.** An order becomes
 paid when a verified transaction says so, and a refund becomes `processed` when
 the provider says the money landed — not when an operator pressed the button.
@@ -318,6 +329,12 @@ who hid the listing), several changes batching into one message, cosmetic edits
 queueing nothing, every email carrying a way out, and every channel a
 notification can route to being resolvable from the container.
 
+`TaxonomyTest` is mostly about that: renaming a slug carries saved searches with
+it and the rewritten search still returns its listing; merging keeps the
+listings and handles the one tagged with both terms, which would otherwise
+violate the pivot's composite key; an amenity in use and an area with listings
+or capture slots are refused rather than silently detached.
+
 `WebPushTest` leads with the RFC 8291 test vector, encrypted and decrypted, and
 checks the VAPID token verifies against the key browsers are given and that its
 audience is the endpoint's *origin* rather than the endpoint. It also covers the
@@ -355,10 +372,6 @@ Not yet implemented:
   once PRD Q1 is settled
 - Video transcoding in practice — the job is written and dispatched, but needs
   FFmpeg installed to produce the 720p/480p renditions and the poster frame
-- Taxonomy administration — amenities and property types are still seeded rather
-  than editable. The rest of the console (dashboard, review queue, listings,
-  people and KYC, orders and refunds, settlements, coverage and capacity, audit)
-  is built
 - A real WhatsApp sender. The channel and template contract exist; it logs until
   there is a Meta business account with approved templates, which have to be
   submitted weeks before they can be sent
