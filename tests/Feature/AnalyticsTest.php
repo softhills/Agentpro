@@ -285,6 +285,24 @@ class AnalyticsTest extends TestCase
             ->get(route('home'))->assertOk()->assertDontSee('Essential only');
     }
 
+    /**
+     * The banner is shown to guests, so its link has to be one a guest can
+     * open. It pointed at /account/data, which sits behind the auth middleware
+     * — so the only explanatory link on a consent banner bounced the people
+     * seeing it to a login wall.
+     */
+    public function test_the_banner_link_is_readable_without_an_account(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+
+        $response->assertSee(route('pages.privacy'), false)
+            ->assertDontSee(route('privacy.index'), false);
+
+        // And it resolves for somebody with no session at all.
+        $this->get(route('pages.privacy'))->assertOk();
+        $this->assertGuest();
+    }
+
     public function test_an_unanswered_banner_means_essential_only(): void
     {
         // The default is a refusal, not a pending yes (FR-M1-02).

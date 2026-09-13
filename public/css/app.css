@@ -72,6 +72,10 @@
 
   --shadow-card:0 1px 2px rgba(31,42,78,.05), 0 6px 18px rgba(31,42,78,.06);
   --shadow-pop:0 4px 12px rgba(31,42,78,.09), 0 16px 40px rgba(31,42,78,.11);
+  /* Both existing shadows cast downward, which is invisible on a bar pinned to
+     the bottom of the viewport. Tokenised rather than inlined so the dark theme
+     can carry its own: a 7% black shadow on a near-black page does nothing. */
+  --shadow-up:0 -2px 8px rgba(31,42,78,.06), 0 -12px 32px rgba(31,42,78,.10);
 
   --r:14px; --r-sm:9px; --r-pill:999px;
 
@@ -129,6 +133,7 @@
 
   --shadow-card:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
   --shadow-pop:0 4px 12px rgba(0,0,0,.45), 0 16px 40px rgba(0,0,0,.4);
+  --shadow-up:0 -2px 8px rgba(0,0,0,.45), 0 -12px 32px rgba(0,0,0,.4);
 }
 
 *{box-sizing:border-box}
@@ -929,21 +934,44 @@ textarea.finput{line-height:1.55;resize:vertical}
   font-family:var(--m);font-size:11px;color:var(--slate-2)}
 
 /* ------------------------------------------------------------------- consent
-   FR-M1-02. Both choices are the same button: the default is already
-   essential-only, so nothing here needs to push anyone towards yes, and a
-   banner whose decline is grey six-point text collects consent worth nothing. */
-.consent{position:sticky;bottom:0;z-index:40;background:var(--surface);
-  border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(0,0,0,.07)}
-.consent-in{max-width:1180px;margin:0 auto;padding:15px 22px;
-  display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px}
-.consent-copy{margin:0;flex:1 1 380px;font-family:var(--i);font-size:13px;
-  line-height:1.55;color:var(--ink);max-width:74ch}
+   FR-M1-02.
+
+   Both choices are the same button. The default is already essential-only, so
+   nothing here needs to push anyone towards yes, and a banner whose decline is
+   grey six-point text collects consent worth nothing. "Equal weight" is about
+   emphasis, though — not about being hard to see, which is what the first
+   version accidentally was: the bar used --surface and so do ghost buttons, so
+   the controls had no fill contrast against the thing containing them and read
+   as faint outlines.
+
+   The bar now sits on --surface-2, one step down the ladder from cards, which
+   puts the buttons a step above it and gives them an edge again. It also stops
+   the bar merging into a page made of --surface cards. */
+.consent{position:sticky;bottom:0;z-index:40;background:var(--surface-2);
+  border-top:1px solid var(--line);box-shadow:var(--shadow-up)}
+.consent-in{max-width:1180px;margin:0 auto;
+  padding:14px 22px;
+  /* Phones with a home indicator eat the bottom of a pinned bar. max() keeps
+     the normal padding everywhere else. */
+  padding-bottom:max(14px, env(safe-area-inset-bottom, 0px));
+  display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px}
+.consent-copy{margin:0;flex:1 1 340px;font-family:var(--i);font-size:13px;
+  line-height:1.55;color:var(--ink);max-width:68ch}
+.consent-copy b{font-family:var(--q);font-weight:700;color:var(--heading)}
 .consent-copy a{color:var(--blue)}
 .consent-acts{display:flex;gap:9px;flex:0 0 auto}
 .consent-acts form{margin:0}
-@media (max-width:560px){
+/* Raised off the bar, and a firmer border than the default ghost: these are the
+   only two controls on it and both have to read as pressable at a glance. */
+.consent-acts .btn{background:var(--surface);border-color:var(--slate-2);white-space:nowrap}
+.consent-acts .btn:hover{border-color:var(--blue);color:var(--blue)}
+
+@media (max-width:620px){
+  .consent-in{padding:13px 16px;padding-bottom:max(13px, env(safe-area-inset-bottom, 0px));gap:11px 14px}
+  .consent-copy{flex:1 1 100%;font-size:12.5px}
   .consent-acts{width:100%}
-  .consent-acts form,.consent-acts .btn{flex:1 1 0;width:100%}
+  .consent-acts form{flex:1 1 0}
+  .consent-acts .btn{width:100%}
 }
 
 /* ------------------------------------------------------------------ realsure

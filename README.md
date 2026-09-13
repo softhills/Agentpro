@@ -378,6 +378,19 @@ completed rows would turn the panel into a list of ticks that reads as a full
 audit. A badge that does not say what was checked is worth nothing, and one
 that hides what was *not* checked is worse than nothing.
 
+**The consent banner's two buttons are identical in weight, but that is about
+emphasis, not visibility.** The first version got the principle right and the
+execution wrong: the bar used `--surface` and so do ghost buttons, so the only
+two controls on it had no fill contrast against the thing containing them and
+read as faint outlines. The bar now sits on `--surface-2`, one step down the
+ladder from cards, which gives the buttons an edge again and stops the bar
+merging into a page made of cards. The shadow is a `--shadow-up` token because
+both existing shadow tokens cast downward — invisible on a bar pinned to the
+bottom — and because a hard-coded 7% black shadow does nothing on a near-black
+page. The banner's only explanatory link pointed at `/account/data`, which sits
+behind `auth`: the one link on a banner shown to guests bounced them to a login
+wall. It goes to the public privacy notice, and a test pins that.
+
 **Consent draws the line between counting and following.** FR-M13-04 says no
 non-essential tracking before consent, and the difficult part is not the banner
 — it is that a reading too broad leaves the lister's analytics permanently
