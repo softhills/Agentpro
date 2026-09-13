@@ -139,6 +139,15 @@
         </section>
     @endif
 
+    {{--
+        The only route to the privacy screen in the chrome. Settings is where
+        people look for it, and a statutory right nobody can find is not one
+        they have in practice.
+    --}}
+    <p class="formnote" style="margin-top:16px">
+        Want a copy of everything we hold about you, or want it erased?
+        <a href="{{ route('privacy.index') }}">Your data</a>.
+    </p>
 </div>
 @endsection
 

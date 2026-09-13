@@ -44,3 +44,16 @@ Schedule::command('agentpro:run-saved-searches --frequency=daily')
 Schedule::command('agentpro:reconcile-settlements')
     ->dailyAt('06:30')
     ->withoutOverlapping();
+
+/*
+ | FR-M1-09: carry out erasures whose cooling-off has ended, and delete exports
+ | nobody collected.
+ |
+ | Hourly rather than daily, because the cooling-off period is a promise with a
+ | time on it — "your account closes at 6pm on Thursday" should not mean 6am on
+ | Friday. It also keeps uncollected export files, each a complete copy of
+ | somebody's account, from sitting around for most of a day after they expire.
+ */
+Schedule::command('agentpro:run-data-requests')
+    ->hourly()
+    ->withoutOverlapping();

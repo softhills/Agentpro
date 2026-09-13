@@ -202,6 +202,44 @@ return [
         'variance_tolerance' => env('AGENTPRO_SETTLEMENT_TOLERANCE', 1.00),
     ],
 
+    /*
+     * Access and erasure (FR-M1-09, NDPA 2023).
+     *
+     * @see \App\Support\PersonalData for what an erasure does to each table and
+     *      the justification for everything it keeps.
+     */
+    'privacy' => [
+        /*
+         * How long a scheduled erasure waits before it runs.
+         *
+         * Longer than the payout hold (24h), and for a different reason. A
+         * stolen login is worth money if it can redirect a payout, so that hold
+         * only has to outlast the attacker's patience. An erasure is worth
+         * nothing but harm — which is exactly what makes it the thing a
+         * vindictive attacker reaches for — and it cannot be undone afterwards,
+         * so this has to outlast a weekend away from a phone. Shortening it is
+         * a real decision, not a tuning knob.
+         */
+        'erasure_grace_hours' => env('AGENTPRO_ERASURE_GRACE_HOURS', 72),
+
+        // How long a built export stays downloadable. An uncollected export is
+        // a complete copy of somebody's account sitting on a disk, so this is
+        // short on purpose — and asking again costs nothing.
+        'export_expires_hours' => env('AGENTPRO_EXPORT_EXPIRY_HOURS', 72),
+
+        /*
+         * Exports are written here. 'local' is Laravel's private disk — outside
+         * the web root, with no URL of its own — and that is the requirement,
+         * not the convenience. Pointing this at a public disk would publish
+         * every export to anyone who could guess a uuid.
+         */
+        'export_disk' => env('AGENTPRO_EXPORT_DISK', 'local'),
+
+        // Shown in the export file and on the privacy screen. NDPA s. 31
+        // requires a contact point for data-subject requests.
+        'contact' => env('AGENTPRO_PRIVACY_CONTACT', 'privacy@agentpro.ng'),
+    ],
+
     'paystack' => [
         'secret_key'   => env('PAYSTACK_SECRET_KEY'),
         'public_key'   => env('PAYSTACK_PUBLIC_KEY'),

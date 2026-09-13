@@ -292,6 +292,43 @@ billed and never delivered. Transactional messages go on a separate cleared
 route, and using it for marketing is what gets a sender ID banned — which is why
 saved-search alerts deliberately have no `toSms()` at all.
 
+**Erasure is anonymisation, not a delete, and `PersonalData` is where that is
+decided.** Orders, refunds, payouts, ledger entries and the audit trail all hang
+off the account row and all have to be kept — revenue and anti-money-laundering
+rules require transaction records for six years, and s. 34(2) of the NDPA allows
+for exactly that rather than overriding another statute. Dropping the row would
+either cascade those away or orphan them, and an audit trail whose actor cannot
+be resolved has stopped being one. So the row survives with every personal field
+overwritten. `app/Support/PersonalData.php` records that judgement table by
+table, with the justification we would have to give if a regulator asked, and
+`PersonalDataTest` reads the live schema and fails on any table that references
+`users` without an entry. That test is the real protection here: nobody is going
+to break the erasure code, but somebody will add a table with a `user_id` on it
+in eighteen months, and without the guard every privacy test would keep passing
+while the platform quietly stopped honouring a statutory right on that table.
+
+**An erasure waits, and is re-checked when it runs.** It is the most destructive
+thing an account can do to itself and it cannot be undone, which makes it worth
+something to whoever has stolen a login — not to steal, but to destroy. So it is
+held for 72 hours and the warning goes to the contact details already on file,
+the same control as a change of payout bank details, for the same reason. The
+blockers — a live listing, a balance still owed, a payout or refund in flight, a
+paid capture that has not happened — are then checked *again* at the moment it
+runs, because three days is long enough for a listing to be republished, and
+running anyway would destroy the record of an obligation that did not exist when
+the button was pressed. Cancelling asks for nothing at all: it is the escape
+hatch in a takeover, and an attacker who cancels their own erasure has achieved
+nothing.
+
+**An export is announced, not handed over.** The file is built on the queue and
+the person is told through their registered contact details; the download itself
+stays behind the session, and the message carries no link to it. A forwarded
+email should not be a copy of somebody's whole account. Every query in
+`ExportAccountData` names its columns explicitly rather than selecting `*`, so
+the failure mode where a newly added column starts leaking by default cannot
+happen — and a lister's export contains no detail of the seekers who enquired on
+their listings, because that is the seekers' data and they have their own copy.
+
 **Saved searches track reported listings, not a timestamp.** A listing published
 last week at ₦15M that drops to ₦11M today becomes a match without its
 `published_at` moving, so a watermark would never report it — and a price drop
@@ -366,6 +403,19 @@ nobody approving their own payout, the balance being spoken for at request time,
 and the three different endings a transfer has — paid, failed, and reversed days
 later, which has to put money back on a ledger that already spent it.
 
+`PrivacyTest` divides unevenly on purpose. The export is mostly about what it
+must *not* contain — another person's details, our own secrets, an unmasked
+account number — because a right-of-access feature that over-shares turns a
+privacy obligation into a data breach. The erasure is almost entirely about the
+controls: that it waits, that it warns the person it is happening to on the
+details already on file, that it refuses out loud while somebody is still owed
+something, that cancelling needs nothing, and that the blockers are checked
+again at the moment it runs rather than only when it was asked for.
+
+`PersonalDataTest` guards the manifest against the schema, and then proves the
+guard is not decoration by creating a table with a `user_id` on it and asserting
+it gets caught.
+
 `TaxonomyTest` is mostly about that: renaming a slug carries saved searches with
 it and the rewritten search still returns its listing; merging keeps the
 listings and handles the one tagged with both terms, which would otherwise
@@ -409,6 +459,13 @@ Not yet implemented:
   once PRD Q1 is settled
 - Video transcoding in practice — the job is written and dispatched, but needs
   FFmpeg installed to produce the 720p/480p renditions and the poster frame
+- **The published privacy notice.** `/account/data` gives people the two rights
+  the NDPA grants them over their own data, and the export names the lawful
+  basis for every section it contains — but s. 27 also requires a notice
+  published *before* collection, and the `Privacy` link in the footer still goes
+  nowhere. That is a corporate page with legal wording on it, not a feature, and
+  it needs a lawyer rather than a commit. `config('agentpro.privacy.contact')`
+  is the address it has to name.
 - A real WhatsApp sender. The channel and template contract exist; it logs until
   there is a Meta business account with approved templates, which have to be
   submitted weeks before they can be sent

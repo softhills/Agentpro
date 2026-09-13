@@ -24,6 +24,7 @@ use App\Http\Controllers\Lister\SandboxCheckoutController;
 use App\Http\Controllers\Lister\ScanController;
 use App\Http\Controllers\Technician\AssignmentController;
 use App\Http\Controllers\Webhooks\PaystackWebhookController;
+use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SavedSearchController;
@@ -108,6 +109,26 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/account/notifications', [NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
     Route::put('/account/notifications', [NotificationPreferenceController::class, 'update'])->name('notifications.update');
+
+    /*
+    | Your data (FR-M1-09, NDPA ss. 34 and 38).
+    |
+    | Throttled hard in one direction only. Building an export reads seventeen
+    | tables and writes a file, so repeating it is a cheap way to make the
+    | server do expensive work — and there is no honest reason to ask twice in
+    | an hour. Cancelling is not throttled at all: it is the escape hatch when
+    | somebody else is signed in as you, and rate-limiting that would be
+    | rate-limiting the victim.
+    */
+    Route::get('/account/data', [PrivacyController::class, 'index'])->name('privacy.index');
+    Route::post('/account/data/export', [PrivacyController::class, 'export'])
+        ->middleware('throttle:3,60')->name('privacy.export');
+    Route::get('/account/data/{dataRequest}/download', [PrivacyController::class, 'download'])
+        ->name('privacy.download');
+    Route::post('/account/data/erase', [PrivacyController::class, 'erase'])
+        ->middleware('throttle:5,60')->name('privacy.erase');
+    Route::post('/account/data/{dataRequest}/cancel', [PrivacyController::class, 'cancel'])
+        ->name('privacy.cancel');
 
     /*
     | Browser push registration (FR-M9-08).

@@ -30,13 +30,22 @@
 
   --amber:#FFB800;
   --amber-ink:#7A5600;
-  --on-amber:var(--on-amber);
+  /* Same self-reference bug: the unit-count pill and the price-drop tag were
+     rendering amber-on-inherited rather than amber-on-near-black. 9.9:1. */
+  --on-amber:#241A02;
 
-  /* semantic trio: soft fill, readable ink, and a border that sits between */
-  --ok-soft:#E7F5E3;   --ok-ink:var(--ok-ink);   --ok-line:var(--ok-line);
-  --warn-soft:#FDF2D9; --warn-ink:#7A5600; --warn-line:var(--warn-line);
-  --bad-soft:#FBE7E4;  --bad-ink:var(--bad-ink);  --bad-line:var(--bad-line);
-  --error:var(--error);
+  /* semantic trio: soft fill, readable ink, and a border that sits between.
+     Six of these were written as var(--themselves) — a self-reference, which is
+     invalid at computed-value time, so in the light theme every error state,
+     "all clear" tick and warning border resolved to nothing and fell back to
+     the inherited colour. The dark palette below always carried real values,
+     which is why it only ever showed in light mode. Ink is measured against its
+     own soft fill; the lines sit just above the neutral --line (1.28:1) so a
+     tinted border reads as tinted without shouting. */
+  --ok-soft:#E7F5E3;   --ok-ink:#1E6B12;   --ok-line:#A8D6A0;  /* 5.86:1 */
+  --warn-soft:#FDF2D9; --warn-ink:#7A5600; --warn-line:#E3C98A;  /* 5.98:1 */
+  --bad-soft:#FBE7E4;  --bad-ink:#8E2B2B;  --bad-line:#E8B5AC;  /* 6.98:1 */
+  --error:#8E2B2B;
 
   /* surfaces — page sits below cards, never the other way round */
   --paper:#E9EDF5;
@@ -49,8 +58,13 @@
   --slate:#5C6478;
   --slate-2:#828B9E;
 
-  --w3w:var(--w3w);
-  --placeholder:var(--placeholder);
+  /* The last two self-references. what3words' brand red (#E11F26) only reaches
+     3.99:1 on --bad-soft, which is the pill it always sits in, so the light
+     theme uses a darkened version of it at 4.96:1 rather than the brand value.
+     --placeholder resolving to nothing meant image placeholders were
+     transparent and showed the page ground instead of a distinct well. */
+  --w3w:#C41E25;
+  --placeholder:#E2E7F0;
   --map-bg:#E4EAF2;
   --hero-1:#DCE6F5; --hero-2:#C3D4EC; --hero-3:#B4C9E6;
   --hero-ink:#3C4A66; --hero-ink-2:#4A5875;
@@ -840,3 +854,45 @@ textarea.finput{line-height:1.55;resize:vertical}
   .balancetotal b{font-size:20px}
   .refundcell{min-width:0}
 }
+
+/* ---------------------------------------------------------------- your data
+   FR-M1-09. The three dispositions are colour-coded to the semantic trio the
+   rest of the app already uses — red for gone, amber for held, green for kept
+   intact — so a reader can tell the groups apart before reading a word. */
+.disposal{display:grid;gap:14px}
+.disposalgroup{padding:15px 17px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.disposalgroup h3{margin:0 0 3px;font-family:var(--q);font-weight:700;font-size:14px;color:var(--heading)}
+.disposalgroup > .sub{display:block;margin-bottom:11px}
+.disposalgroup .plainlist{gap:10px}
+.disposalgroup .plainlist li{padding-left:13px;border-left:2px solid var(--line)}
+.disposal-delete{border-color:var(--bad-line)}
+.disposal-delete .plainlist li{border-left-color:var(--bad-line)}
+.disposal-anonymise{border-color:var(--warn-line)}
+.disposal-anonymise .plainlist li{border-left-color:var(--warn-line)}
+.disposal-retain{border-color:var(--ok-line)}
+.disposal-retain .plainlist li{border-left-color:var(--ok-line)}
+
+/* Destructive, and it should not look like the button next to it. Outlined
+   rather than filled: a solid red block reads as the primary action on the
+   page, which closing your account never is. */
+.btn-danger{background:var(--surface);color:var(--bad-ink);border:1.5px solid var(--bad-line)}
+.btn-danger:hover{background:var(--bad-soft)}
+
+/* ------------------------------------------------------- getting paid (M11)
+   The balance and the registered bank account. Both carry a figure or a name
+   that has to be read exactly, so both use tabular figures and neither wraps
+   its identifying line. */
+.balancecard{margin-bottom:22px;padding:18px 20px;border:1px solid var(--line);
+  border-radius:13px;background:var(--surface);display:grid;gap:3px}
+.balancelabel{font-family:var(--m);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--slate-2)}
+.balancecard strong{font-family:var(--q);font-weight:700;font-size:27px;color:var(--sure);
+  font-variant-numeric:tabular-nums}
+.balancecard .fhint{margin:6px 0 0;max-width:60ch}
+
+.bankcard{display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+  padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.bankcard > div{display:grid;gap:2px;min-width:0}
+.bankcard strong{font-family:var(--q);font-weight:700;font-size:14px;color:var(--heading)}
+.bankcard .sub{font-variant-numeric:tabular-nums}
+.bankcard > :last-child{margin-left:auto}
