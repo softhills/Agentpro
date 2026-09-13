@@ -88,7 +88,7 @@
                 <li><x-icon name="check" stroke-width="2.5" />Community and neighbour investigation</li>
                 <li><x-icon name="check" stroke-width="2.5" />On-site capture by an Agentpro technician</li>
             </ul>
-            <a href="#" class="btn btn-blue">How RealSure works</a>
+            <a href="{{ route('pages.realsure') }}" class="btn btn-blue">How RealSure works</a>
         </div>
 
         <div class="vbplayer">

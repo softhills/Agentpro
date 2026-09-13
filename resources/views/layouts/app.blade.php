@@ -66,9 +66,9 @@
       <a href="{{ route('search', ['intent' => 'rent']) }}" @class(['cur' => request('intent') === 'rent'])>Rent</a>
       <a href="{{ route('search', ['intent' => 'sale']) }}" @class(['cur' => request('intent') === 'sale'])>Buy</a>
       <a href="{{ route('search', ['type' => 'land']) }}" @class(['cur' => request('type') === 'land'])>Land</a>
-      <a href="#">RealSure</a>
-      <a href="#">Areas</a>
-      <a href="#">Agents</a>
+      <a href="{{ route('pages.realsure') }}" @class(['cur' => request()->routeIs('pages.realsure')])>RealSure</a>
+      <a href="{{ route('pages.areas') }}" @class(['cur' => request()->routeIs('pages.area*')])>Areas</a>
+      <a href="{{ route('pages.agents') }}" @class(['cur' => request()->routeIs('pages.agent*')])>Agents</a>
     </nav>
     <div class="navright">
       <button type="button" class="themetoggle" data-theme-toggle
@@ -115,7 +115,9 @@
 <footer class="foot">
   <div class="container in">
     <strong style="color:var(--on-navy);font-size:15px">Agentpro</strong>
-    <a href="#">RealSure</a><a href="#">Areas</a><a href="#">Agents</a><a href="#">Terms</a><a href="#">Privacy</a>
+    <a href="{{ route('pages.realsure') }}">RealSure</a><a href="{{ route('pages.areas') }}">Areas</a><a
+       href="{{ route('pages.agents') }}">Agents</a><a href="{{ route('pages.about') }}">About</a><a
+       href="{{ route('pages.terms') }}">Terms</a><a href="{{ route('pages.privacy') }}">Privacy</a>
     <p class="legal">
       Title information shown on listings is declared by the lister. Agentpro makes no
       representation as to the legal validity of any title unless the title-verification

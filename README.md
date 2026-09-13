@@ -293,6 +293,62 @@ billed and never delivered. Transactional messages go on a separate cleared
 route, and using it for marketing is what gets a sender ID banned — which is why
 saved-search alerts deliberately have no `toSms()` at all.
 
+**HotPads parity on the listing page (PRD §16).** Four R1 items from that
+benchmark lived only on the server: saving, hiding and reporting a listing each
+had a route, an action and passing tests, while the page a seeker would use them
+on had three `<button type="button">` elements wired to nothing. Price history
+was eager-loaded and never rendered. That is the failure mode where every unit
+test passes and the feature does not exist, which is why `ListingDetailTest`
+asserts the page *reaches* the behaviour rather than that the behaviour works.
+
+The page now carries the same signals HotPads leads with. **"Updated N ago"**
+sits beside the address, where a seeker decides whether a listing is still real
+(FR-M2-14) — it was on the card and missing from the detail page.
+**Price history** (FR-M7-07) shows only once the price has actually moved; one
+point is not a history and a single-row panel implies a change that did not
+happen. **Interest this week** is HotPads' "Competition for this rental", built
+from events M13 already records, and it is the same figure the lister sees on
+their performance screen so the two cannot tell different stories about one
+listing. It is suppressed below `listings.demand_floor`: "viewed 2 times this
+week" reads as a dead listing whether or not it is one, and at launch — when
+supply is deliberately thin because every listing is human-approved — publishing
+that about somebody's property helps nobody.
+
+**The listing has its own map**, reusing the same Leaflet build as search rather
+than a second map stack. Scroll-wheel zoom is off and one-finger drag is
+disabled on touch, because a map halfway down a long page that swallows the
+scroll gesture is a map you cannot scroll past. The marker is a soft circle
+rather than a dropped pin: the coordinate is what the lister typed, and in a
+market where street addressing is unreliable (problem P3) a sharp pin claims a
+precision nobody has verified.
+
+The search map needed no change — it is already the primary surface, and on
+mobile it carries `order:-1` so it sits above the results rather than below them.
+
+**The corporate pages are built from the database, not from copy.** An area page
+that says "Lekki Phase 1 is a vibrant neighbourhood" tells a seeker nothing they
+can act on, and goes stale the moment it is written; one that says how many
+listings are live, what the middle of the price range is and whether 3D capture
+is available there is worth opening and cannot drift. The same rule holds for
+the agent directory, which lists only verified listers who have stock, and for
+the lister profile (FR-M1-07), where every figure is derived and nothing is
+written by the lister. A rating is withheld below `profiles.minimum_ratings`,
+because a "5.0" from one rating is not a reputation and printing it as one would
+mislead in the lister's favour — the opposite of what a trust platform is for.
+
+**The privacy notice is generated from `PersonalData::map()`** — the same
+manifest the erasure runs on. A notice written by hand starts accurate and
+drifts the first time a table is added; this one cannot, because the guard test
+that forces every new table into the manifest is also what keeps the page
+complete. The prose around it still needs a Nigerian lawyer; what it says about
+the system is true, which is the part software can be responsible for.
+
+**The RealSure officer console moved to `/officer`.** The product name belongs
+to the public page the header and footer link to, and an internal console should
+never hold a URL the marketing surface needs. Route names stay `realsure.*`
+because they describe the records being managed, while the path describes who
+the screens are for — the same split as `/technician`.
+
 **The RealSure badge is granted, never derived.** It would be easy to light it
 up the moment a component is ticked, and wrong: the ten components in FR-M6-02
 include photography and floor plans, which are services the lister bought
@@ -477,6 +533,18 @@ nobody approving their own payout, the balance being spoken for at request time,
 and the three different endings a transfer has — paid, failed, and reversed days
 later, which has to put money back on a ledger that already spent it.
 
+`ListingDetailTest` covers the HotPads parity items, and mostly checks that the
+page can reach behaviour that already worked — saving, hiding and reporting were
+tested end to end while the listing page wired to none of them. It also pins the
+two judgement calls: price history appears only after the price has moved, and
+the demand figure stays hidden below the floor.
+
+`CorporatePagesTest` protects two things: that these pages exist at all — every
+one of them was a dead `href="#"`, and one rotting back to nothing would be
+worse than never having built them, so the suite fails if `href="#"` reappears
+anywhere — and who appears on them. The directory, the profiles and the sitemap
+all publish people, and an unverified lister must not reach any of the three.
+
 `RealsureTest` is almost entirely about what must not be possible: a badge
 earned on photography alone, a badge without the title check, a lister badging
 their own listing, a badge that outlives the verification underneath it, and a
@@ -547,13 +615,15 @@ Not yet implemented:
   once PRD Q1 is settled
 - Video transcoding in practice — the job is written and dispatched, but needs
   FFmpeg installed to produce the 720p/480p renditions and the poster frame
-- **The published privacy notice.** `/account/data` gives people the two rights
-  the NDPA grants them over their own data, and the export names the lawful
-  basis for every section it contains — but s. 27 also requires a notice
-  published *before* collection, and the `Privacy` link in the footer still goes
-  nowhere. That is a corporate page with legal wording on it, not a feature, and
-  it needs a lawyer rather than a commit. `config('agentpro.privacy.contact')`
-  is the address it has to name.
+- **Legal review of `/terms` and `/privacy`.** Both pages are built and both are
+  accurate about what the system does — the privacy notice is generated from the
+  erasure manifest, so it cannot describe something the code does not do. What
+  neither has is a lawyer. Nothing on them invents a warranty, a liability cap
+  or a dispute-resolution clause, because that is drafting rather than
+  engineering, and a plausible-sounding invented clause on a live legal page is
+  worse than a missing one. The company details they print
+  (`agentpro.company.*`) are also empty until somebody fills in the real RC
+  number and registered address.
 - A real WhatsApp sender. The channel and template contract exist; it logs until
   there is a Meta business account with approved templates, which have to be
   submitted weeks before they can be sent

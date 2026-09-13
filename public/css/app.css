@@ -980,3 +980,156 @@ textarea.finput{line-height:1.55;resize:vertical}
 .surecomp-state em{font-style:normal;color:var(--slate-2);display:block;font-size:11.5px}
 .surecomp .taxform{margin:14px 15px 15px;max-width:520px}
 .surecomp .prefrow{margin-bottom:2px}
+
+/* ------------------------------------------------------- corporate pages (D2)
+   One shared layer for RealSure, Areas, Agents, About, Terms and Privacy. They
+   are read rather than operated, so the measure is tighter and the rhythm is
+   vertical — no cards-in-a-grid where a paragraph would do. */
+.cpage{padding-bottom:64px}
+.chero{background:var(--surface);border-bottom:1px solid var(--line);padding:52px 0 42px;margin-bottom:38px}
+.chero-tight{padding:38px 0 32px;margin-bottom:30px}
+.ceyebrow{font-family:var(--m);font-size:11px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--blue);margin:0 0 13px}
+.ceyebrow a{color:inherit}
+.chero h1{font-family:var(--q);font-weight:700;font-size:clamp(29px,4.4vw,44px);line-height:1.06;
+  letter-spacing:-.02em;margin:0 0 12px;color:var(--heading);text-wrap:balance;max-width:20ch}
+.clede{font-family:var(--i);font-size:17px;line-height:1.6;color:var(--slate);margin:0;max-width:60ch}
+.cactions{display:flex;flex-wrap:wrap;gap:11px;align-items:center;margin:22px 0 0}
+
+.cband{margin-bottom:46px}
+.cband > h2{font-family:var(--q);font-weight:700;font-size:23px;letter-spacing:-.01em;
+  margin:0 0 12px;color:var(--heading);text-wrap:balance}
+.cbody{font-family:var(--i);font-size:15.5px;line-height:1.68;color:var(--ink);margin:0 0 14px;max-width:68ch}
+.cbody.sub{font-size:14px;color:var(--slate)}
+/* Legal pages are read start to finish, so they get a narrower measure than
+   the marketing ones and more air between sections. */
+.cprose .cband{margin-bottom:40px;max-width:72ch}
+.cprose .cband > h2{font-size:20px}
+
+.cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.ccard{padding:20px 22px;border:1px solid var(--line);border-radius:13px;background:var(--surface)}
+.ccard h3{display:flex;align-items:center;gap:9px;margin:0 0 7px;
+  font-family:var(--q);font-weight:700;font-size:16px;color:var(--heading)}
+.ccard h3 svg{width:19px;height:19px;flex:none;color:var(--blue)}
+.ccard .sub{margin:0;font-family:var(--i);font-size:14px;line-height:1.6;color:var(--slate)}
+/* RealSure owns its own colour so a trust mark never reads as a button. */
+.ccard-sure{border-color:var(--sure);background:var(--sure-soft,var(--surface))}
+.ccard-sure h3 svg{color:var(--sure)}
+
+.cticks{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px;
+  font-family:var(--i);font-size:14.5px;color:var(--ink)}
+.cticks li{display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+.cticks svg{width:16px;height:16px;flex:none;margin-top:3px;color:var(--sure)}
+.cticks-plain svg{color:var(--slate-2)}
+
+.crules{margin:0;padding:0;list-style:none;counter-reset:r;display:grid;gap:13px;max-width:70ch}
+.crules li{counter-increment:r;position:relative;padding-left:38px;
+  font-family:var(--i);font-size:15px;line-height:1.6;color:var(--ink)}
+.crules li::before{content:counter(r);position:absolute;left:0;top:0;width:25px;height:25px;
+  border-radius:50%;background:var(--blue-soft);color:var(--blue);font-family:var(--m);
+  font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.crules b{font-family:var(--q);font-weight:700}
+
+.kvlist{margin:0;border-top:1px solid var(--line);max-width:72ch}
+.kvlist > div{display:grid;grid-template-columns:minmax(140px,200px) 1fr;gap:8px 22px;
+  padding:13px 0;border-bottom:1px solid var(--line)}
+.kvlist dt{font-family:var(--q);font-weight:700;font-size:14.5px;color:var(--heading)}
+.kvlist dd{margin:0;font-family:var(--i);font-size:14.5px;line-height:1.62;color:var(--slate)}
+
+/* Areas */
+.arealist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.areacard{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px;border:1px solid var(--line);border-radius:11px;background:var(--surface);
+  text-decoration:none;color:inherit}
+.areacard:hover{border-color:var(--blue);background:var(--surface-2)}
+.areacard-name{font-family:var(--q);font-weight:700;font-size:14.5px;color:var(--heading);
+  display:grid;gap:4px;min-width:0}
+.areacard-count{font-family:var(--q);font-weight:700;font-size:17px;color:var(--ink);
+  font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.areacard-count em{display:block;font-style:normal;font-family:var(--i);font-size:11.5px;
+  font-weight:400;color:var(--slate-2)}
+.areatag{display:inline-flex;align-items:center;gap:5px;font-style:normal;font-family:var(--m);
+  font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--sure);font-weight:600}
+.areatag svg{width:13px;height:13px}
+.areatag-lg{font-size:11.5px;padding:9px 14px;border-radius:var(--r-pill);
+  background:var(--sure-soft,var(--surface-2));text-transform:none;letter-spacing:0}
+
+.areastats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;
+  margin:24px 0 0;background:var(--line);border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;max-width:660px}
+.areastats > div{background:var(--surface);padding:14px 16px}
+.areastats dt{font-family:var(--m);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--slate-2);margin:0 0 4px}
+.areastats dd{margin:0;font-family:var(--q);font-weight:700;font-size:21px;color:var(--ink);
+  font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.areastats dd span{font-family:var(--i);font-weight:400;font-size:12px;color:var(--slate-2)}
+.areastats .ddsure{color:var(--sure);font-size:17px}
+.areastats .ddnone{color:var(--slate-2)}
+
+/* Agents */
+.agentfilter{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:22px;max-width:560px}
+.agentfilter .finput{flex:1 1 160px;width:auto}
+.agentgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.agentcard{display:flex;align-items:center;gap:13px;padding:15px 17px;text-decoration:none;
+  border:1px solid var(--line);border-radius:12px;background:var(--surface);color:inherit}
+.agentcard:hover{border-color:var(--blue);background:var(--surface-2)}
+.agentcard-body{display:grid;gap:2px;min-width:0}
+.agentcard-body b{display:flex;align-items:center;gap:6px;font-family:var(--q);font-weight:700;
+  font-size:14.5px;color:var(--heading)}
+.agentcard-body b svg{width:14px;height:14px;flex:none;color:var(--sure)}
+.avatar-lg{width:44px;height:44px;font-size:15px;flex:none}
+.avatar-xl{width:62px;height:62px;font-size:21px;flex:none}
+.profilehead{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.profilehead h1{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.profilehead h1 svg{width:22px;height:22px;flex:none;color:var(--sure)}
+
+@media (max-width:600px){
+  .chero{padding:34px 0 28px}
+  .chero h1{max-width:none}
+  .kvlist > div{grid-template-columns:1fr;gap:3px}
+  .cactions .btn{flex:1 1 auto}
+}
+
+/* ----------------------------------------------- listing detail (HotPads §16)
+   Freshness beside the address, the way HotPads puts "Updated 2 hours ago"
+   directly above the price — this is the line a seeker reads to decide whether
+   a listing is still real (FR-M2-14). */
+.freshline{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--slate)}
+.isnew{background:var(--ok-soft);color:var(--ok-ink);font-family:var(--m);font-size:10px;
+  font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:var(--r-pill)}
+
+/* The action row. Forms, so each button is its own form element rather than a
+   flex child — without this they stack. */
+.acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.acts form{margin:0}
+
+/* Price history (FR-M7-07). A table would be heavier than this deserves; the
+   value is the direction of travel, not the precise dates. */
+.pricehist{list-style:none;margin:0;padding:0;display:grid;gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.pricehist li{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:baseline;
+  padding:10px 13px;background:var(--surface);font-family:var(--i);font-size:13.5px}
+.ph-date{color:var(--slate)}
+.ph-price{font-family:var(--q);font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.ph-delta{font-size:12.5px;color:var(--slate-2);min-width:96px;text-align:right;
+  font-variant-numeric:tabular-nums}
+/* A drop is good news for the seeker reading it, which is who this is for. */
+.ph-delta .down{color:var(--ok-ink)}
+.ph-delta .up{color:var(--slate)}
+
+/* Demand, beneath the fee panel. HotPads' "Competition for this rental". */
+.demand{margin-top:14px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;
+  background:var(--surface-2)}
+.demand h3{display:flex;align-items:center;gap:8px;margin:0 0 5px;
+  font-family:var(--q);font-weight:700;font-size:14px;color:var(--heading)}
+.demand h3 svg{width:16px;height:16px;color:var(--blue)}
+.demand p{margin:0;font-family:var(--i);font-size:13.5px;line-height:1.55;color:var(--slate)}
+.demand b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* Location map and the report block, both full width below the two columns. */
+.dmap-panel,.reportpanel{margin-top:22px}
+.dmap{height:320px;border-radius:11px;overflow:hidden;border:1px solid var(--line);
+  background:var(--map-bg)}
+.reportform{display:grid;gap:12px;max-width:440px;margin-top:14px}
+.reportpanel .allclear{margin-top:12px}
+@media (max-width:700px){ .dmap{height:240px} }

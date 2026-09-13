@@ -18,6 +18,8 @@ use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InteractionController;
 use App\Http\Controllers\NotificationPreferenceController;
+use App\Http\Controllers\PagesController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Lister\DashboardController;
 use App\Http\Controllers\Lister\ListingAnalyticsController;
 use App\Http\Controllers\Lister\ListingController;
@@ -53,6 +55,31 @@ Route::get('/search/pins', [SearchController::class, 'pins'])
     ->name('search.pins');
 
 Route::get('/property/{property}', [PropertyController::class, 'show'])->name('property.show');
+
+/*
+| Corporate and product pages (deliverable D2).
+|
+| Every one of these was a dead href="#" in the header and footer. They are
+| public and server-rendered for the same reason listing pages are: this is the
+| SEO surface, and a marketing page a crawler cannot read is a marketing page
+| that does not exist (FR-M5-08).
+|
+| The lister profile is bound on `{user:uuid}` rather than by adding a route key
+| to the model, because the signed unsubscribe link passes an id and changing
+| the default binding would silently break every message already sent (SEC-10).
+*/
+Route::get('/realsure', [PagesController::class, 'realsure'])->name('pages.realsure');
+Route::get('/areas', [PagesController::class, 'areas'])->name('pages.areas');
+Route::get('/areas/{area}', [PagesController::class, 'area'])->name('pages.area');
+Route::get('/agents', [PagesController::class, 'agents'])->name('pages.agents');
+Route::get('/agents/{user:uuid}', [PagesController::class, 'agent'])->name('pages.agent');
+Route::get('/about', [PagesController::class, 'about'])->name('pages.about');
+Route::get('/terms', [PagesController::class, 'terms'])->name('pages.terms');
+Route::get('/privacy', [PagesController::class, 'privacy'])->name('pages.privacy');
+
+// FR-M5-08. Cached, because it walks every published listing and a crawler
+// that asks for it hourly should not cost a full table scan each time.
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 /*
 | Consent and the analytics beacon (M13). Public, because the seeker funnel
@@ -308,7 +335,14 @@ Route::middleware('auth')->group(function () {
     | Agentpro is willing to assert about it, and those are different powers
     | that should not imply one another.
     */
-    Route::middleware('staff:realsure_officer')->prefix('realsure')->name('realsure.')->group(function () {
+    /*
+    | Path is /officer, not /realsure: the product name belongs to the public
+    | page seekers and listers are sent to, and an internal console should never
+    | hold a URL the marketing site needs. The route names stay `realsure.*`
+    | because they describe the records being managed, while the path describes
+    | who the screens are for — the same split as /technician.
+    */
+    Route::middleware('staff:realsure_officer')->prefix('officer')->name('realsure.')->group(function () {
         Route::get('/', [RealsureConsoleController::class, 'index'])->name('queue');
         Route::get('/{property}', [RealsureConsoleController::class, 'show'])->name('record');
         Route::post('/{property}/component', [RealsureConsoleController::class, 'record'])->name('component');

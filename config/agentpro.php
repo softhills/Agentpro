@@ -203,6 +203,55 @@ return [
     ],
 
     /*
+     * The listing detail page.
+     */
+    'listings' => [
+        /*
+         * How many views in the past week before the demand figure is shown
+         * to seekers at all (HotPads parity, PRD §16).
+         *
+         * "Viewed 2 times this week" reads as a dead listing whether or not it
+         * is one. At launch, when supply is deliberately thin because every
+         * listing is human-approved, publishing a discouraging number about
+         * somebody's property helps nobody — and the seeker learns nothing
+         * from it either way. Above the floor the number is genuine signal:
+         * it tells them whether to ring today.
+         */
+        'demand_floor' => env('AGENTPRO_DEMAND_FLOOR', 5),
+    ],
+
+    /*
+     * Public lister profiles (FR-M1-07).
+     */
+    'profiles' => [
+        /*
+         * How many ratings before an average is shown at all.
+         *
+         * A "5.0" from a single rating is not a reputation, and printing it as
+         * one would mislead in the lister's favour — which is the opposite of
+         * what a trust platform is for. Below this the profile says how many
+         * ratings there are and stops.
+         */
+        'minimum_ratings' => env('AGENTPRO_PROFILE_MIN_RATINGS', 3),
+    ],
+
+    /*
+     * The corporate pages (deliverable D2).
+     *
+     * Contact and registration details are configuration, not markup: they
+     * appear on the terms and privacy pages, they change without a deployment,
+     * and inventing plausible-looking ones in a Blade template is how a
+     * fictional RC number ends up on a live legal page.
+     */
+    'company' => [
+        'legal_name' => env('AGENTPRO_LEGAL_NAME', 'Agentpro Limited'),
+        'rc_number'  => env('AGENTPRO_RC_NUMBER'),
+        'address'    => env('AGENTPRO_ADDRESS'),
+        'email'      => env('AGENTPRO_CONTACT_EMAIL', 'hello@agentpro.ng'),
+        'phone'      => env('AGENTPRO_CONTACT_PHONE'),
+    ],
+
+    /*
      * RealSure (M6).
      *
      * What it takes to earn the badge. These are the two numbers that decide
