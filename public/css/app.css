@@ -162,7 +162,12 @@ img{max-width:100%;display:block}
 .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:20px}
 
 /* --------------------------------------------------------------- nav / btn */
-.nav{background:var(--surface);border-bottom:1px solid var(--line);height:66px;display:flex;align-items:center;gap:28px}
+/* --nav-h is the one chrome height worth hard-coding: the bar is a fixed
+   height by declaration and its links are hidden rather than wrapped on
+   narrow screens, so unlike the filter bar it cannot change behind your back.
+   Declared here, beside the height it describes, and read by .searchpane. */
+:root{--nav-h:66px}
+.nav{background:var(--surface);border-bottom:1px solid var(--line);height:var(--nav-h);display:flex;align-items:center;gap:28px}
 .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:19px;letter-spacing:-.02em;color:var(--heading)}
 .logo svg{width:26px;height:26px;flex:none}
 .navlinks{display:flex;gap:22px;font-size:14.5px;font-weight:600;color:var(--slate)}
@@ -259,7 +264,30 @@ img{max-width:100%;display:block}
 .filterbar .spacer{flex:1}
 .chipcount{background:var(--surface);color:var(--heading);border-radius:var(--r-pill);font-weight:700;font-size:11px;padding:2px 7px}
 
-.split{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);height:calc(100vh - 66px - 60px);min-height:560px}
+/*
+   The split pane fills what the nav and filter bar leave over.
+
+   It used to be calc(100vh - 66px - 60px), and the 60px was wrong: the filter
+   bar wraps, so it is 105px at common widths and taller still when the chips
+   run to three lines. The split therefore ran ~45px past the bottom of the
+   viewport and took the map's OpenStreetMap attribution with it, below the
+   fold, where nobody saw it — which is a licence problem rather than a
+   cosmetic one, because the ODbL requires the credit to be visible.
+
+   Flex removes the guess. Body is a column, the split takes what is left, and
+   it stays correct when the filter bar wraps to a new line or the nav changes
+   height. 100dvh rather than 100vh so mobile browser chrome is excluded; the
+   100vh line above it is the fallback for anything that does not know dvh.
+*/
+.searchpane{display:flex;flex-direction:column;
+  height:calc(100vh - var(--nav-h));
+  /* dvh excludes mobile browser chrome, which vh famously does not. */
+  height:calc(100dvh - var(--nav-h))}
+.split{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);
+  flex:1 1 auto;
+  /* Without this a flex item will not shrink below its content, and the
+     overflow-y on .results never engages — the whole page scrolls instead. */
+  min-height:0}
 .results{overflow-y:auto;background:var(--paper);padding:16px}
 .reshead{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .reshead h1{font-weight:700;font-size:19px;margin:0;color:var(--heading);letter-spacing:-.02em}
@@ -419,7 +447,12 @@ img{max-width:100%;display:block}
 
 /* ------------------------------------------------------------ responsive */
 @media (max-width:960px){
-  .split{grid-template-columns:1fr;height:auto}
+  /* Stacked, and no longer viewport-locked: below this width the map sits
+     above the results and the whole page scrolls, so the split must stop
+     claiming the leftover height. */
+  .split{grid-template-columns:1fr;height:auto;flex:none}
+  /* Stops claiming the viewport: below this width the page scrolls normally. */
+  .searchpane{display:block;height:auto}
   .mapwrap{height:340px;border-left:0;border-top:1px solid var(--line);order:-1}
   .dbody{grid-template-columns:1fr}
   .pricecard{position:static}
@@ -966,7 +999,32 @@ textarea.finput{line-height:1.55;resize:vertical}
 .consent-acts .btn{background:var(--surface);border-color:var(--slate-2);white-space:nowrap}
 .consent-acts .btn:hover{border-color:var(--blue);color:var(--blue)}
 
+/*
+   Lift the map's bottom controls clear of the banner while it is up.
+
+   With the split pane correctly sized, the OpenStreetMap credit sits at the
+   very bottom of the viewport — exactly where a banner pinned to the bottom
+   lands on top of it. The ODbL requires that credit to be visible, and "it
+   reappears once you dismiss the banner" is not visible to the first-time
+   visitor who is the only person who ever sees the banner.
+
+   --consent-h lives on :root, not on .consent. A custom property is only
+   visible to the element it is declared on and its descendants, and
+   .leaflet-bottom is neither — declaring it on .consent left `bottom` with an
+   undefined variable, which is invalid at computed-value time, so the control
+   fell back to auto and the credit jumped to the *top* of the map. Same class
+   of silent failure as a self-referential token.
+
+   :has() does the rest; where it is unsupported the attribution stays put.
+*/
+:root{--consent-h:96px}
+body:has(.consent) .leaflet-bottom{bottom:var(--consent-h)}
+
 @media (max-width:620px){
+  /* Taller here: the copy wraps to five lines and the buttons take their own
+     row. Kept beside the padding that causes it, and on :root for the same
+     reason as above. */
+  :root{--consent-h:178px}
   .consent-in{padding:13px 16px;padding-bottom:max(13px, env(safe-area-inset-bottom, 0px));gap:11px 14px}
   .consent-copy{flex:1 1 100%;font-size:12.5px}
   .consent-acts{width:100%}

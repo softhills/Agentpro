@@ -378,6 +378,23 @@ completed rows would turn the panel into a list of ticks that reads as a full
 audit. A badge that does not say what was checked is worth nothing, and one
 that hides what was *not* checked is worse than nothing.
 
+**The search split is sized by flex, not by guessing at the chrome.** It used
+to be `calc(100vh - 66px - 60px)`, and the 60px was wrong: the filter bar wraps,
+so it measures 105px at common widths and more when the chips run to three
+lines. The split therefore ran about 45px past the bottom of the viewport and
+took the map's OpenStreetMap credit with it, below the fold where nobody saw
+it — a licence problem rather than a cosmetic one, since the ODbL requires the
+credit to be visible. A `.searchpane` wrapper is now `calc(100dvh - var(--nav-h))`
+with the split as `flex:1`, so only one chrome height is hard-coded and it is
+the one that cannot change behind your back: the nav is a declared fixed height
+whose links are hidden rather than wrapped on narrow screens. `MapSearchTest`
+guards the wrapper, because removing it would bring the bug back silently.
+
+While the consent banner is up it would sit on top of that same credit, so
+Leaflet's bottom controls are lifted by `--consent-h` for as long as the banner
+exists. "It reappears once you dismiss the banner" is not visible to the
+first-time visitor who is the only person who ever sees the banner.
+
 **The consent banner's two buttons are identical in weight, but that is about
 emphasis, not visibility.** The first version got the principle right and the
 execution wrong: the bar used `--surface` and so do ghost buttons, so the only

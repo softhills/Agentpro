@@ -4,8 +4,16 @@
 
 @section('content')
 
-{{-- HotPads information architecture in the RealPress skin: a persistent filter
-     bar, a result list bound to the map viewport, and card/pin pairing. --}}
+{{--
+    HotPads information architecture in the RealPress skin: a persistent filter
+    bar, a result list bound to the map viewport, and card/pin pairing.
+
+    The wrapper exists so the split can fill whatever the filter bar leaves.
+    That bar wraps — 105px at common widths, more when the chips run to three
+    lines — so subtracting a guessed height from the viewport put the bottom of
+    the map, and the OpenStreetMap credit sitting on it, below the fold.
+--}}
+<div class="searchpane">
 <div class="filterbar">
     <div class="container">
         <form method="GET" action="{{ route('search') }}">
@@ -146,6 +154,7 @@
         </noscript>
     </div>
 </div>
+</div>{{-- /.searchpane --}}
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}">

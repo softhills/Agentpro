@@ -210,6 +210,30 @@ class MapSearchTest extends TestCase
     }
 
     /** SEC-10: the pin endpoint is the cheapest way to scrape inventory. */
+    /**
+     * The split pane is sized in CSS off this wrapper, so the wrapper is a
+     * structural contract rather than a div somebody can tidy away.
+     *
+     * It replaced `calc(100vh - 66px - 60px)`, where the 60px was a guess at
+     * the filter bar and the filter bar wraps — it is 105px at common widths.
+     * The split therefore ran past the bottom of the viewport and took the map's
+     * OpenStreetMap credit with it, below the fold, which the ODbL does not
+     * allow. Remove the wrapper and that returns silently.
+     */
+    public function test_the_search_pane_wraps_the_filter_bar_and_the_split(): void
+    {
+        $this->listing(6.4478, 3.4723);
+
+        $html = $this->get(route('search'))->assertOk()->getContent();
+
+        $pane = strpos($html, 'class="searchpane"');
+
+        $this->assertNotFalse($pane, 'The search pane wrapper is gone; the split pane has nothing to size against.');
+        $this->assertLessThan(strpos($html, 'class="filterbar"'), $pane,
+            'The filter bar has to sit inside the pane, or its height is not deducted from the split.');
+        $this->assertLessThan(strpos($html, 'class="split"'), $pane);
+    }
+
     public function test_the_pin_endpoint_is_rate_limited(): void
     {
         $this->assertContains(
