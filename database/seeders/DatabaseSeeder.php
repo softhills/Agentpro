@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Actions\StoreListingPhoto;
 use App\Models\Amenity;
 use App\Models\Area;
 use App\Models\MediaAsset;
@@ -15,6 +16,7 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Support\Vocab;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -31,6 +33,14 @@ use Illuminate\Support\Str;
  */
 class DatabaseSeeder extends Seeder
 {
+    /** Fetches and caches the real photographs. @see SeedPhotos */
+    private SeedPhotos $photos;
+
+    public function __construct()
+    {
+        $this->photos = new SeedPhotos();
+    }
+
     public function run(): void
     {
         $this->seedAreas();
@@ -618,26 +628,78 @@ class DatabaseSeeder extends Seeder
         }
     }
 
+    /**
+     * Photographs, through the same action a real upload goes through.
+     *
+     * Calling StoreListingPhoto rather than inserting rows means the seed
+     * exercises the production path: content sniffing, the responsive WebP
+     * renditions, EXIF stripping and the perceptual hash. It also means the
+     * development inventory is the only fixture in the project that can prove
+     * the media pipeline works, because nothing else produces a real file.
+     *
+     * The spec asks for up to thirty photographs per listing. That was fine for
+     * placeholder rows and is not fine for real files: thirty images from a
+     * pool of sixteen is visibly the same room four times, and a first seed
+     * would pull and process a hundred and sixty. Capped, with the floor kept
+     * above the five FR-M3-01 requires.
+     *
+     * @return int the next sort_order
+     */
+    private function seedPhotos(Property $property, int $wanted, $publishedAt, int $sort): int
+    {
+        $count = max(5, min($wanted, 8));
+
+        // SeedPhotos rotates its own pools, counting per listing type, so that
+        // no two listings open on the same cover.
+        $files = $this->photos->forListing($property->listing_type, $count);
+
+        if ($files === []) {
+            // No network on a first run. The placeholder artwork was built for
+            // this, and a seed that refuses to finish offline is a seed people
+            // stop running.
+            for ($i = 0; $i < $count; $i++) {
+                MediaAsset::create([
+                    'uuid' => Str::uuid(),
+                    'property_id' => $property->id,
+                    'kind' => 'photo',
+                    'disk' => 'public',
+                    'path' => null,
+                    'source' => 'lister',
+                    'captured_at' => $publishedAt,
+                    'moderation_state' => 'approved',
+                    'is_cover' => $i === 0,
+                    'sort_order' => $sort++,
+                ]);
+            }
+
+            return $sort;
+        }
+
+        $store = app(StoreListingPhoto::class);
+
+        foreach ($files as $i => $file) {
+            // A copy, because UploadedFile in test mode moves the file it is
+            // given and the cache has to survive for the next listing.
+            $temp = tempnam(sys_get_temp_dir(), 'seed').'.jpg';
+            copy($file, $temp);
+
+            $asset = $store($property, new UploadedFile($temp, basename($file), 'image/jpeg', null, true));
+
+            // The action stamps "now"; the seed is building a backdated
+            // inventory and the listing page shows capture dates.
+            $asset->update(['captured_at' => $publishedAt, 'sort_order' => $sort++]);
+        }
+
+        return $sort;
+    }
+
     private function seedMedia(Property $property, array $spec, $publishedAt): void
     {
         $sort = 0;
 
         foreach ($spec as $kind => $value) {
             if ($kind === 'photo') {
-                for ($i = 0; $i < $value; $i++) {
-                    MediaAsset::create([
-                        'uuid' => Str::uuid(),
-                        'property_id' => $property->id,
-                        'kind' => 'photo',
-                        'disk' => 'public',
-                        'path' => null, // placeholder rendering until real uploads land
-                        'source' => 'lister',
-                        'captured_at' => $publishedAt,
-                        'moderation_state' => 'approved',
-                        'is_cover' => $i === 0,
-                        'sort_order' => $sort++,
-                    ]);
-                }
+                $sort = $this->seedPhotos($property, (int) $value, $publishedAt, $sort);
 
                 continue;
             }

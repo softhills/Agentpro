@@ -41,7 +41,26 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            /*
+             * Relative, not APP_URL.'/storage'.
+             *
+             * This disk is development only — in production `agentpro.media.disk`
+             * points at the S3-compatible disk below, which builds its own
+             * absolute CDN URLs on a domain that cannot execute PHP (SEC-04).
+             * So the only consumer here is a browser rendering a page it already
+             * fetched from this host, and a relative path is correct for that
+             * on any host and any port.
+             *
+             * The default was absolute, and it meant every photograph on the
+             * site resolved to APP_URL — port 80 — while the application was
+             * being served on 8000 or 8123. Nothing displayed. It went unnoticed
+             * for as long as the seed produced only placeholder artwork, which
+             * needs no file at all.
+             *
+             * If media URLs are ever needed outside a page — an email, a feed —
+             * that consumer has to make them absolute, because this cannot.
+             */
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
