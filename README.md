@@ -50,10 +50,10 @@ binaries, or put them on `PATH`.
 
 ## Setup
 
-> Deploying to shared hosting? **[docs/DEPLOY-CPANEL.md](docs/DEPLOY-CPANEL.md)**
-> covers cPanel and Softaculous end to end, including the two cron jobs the app
-> does not work without and why the seeder must never run against a live
-> database.
+> Deploying to shared hosting? **[docs/DEPLOYING.md](docs/DEPLOYING.md)** covers
+> cPanel and DirectAdmin end to end — how to get the domain serving `public/` on
+> each, the two cron jobs the app does not work without, and why the seeder must
+> never run against a live database.
 
 ```bash
 composer install

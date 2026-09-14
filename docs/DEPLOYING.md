@@ -1,4 +1,4 @@
-# Deploying Agentpro on cPanel (with Softaculous)
+# Deploying Agentpro on shared hosting (cPanel or DirectAdmin, via Softaculous)
 
 ## Read this first: what Softaculous actually does
 
@@ -60,9 +60,16 @@ cPanel → **Softaculous Apps Installer** → search **Laravel** → *Install*.
 > `example.com/app/` those resolve to the wrong place and you get a site with no
 > photographs and no push. Use a subdomain if you need a staging copy.
 
-When it finishes, note the install path — usually `/home/<cpanel-user>/laravel`
-or similar. Softaculous also leaves an `index.php` in that folder that redirects
-to `public/`. Step 5 removes the need for it.
+When it finishes, note where it actually installed. With **In Directory** blank
+that is your document root — `/home/<cpanel-user>/public_html` — **not** a
+folder named after the framework. Confirm rather than assume:
+
+```bash
+ls -la ~ && find ~ -maxdepth 2 -name ".env"
+```
+
+Softaculous also leaves an `index.php` there that redirects to `public/`. Step 5
+removes the need for it.
 
 ---
 
@@ -75,17 +82,64 @@ cd ~
 rm -rf agentpro-new && git clone <your-repo-url> agentpro-new
 ```
 
-Keep the `.env` Softaculous generated — it has a valid `APP_KEY`:
+Check which PHP you have before anything else — cPanel's default `php` is often
+still 7.x, and every command below needs 8.2+:
 
 ```bash
-cp ~/laravel/.env ~/agentpro-new/.env
+php -v
 ```
 
-Then install dependencies:
+If it is old, find the right one and use its full path in place of `php`
+everywhere below, including in the cron jobs in step 7. Where to look depends on
+the host:
+
+```bash
+which php; ls -d /usr/local/php8*/bin/php /usr/local/bin/ea-php* /opt/alt/php8*/usr/bin/php 2>/dev/null
+```
+
+Naming differs by host — `/usr/local/php85/bin/php`, `/usr/local/bin/ea-php83`
+and `/opt/alt/php83/usr/bin/php` are all the same idea. Note down whichever one
+you have; step 7 needs it.
+
+> **The CLI PHP and the website's PHP are two different settings.** The version
+> you see here is the shell's. The one serving the site is set in cPanel →
+> *Select PHP Version* (on CloudLinux hosts, the PHP Selector). Set them to the
+> same version, or you will be debugging a site that behaves unlike anything you
+> can reproduce in the terminal. That screen is also where the extensions from
+> step 1 are ticked.
+
+**Composer is frequently not installed**, and not on `PATH` even when it is.
+Check first:
+
+```bash
+ls -la /opt/cpanel/composer/bin/composer /usr/local/bin/composer 2>/dev/null; command -v composer composer2
+```
+
+If there is none, install your own — this is Composer's official sequence, and
+the hash check is the part not to skip:
+
+```bash
+mkdir -p ~/bin && cd ~ \
+  && php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
+  && php -r "if (hash_file('sha384','composer-setup.php') === trim(file_get_contents('https://composer.github.io/installer.sig'))) { echo 'verified'.PHP_EOL; } else { unlink('composer-setup.php'); echo 'CORRUPT'.PHP_EOL; exit(1); }" \
+  && php composer-setup.php --install-dir=$HOME/bin --filename=composer \
+  && rm composer-setup.php \
+  && echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc && export PATH="$HOME/bin:$PATH"
+```
+
+Install dependencies, then generate your own application key:
 
 ```bash
 cd ~/agentpro-new && composer install --no-dev --optimize-autoloader
 ```
+
+```bash
+cd ~/agentpro-new && cp .env.example .env && php artisan key:generate
+```
+
+`key:generate` needs the framework, so Composer has to run first. Generating a
+key here is simpler and more reliable than copying the one Softaculous made —
+you are going to rewrite the rest of that file in step 4 regardless.
 
 > **No Node, no npm, no build step.** The CSS is hand-written and served from
 > `public/css/app.css`. `package.json` exists for tooling that this app does not
@@ -100,11 +154,15 @@ cd ~/agentpro-new && composer install --no-dev --optimize-autoloader
 > already in `.gitignore`, so a clone will not have it — only a drag-and-drop
 > upload of your working folder would.
 
-Swap the folders:
+Put it in its final home:
 
 ```bash
-mv ~/laravel ~/laravel-old && mv ~/agentpro-new ~/agentpro
+mv ~/agentpro-new ~/agentpro
 ```
+
+Leave the Softaculous install where it is for now. Once step 5 has the document
+root pointing at `~/agentpro/public` and the site loads, you can clear it out.
+Deleting it first leaves you with nothing serving while you debug.
 
 ---
 
@@ -153,7 +211,7 @@ PAYSTACK_PUBLIC_KEY=pk_live_...
 your database password and every other environment variable to whoever
 triggered it.
 
-Leave `APP_KEY` exactly as Softaculous generated it. Changing it later logs
+Leave `APP_KEY` exactly as `key:generate` set it. Changing it later logs
 everyone out and makes existing encrypted columns unreadable.
 
 ---
@@ -161,24 +219,101 @@ everyone out and makes existing encrypted columns unreadable.
 ## 5. Point the domain at `public/`
 
 This is the step people skip, and skipping it publishes `.env` to the internet.
+Laravel is built to serve `public/` and nothing above it. Everything above it is
+your source, your credentials and your customers' uploads.
 
-cPanel → **Domains** → your domain → *Manage* → set **Document Root** to:
+Which method you get depends on the panel, so check which one you have first:
+cPanel is on port 2083 and DirectAdmin on 2222.
 
-```
-/home/<cpanel-user>/agentpro/public
-```
+### cPanel
 
-Then delete the redirect stub Softaculous left behind:
+**Domains** → your domain → *Manage* → set **Document Root** to
+`/home/<user>/agentpro/public`. Then remove the Softaculous redirect stub:
+`rm -f ~/agentpro/index.php`.
+
+### DirectAdmin
+
+A user-level account has no document-root field — the docroot is fixed at
+`~/domains/<domain>/public_html`. (The `|?DOCROOT=|` directive in *Custom HTTPD
+Configurations* does the job, but is usually reseller-only. Look under **Menu**
+for it first; if it is there, that is the cleanest answer.)
+
+Otherwise, replace `public_html` with a symlink to the app's public folder:
 
 ```bash
-rm -f ~/agentpro/index.php
+cd ~/domains/<domain> \
+  && mv public_html public_html.old \
+  && ln -s /home/<user>/agentpro/public public_html
 ```
 
-> **If your host will not let you change the document root**, the fallback is a
-> `.htaccess` in `public_html` that rewrites everything into the app's `public`
-> folder. It works, but every file outside `public/` is then one
-> misconfiguration away from being downloadable. Prefer changing the document
-> root; consider a host that allows it.
+Rename rather than delete, so one command puts it back. This is the approach to
+prefer on DirectAdmin: `public_path()` keeps resolving correctly, the `storage`
+symlink from step 6 stays valid, and deploys need no extra step.
+
+### If neither works
+
+Some Apache configurations refuse to follow a symlinked docroot — a 403 on every
+page. Then copy the public folder into place and repoint its bootstrap:
+
+```bash
+rm -rf ~/domains/<domain>/public_html/* \
+  && rm -f ~/domains/<domain>/public_html/.env \
+           ~/domains/<domain>/public_html/.env.example \
+           ~/domains/<domain>/public_html/.editorconfig \
+           ~/domains/<domain>/public_html/.gitattributes \
+           ~/domains/<domain>/public_html/.gitignore \
+  && cp -r ~/agentpro/public/. ~/domains/<domain>/public_html/
+```
+
+> **`rm -rf dir/*` does not delete dotfiles**, and the Softaculous install left
+> a `.env` among them. Clear the visible files and you are looking at a tidy
+> directory with a live set of database credentials still in it, inside the
+> document root, served over HTTP — Laravel's `public/.htaccess` has no rule
+> against `.env`, and not every host blocks dotfiles itself. Always finish with
+> `ls -la` and read the list, not `ls`.
+
+Then edit `public_html/index.php`. **Three** paths point one level up, not two —
+the maintenance-mode check is easy to miss, and missing it means `artisan down`
+silently does nothing. Replace the lot with one base:
+
+```php
+$base = '/home/<user>/agentpro';
+
+if (file_exists($maintenance = $base.'/storage/framework/maintenance.php')) {
+    require $maintenance;
+}
+
+require $base.'/vendor/autoload.php';
+
+$app = require_once $base.'/bootstrap/app.php';
+```
+
+Then recreate the media symlink by hand, because `storage:link` pointed it at
+the app's own `public/`, which is no longer what gets served:
+
+```bash
+rm -f ~/domains/<domain>/public_html/storage \
+  && ln -s /home/<user>/agentpro/storage/app/public ~/domains/<domain>/public_html/storage
+```
+
+The cost of this one is that **every** deploy touching `public/` — CSS, the
+banner photographs, `sw.js` — needs the `cp -r` repeated. It is the last resort,
+not the default.
+
+> **Never solve this with an `.htaccess` in `public_html` that rewrites into the
+> app folder.** It appears to work, and it leaves `.env`, `storage/` and your
+> whole source tree inside the document root, one misconfiguration away from
+> being downloadable.
+
+### Confirm it, in this order
+
+```
+https://<domain>/up       → 200
+https://<domain>/          → the Agentpro home page
+https://<domain>/.env      → 404 or 403. If this downloads, STOP: delete the file,
+                             then rotate the database password it just published
+https://<domain>/public/   → 404
+```
 
 ---
 
@@ -228,26 +363,45 @@ ever emailed or notified. Without the scheduler, listing alerts accumulate in
 their batching window and never close, saved searches never run, account
 erasures never execute, and settlements are never reconciled.
 
-First find the right PHP binary — cPanel's default `php` is often an old
-version:
+First get your two real paths. Cron has almost no `PATH`, so both have to be
+absolute — a bare `php` in a cron line is the classic reason a scheduler that
+works in the terminal does nothing on a timer:
 
 ```bash
-which php
-ls /usr/local/bin/ea-php*
+which php && echo ~
 ```
 
-cPanel → **Cron Jobs** → add both, *Once Per Minute* (`* * * * *`):
+That prints something like `/usr/local/php85/bin/php` and `/home/agentpr3`.
+Substitute both into the lines below — **including the angle brackets**, which
+are not part of the command. Bash reads a stray `<` as input redirection, so
+pasting the template unedited fails with a confusing "No such file or directory".
+
+These go in cPanel → **Cron Jobs**, not the terminal. Add both, *Once Per Minute*
+(`* * * * *`):
 
 **The scheduler**
 
 ```
-cd /home/<cpanel-user>/agentpro && /usr/local/bin/ea-php83 artisan schedule:run >> /dev/null 2>&1
+cd <home>/agentpro && <php> artisan schedule:run >> <home>/cron.log 2>&1
 ```
 
 **The queue worker**
 
 ```
-/usr/local/bin/ea-php83 /home/<cpanel-user>/agentpro/artisan queue:work --stop-when-empty --max-time=55 --tries=3 >> /dev/null 2>&1
+<php> <home>/agentpro/artisan queue:work --stop-when-empty --max-time=55 --tries=3 >> <home>/cron.log 2>&1
+```
+
+Both log to a file rather than `/dev/null` on purpose. A cron that discards its
+own errors is the most common reason for "nothing is ever sent" on shared
+hosting, and the message you threw away is the one that would have told you why.
+Once you have watched it run clean for a few days, switch both to `/dev/null` —
+otherwise the file grows without limit.
+
+Check the wiring before trusting it:
+
+```bash
+cd ~/agentpro && php artisan schedule:list   # the five commands and their next run
+tail -20 ~/cron.log                          # a minute after saving. Empty is good
 ```
 
 `--stop-when-empty --max-time=55` is what makes a long-running worker safe on a
@@ -322,20 +476,50 @@ webhook means people are charged and their order never completes.
 
 ## Deploying an update later
 
+Two halves. From your own machine:
+
 ```bash
-cd ~/agentpro
-php artisan down
-
-git pull
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan config:cache && php artisan route:cache && php artisan view:cache
-
-php artisan up
+git add -A && git commit -m "what changed" && git push
 ```
 
-Back up the database before any deployment that carries a migration. cPanel →
-*Backup* → *Download a MySQL Database Backup* takes about ten seconds and is the
+Then on the server, one command:
+
+```bash
+~/agentpro/deploy.sh
+```
+
+`deploy.sh` lives in the repository. It takes the site down, pulls, installs,
+migrates, syncs the public folder if this install needs it, rebuilds all three
+caches and restarts the queue — and brings the site back up even if a step in
+the middle fails. Make it executable once, on the first deploy:
+
+```bash
+chmod +x ~/agentpro/deploy.sh
+```
+
+**On the copy layout, tell it where the webroot is**, or it will pull new code
+and leave the browser looking at the old CSS:
+
+```bash
+echo 'export WEBROOT=~/domains/<domain>/public_html' >> ~/.bashrc && source ~/.bashrc
+```
+
+Leave `WEBROOT` unset on a symlinked document root — there is nothing to copy,
+because the webroot *is* `public/`. That is the single biggest argument for the
+symlink: with it, a deploy has no step anybody can forget.
+
+If your CLI PHP is not on `PATH` as `php`, pass it:
+`PHP=/usr/local/php85/bin/php ~/agentpro/deploy.sh`
+
+> **`index.php` is never copied to the webroot**, deliberately. On the copy
+> layout it has been edited to point at the application directory, while the one
+> in the repository points one level up from `public/` — which from the webroot
+> is nothing at all. Overwriting it is a white screen on every page, and it is
+> the single easiest way to break this layout.
+
+Back up the database before any deployment that carries a migration. In cPanel
+that is *Backup* → *Download a MySQL Database Backup*; in DirectAdmin,
+*Databases* → the database → *Download*. It takes about ten seconds and is the
 difference between an annoying evening and a catastrophic one.
 
 ---
@@ -349,6 +533,10 @@ difference between an annoying evening and a catastrophic one.
 | Photographs are grey placeholders | `storage:link` was not run, or `gd` is not enabled |
 | Photo upload fails but everything else works | `gd` or `exif` missing, or `upload_max_filesize` too small in *MultiPHP INI Editor* |
 | `.env` edits have no effect | Config is cached. Re-run `php artisan config:cache` |
+| `composer: command not found` | Not installed or not on `PATH` — step 3 |
+| A command fails with `No such file or directory` naming a word from this guide | A `<placeholder>` was pasted unedited; bash read `<` as a redirect |
+| Scheduler works when you run it by hand, never on the timer | The cron line uses a bare `php`. Cron has no useful `PATH` — use the absolute path |
+| Works in the terminal, 500s in the browser | CLI PHP and the website's PHP are different versions — step 3 |
 | Nothing is ever emailed | The queue cron is not running, or `QUEUE_CONNECTION` is not `database` |
 | Alerts pile up and never send | The scheduler cron is not running |
 | Map pane blank | Check the browser console. Outbound requests to `tile.openstreetmap.org` may be blocked |

@@ -49,7 +49,7 @@ class DatabaseSeeder extends Seeder
          * This seeder creates six accounts whose password is the word
          * "password", two of them full admins. `migrate --seed` is in every
          * Laravel deployment guide ever written, including the one in
-         * docs/DEPLOY-CPANEL.md, and the cost of somebody typing it once
+         * docs/DEPLOYING.md, and the cost of somebody typing it once
          * against a live database is an administrator account with a guessable
          * password on a platform that holds identity documents.
          *

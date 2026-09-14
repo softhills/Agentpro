@@ -30,3 +30,6 @@ Thumbs.db
 # XAMPP instance and must never reach the repository.
 /storage/backups/
 *.sql
+
+# Visual Studio
+/.vs
