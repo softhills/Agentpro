@@ -53,6 +53,10 @@ class SitemapController extends Controller
             ['pages.realsure', '0.9', 'monthly'],
             ['pages.areas',    '0.8', 'weekly'],
             ['pages.agents',   '0.7', 'weekly'],
+            // FR-M2-09. Weekly rather than monthly: its whole value is being
+            // current, and a crawler holding a three-week-old copy of "what has
+            // sold" is showing the opposite of what the page is for.
+            ['pages.closed',   '0.6', 'weekly'],
             ['pages.about',    '0.5', 'yearly'],
             ['pages.terms',    '0.3', 'yearly'],
             ['pages.privacy',  '0.3', 'yearly'],

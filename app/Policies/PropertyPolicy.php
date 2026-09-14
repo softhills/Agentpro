@@ -55,6 +55,27 @@ class PropertyPolicy
             && in_array($property->lifecycle_state->value, ['draft', 'rejected', 'unpublished'], true);
     }
 
+    /**
+     * FR-M2-07 / FR-M2-09: take it off the market.
+     *
+     * The owner and any moderator — the latter through `before()`. Both are
+     * legitimate: a lister knows the flat is let, and the platform has to be
+     * able to pull a listing that should not be up, without waiting for the
+     * person who put it there to agree.
+     */
+    public function unlist(User $user, Property $property): bool
+    {
+        return $this->owns($user, $property)
+            && $property->lifecycle_state->canBeUnlisted();
+    }
+
+    /** Undo a closing the lister declared. See LifecycleState::canBeRelisted(). */
+    public function relist(User $user, Property $property): bool
+    {
+        return $this->owns($user, $property)
+            && $property->lifecycle_state->canBeRelisted();
+    }
+
     public function delete(User $user, Property $property): bool
     {
         return $this->owns($user, $property)

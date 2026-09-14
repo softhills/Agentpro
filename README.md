@@ -50,6 +50,11 @@ binaries, or put them on `PATH`.
 
 ## Setup
 
+> Deploying to shared hosting? **[docs/DEPLOY-CPANEL.md](docs/DEPLOY-CPANEL.md)**
+> covers cPanel and Softaculous end to end, including the two cron jobs the app
+> does not work without and why the seeder must never run against a live
+> database.
+
 ```bash
 composer install
 cp .env.example .env
@@ -300,6 +305,25 @@ billed and never delivered. Transactional messages go on a separate cleared
 route, and using it for marketing is what gets a sender ID banned — which is why
 saved-search alerts deliberately have no `toSms()` at all.
 
+**Contact details are handed back by the server, never rendered into the page.**
+All four contact controls were `<button type="button">` wired to nothing. They
+are forms now, and pressing one records the initiation (FR-M9-02) before the
+server returns the channel. That ordering is what makes the count right when a
+seeker abandons the call — but the bigger reason is that a phone number sitting
+in the HTML is available to anyone who views source, account or not. Contact
+details are the most scrapeable thing a marketplace holds (SEC-10); behind a
+POST, a bot has to be signed in and leave a row in `interactions` for every one
+it takes. Guests get a link to sign in, because FR-M1-03 makes an account the
+price of *acting* on a listing rather than seeing one.
+
+The revealed number is written out as well as linked: `tel:` does nothing on a
+desktop, and "click to call" with no number visible is a dead end.
+
+**"Request a viewing" opens an email with the viewing already written.** Real
+in-platform scheduling against technician availability is FR-M9-12 and deferred
+to R2. Until that exists the button does what it says rather than saying it and
+doing nothing, and it is logged as an email contact — which is what it is.
+
 **HotPads parity on the listing page (PRD §16).** Four R1 items from that
 benchmark lived only on the server: saving, hiding and reporting a listing each
 had a route, an action and passing tests, while the page a seeker would use them
@@ -342,6 +366,82 @@ the lister profile (FR-M1-07), where every figure is derived and nothing is
 written by the lister. A rating is withheld below `profiles.minimum_ratings`,
 because a "5.0" from one rating is not a reputation and printing it as one would
 mislead in the lister's favour — the opposite of what a trust platform is for.
+
+**Unlisting asks what happened, and the answer is the product (FR-M2-09).**
+Taking a listing down used to be a single unpublish available only to a
+moderator, buried behind filtering the queue to "published" and opening the
+review screen — which is to say, not available. It is now a three-way question
+asked in the same words of the lister and the admin: sold, rented, or something
+else. That distinction is not bookkeeping. Sold and rented carry the listing
+into a public archive; everything else ends its public life quietly. A single
+button that recorded "unpublished" for all three would have thrown away the only
+fact worth keeping about a listing that has ended.
+
+The two sides differ in exactly one place, and it is an authorisation boundary
+rather than a UI one. A lister may report what happened to their own property
+and may choose from `Vocab::LISTER_UNPUBLISH_REASONS`; a moderator may also
+record a *finding* — suspected fraud, a title dispute, a report upheld. A
+finding is something the platform concludes about a listing, never something its
+owner can stamp on it, and a lister who could write one into their own audit
+trail would corrupt the only record that says who decided what. `UnlistListing`
+sits beside `ModerateListing` rather than inside it for the same reason: that
+class's own docblock says it is the only path *into* public visibility, and the
+three paths out of it have the opposite trust model.
+
+Relisting exists because people mis-click, but only for a closing the lister
+declared. An unpublish is somebody else's decision and the way back is
+resubmission, through the queue. Relisting also does not extend the display
+period — a listing that ran out of paid time while it was closed comes back as
+Expired, because otherwise "sold" is the cheapest way to pause a clock somebody
+paid for (FR-M2-08).
+
+**The sold-and-let archive is evidence, and is written as evidence.** A
+marketplace that only ever shows what is still available tells a seeker nothing
+about whether anything moves, and a seeker deciding whether to trust a new
+platform with a deposit has no other way to check. So `/sold` is a page rather
+than a filter buried in search, and the home page carries a linked count of
+completions beside the live ones.
+
+The care is all in what it must not imply. Agentpro is not a party to these
+transactions: it does not broker the sale, it never sees the money, and it
+therefore does not know what any of these properties went for. A wall of "SOLD
+₦85,000,000" would read better and would be a claim nobody here is in a position
+to make. The archive shows the **asking** price, says so above the grid and
+again on every card, and attributes the outcome to the lister who reported it.
+The qualification lives on the card rather than only on the archive page,
+because a closed listing also appears in search behind "include closed" and on
+its lister's profile, and the price needs the same words in all three places.
+
+What keeps it from being farmed is `Property::scopeClosedPublicly()`: closed,
+**and** closed through the flow that stamps `closed_at` and leaves an audit row
+naming who closed it, **and** published beforehand. Without the last condition
+the cheapest way to look busy would be to create drafts and write `sold` straight
+into the column, and the one page on this site whose entire purpose is to be
+believable would be the easiest one to fake. `closed_at` is its own column and
+not `updated_at` for a smaller version of the same reason — fixing a typo on a
+sold listing should not bump it to the top of "recently sold".
+
+`include_closed` was the same shape of bug in miniature: `PropertySearch` has
+accepted the filter since it was written, and nothing in the interface ever
+offered it, so the only way to see a sold property in results was to type the
+parameter into the URL. It is a checkbox now, off by default — somebody looking
+for a home wants what they can still have.
+
+**Every account type now has a route to its own console.** The header carried
+one link per role in a flex row, and the only role it ever had a link for was
+the moderator. A RealSure officer and a capture technician could sign in to a
+console-shaped product and find no way to the single screen their account exists
+for; the technician console had no link anywhere in the application. Both roles
+were being told their URL by hand.
+
+The roles moved into a `<details>` account menu and the bar keeps one link for
+whatever this account came to do. Every group in the menu is gated on exactly
+the check its route group uses — `staff:moderator`, `staff:realsure_officer`,
+`staff:technician` — so the menu and the router cannot disagree; `NavigationTest`
+walks every link each role is shown and opens it as that account, because a menu
+offering a console that 404s is worse than no menu at all. The same menu fixed
+the mobile hole: below 960px `.navlinks` is hidden, and until now that left a
+guest on a phone with a logo and nothing else.
 
 **The privacy notice is generated from `PersonalData::map()`** — the same
 manifest the erasure runs on. A notice written by hand starts accurate and
@@ -404,6 +504,35 @@ because a seeder that fails on a train is a seeder people stop running. Covers
 come from a pool matched to the listing type, so a house leads with its exterior
 and a flat with a room, and no two listings open on the same image.
 
+**The banner is a photograph of Lagos, not a vector skyline.** What was there
+was five flat polygons that could have been any city on earth, on the front door
+of a product whose entire claim is that what it shows you is real. It is now the
+Lekki–Ikoyi link bridge with Ikoyi's housing behind it — a place a seeker in
+Lagos recognises in under a second, which is the whole job of a banner. Files
+live in `public/img/` and are checked in; `HomePageTest` asserts both are there,
+because a missing one fails silently: the scrim keeps the band dark and the
+headline readable, and nothing looks broken enough to notice.
+
+Everything in the band is written for light-on-photograph and does *not* flip
+with the theme, because the photograph does not — four token overrides scoped to
+`.hero` carry that without duplicating a rule per theme, and only the scrim
+deepens in the dark. The scrim is two layers: an ellipse that darkens the middle
+where the centred text sits and fades out at the edges where the bridge and the
+water are the point, over a linear wash that holds the foot down for the search
+panel. It sits on the `<picture>` rather than on a div of its own, so it still
+paints when the image inside fails, and the old gradient stays underneath as the
+ground: between a 404 and a slow first paint there is always a moment without a
+photograph, and the band has to be legible in it. **The photograph is the
+improvement; it is not the contrast.**
+
+Two crops, not one — 102KB at 760px against 248KB at 1440px. A seeker on a
+metered Nigerian connection should not pay for pixels their phone cannot show
+(NFR-02), and the phone crop has a size assertion against it so a careless
+re-export fails a test instead of shipping. Licence is Unsplash (Tunde Buremo) —
+free for commercial use, no permission needed — but it is a **stand-in**: a
+production Agentpro should carry photography it commissioned, of the cities it
+actually operates in, and swapping the two files is the whole change.
+
 **The public media disk builds relative URLs, not `APP_URL.'/storage'`.** With
 the default, every photograph resolved to port 80 while the application was
 served on 8000 — nothing displayed, and it went unnoticed for as long as the
@@ -419,9 +548,30 @@ different timeline. The filter key is `build_status` rather than the PRD's
 wording "property status", because a filter key that differs from the column it
 filters is a rename waiting to go wrong.
 
-Two of that requirement's twelve filters are still missing: **tags** and
-**title type**. Both are larger than this one — tags are partly derived, and
-title type is a nineteen-value grouped vocabulary that needs real UI.
+**Tags and title type complete FR-M5-03's twelve filters**, and tags needed
+storage before they could be filtered at all: FR-M2-04 names four, and three of
+them had nowhere to live — `Vocab::TAGS` listed them and no column could record
+one, so "Payment plan available" was a phrase in a constant. They are a JSON
+column now, because a tag is a marketing label and marketing labels are exactly
+what a business asks to add on a Tuesday; a column per tag means a migration per
+request, which is how a schema ends up with `is_hot_deal` in it.
+
+**`price_drop` is the fourth and is never stored.** The requirement says it is
+applied automatically from price history, and the moment it becomes something
+settable it will be set by a lister whose price never moved.
+`Vocab::LISTER_TAGS` is what a lister may choose, and it gates both the form
+validation and `Property::allTags()` — the second matters more, because it is
+what decides, and a value written straight into the column by a seeder or an
+import would otherwise be believed. The filter derives the tag with the same
+rule the card badge uses (the most recent history entry that changed the price,
+and whether it was higher), so search cannot promise a reduction the listing
+does not show. A test asserts the two agree rather than asserting each
+separately.
+
+Title type filters on any of a listing's declared titles, since a property
+routinely carries two or three. Stage is deliberately not part of it: "in
+progress" is still a declaration worth surfacing, and filtering it out would
+hide the listings whose paperwork is underway — which is most of this market.
 
 **The search split is sized by flex, not by guessing at the chrome.** It used
 to be `calc(100vh - 66px - 60px)`, and the 60px was wrong: the filter bar wraps,

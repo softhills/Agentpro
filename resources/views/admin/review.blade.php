@@ -143,6 +143,11 @@
             <section class="formsec formsec-required">
                 <h2>Decision</h2>
 
+                {{-- Hidden once the listing is closed. Approving a sold property
+                     would republish it and start a fresh display period, which
+                     is not a decision anybody comes to this screen to make —
+                     the way back is the relist below. --}}
+                @unless ($property->lifecycle_state->isClosed())
                 <form method="POST" action="{{ route('admin.approve', $property) }}">
                     @csrf
                     <button type="submit" class="btn btn-green btn-block">Approve and publish</button>
@@ -171,20 +176,60 @@
                     </div>
                     <button type="submit" class="btn btn-ghost btn-block">Return to lister</button>
                 </form>
+                @endunless
 
-                @if ($property->lifecycle_state->value === 'published')
+                {{--
+                    FR-M2-07 / FR-M2-09: off the market, with the outcome named.
+
+                    The same question the lister's own form asks, because it is
+                    the same question. An admin who knows the flat was let has no
+                    business recording that as an anonymous "unpublished" — the
+                    archive would then undercount exactly the transactions staff
+                    were closest to. The reason list is the wider one: a
+                    moderator may record a finding a lister may not.
+                --}}
+                @if ($property->lifecycle_state->canBeUnlisted())
                     <hr class="decisionrule">
-                    <form method="POST" action="{{ route('admin.unpublish', $property) }}" class="stack">
+                    <form method="POST" action="{{ route('admin.unlist', $property) }}" class="stack">
                         @csrf
                         <div class="fieldset">
-                            <label class="flabel" for="unpub">Unpublish — reason</label>
-                            <select id="unpub" name="reason_code" class="finput" required>
+                            <label class="flabel" for="outcome">Take off the market — what happened</label>
+                            <select id="outcome" name="outcome" class="finput" required>
+                                @foreach ($closeOutcomes as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="fieldset">
+                            <label class="flabel" for="unpub">If other — reason</label>
+                            <select id="unpub" name="reason_code" class="finput">
+                                <option value="">—</option>
                                 @foreach ($unpublishReasons as $code => $label)
                                     <option value="{{ $code }}">{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-ghost btn-block" style="color:#8E2B2B">Unpublish</button>
+                        <p class="fhint">
+                            Sold and rented appear in the public
+                            <a href="{{ route('pages.closed') }}">sold and let archive</a>.
+                            Anything else ends the listing's public life quietly.
+                        </p>
+                        <button type="submit" class="btn btn-ghost btn-block" style="color:#8E2B2B">Take off the market</button>
+                    </form>
+                @endif
+
+                @if ($property->lifecycle_state->canBeRelisted())
+                    <hr class="decisionrule">
+                    <form method="POST" action="{{ route('admin.relist', $property) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-ghost btn-block">Put back on the market</button>
+                        <p class="fhint">
+                            {{-- Concatenated rather than wrapped in @if: a
+                                 directive on its own line leaves whitespace,
+                                 and "Sold on 7 Aug 2026 ." is a typo. --}}
+                            Closed as {{ $property->lifecycle_state->label() }}{{ $property->closed_at ? ' on '.$property->closed_at->format('j M Y') : '' }}.
+                            Relisting does not extend the display period.
+                        </p>
                     </form>
                 @endif
             </section>

@@ -71,6 +71,12 @@ Route::get('/property/{property}', [PropertyController::class, 'show'])->name('p
 Route::get('/realsure', [PagesController::class, 'realsure'])->name('pages.realsure');
 Route::get('/areas', [PagesController::class, 'areas'])->name('pages.areas');
 Route::get('/areas/{area}', [PagesController::class, 'area'])->name('pages.area');
+/*
+| The sold-and-let archive (FR-M2-09). Public and crawlable: it is the only
+| page on the site that shows a transaction actually completed, which is what
+| a seeker weighing up a new platform has no other way to check.
+*/
+Route::get('/sold', [PagesController::class, 'closed'])->name('pages.closed');
 Route::get('/agents', [PagesController::class, 'agents'])->name('pages.agents');
 Route::get('/agents/{user:uuid}', [PagesController::class, 'agent'])->name('pages.agent');
 Route::get('/about', [PagesController::class, 'about'])->name('pages.about');
@@ -269,7 +275,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/queue/{property}', [ModerationController::class, 'review'])->name('review');
         Route::post('/queue/{property}/approve', [ModerationController::class, 'approve'])->name('approve');
         Route::post('/queue/{property}/reject', [ModerationController::class, 'reject'])->name('reject');
-        Route::post('/queue/{property}/unpublish', [ModerationController::class, 'unpublish'])->name('unpublish');
+        /*
+        | FR-M2-07. Renamed from `unpublish`: unpublishing is now one of three
+        | outcomes this form can record, and a route still called unpublish
+        | while it is also how a moderator marks a property sold would be a
+        | name that lies about what happened.
+        */
+        Route::post('/queue/{property}/unlist', [ModerationController::class, 'unlist'])->name('unlist');
+        Route::post('/queue/{property}/relist', [ModerationController::class, 'relist'])->name('relist');
     });
 
     Route::prefix('dashboard')->name('lister.')->group(function () {
@@ -285,6 +298,16 @@ Route::middleware('auth')->group(function () {
         Route::get('/listings/{property}/edit', [ListingController::class, 'edit'])->name('listings.edit');
         Route::put('/listings/{property}', [ListingController::class, 'update'])->name('listings.update');
         Route::post('/listings/{property}/submit', [ListingController::class, 'submit'])->name('listings.submit');
+
+        /*
+        | FR-M2-09: off the market, and back on.
+        |
+        | A lister's own transition, not a moderation decision — which is why it
+        | lives here rather than under /admin, and why the reason codes it
+        | accepts are a strict subset of the moderator's.
+        */
+        Route::post('/listings/{property}/unlist', [ListingController::class, 'unlist'])->name('listings.unlist');
+        Route::post('/listings/{property}/relist', [ListingController::class, 'relist'])->name('listings.relist');
 
         // Media (M3). Throttled: image processing is CPU-bound, and an
         // unthrottled upload endpoint is a cheap way to exhaust a small VPS.

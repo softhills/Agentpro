@@ -212,7 +212,8 @@ class ModerationTest extends TestCase
         app(ModerateListing::class)->approve($property, $moderator);
         $this->get(route('property.show', $property->fresh()))->assertOk();
 
-        $this->actingAs($moderator)->post(route('admin.unpublish', $property), [
+        $this->actingAs($moderator)->post(route('admin.unlist', $property), [
+            'outcome'     => 'other',
             'reason_code' => 'upheld_report',
         ])->assertRedirect(route('admin.queue'));
 

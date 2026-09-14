@@ -66,15 +66,34 @@
             @endif
         </p>
 
+        {{--
+            On the card rather than only on the archive page, so it travels with
+            the listing: a closed listing also turns up in search behind
+            "include closed" and on its lister's profile, and in both places the
+            price above needs the same qualification. Agentpro never sees what a
+            property actually went for — only what it was asking.
+        --}}
+        @if ($closed && $property->closed_at)
+            <p class="closednote">{{ $property->lifecycle_state->label() }} {{ $property->closed_at->format('M Y') }} · asking price</p>
+        @endif
+
         <h3><a href="{{ route('property.show', $property) }}">{{ $property->title }}</a></h3>
 
         <p class="addr"><x-icon name="pin" />{{ $property->area?->name ?? $property->city }}</p>
 
-        @if ($unit?->hasPriceDrop() || $property->finish === 'furnished')
+        @php
+            // allTags() folds the derived price_drop in with the lister's own,
+            // so this list and the search filter cannot disagree about what a
+            // listing carries (FR-M2-04).
+            $tags = $property->allTags();
+        @endphp
+        @if ($tags || $property->finish === 'furnished')
             <p class="tags">
-                @if ($unit?->hasPriceDrop())
-                    <span class="tag tag-drop">Price drop</span>
-                @endif
+                @foreach ($tags as $tag)
+                    <span @class(['tag', 'tag-drop' => $tag === 'price_drop', 'tag-offer' => $tag !== 'price_drop'])>
+                        {{ \App\Support\Vocab::TAGS[$tag] }}
+                    </span>
+                @endforeach
                 @if ($property->finish === 'furnished')
                     <span class="tag tag-offer">Furnished</span>
                 @endif

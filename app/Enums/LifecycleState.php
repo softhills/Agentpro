@@ -52,4 +52,32 @@ enum LifecycleState: string
     {
         return in_array($this, [self::Sold, self::Rented], true);
     }
+
+    /**
+     * States a listing can be taken off the market from.
+     *
+     * Expired is included deliberately. A listing whose display period ran out
+     * is still a listing whose property was let last month, and the lister
+     * should be able to say so — otherwise the only listings that ever reach
+     * the archive are the ones someone remembered to close in time, which
+     * makes the archive a measure of admin diligence rather than of activity.
+     */
+    public function canBeUnlisted(): bool
+    {
+        return in_array($this, [self::Published, self::Expired], true);
+    }
+
+    /**
+     * Whether a lister may put this back on the market without re-review.
+     *
+     * Only from a closing they declared themselves. An unpublish is a decision
+     * somebody else made about the listing — usually a report, a title dispute
+     * or a policy breach — and undoing it with a button would make the
+     * moderation power meaningless. That path back is `submit`, through the
+     * queue, which is where it belongs.
+     */
+    public function canBeRelisted(): bool
+    {
+        return $this->isClosed();
+    }
 }

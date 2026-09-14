@@ -68,6 +68,21 @@
   --map-bg:#E4EAF2;
   --hero-1:#DCE6F5; --hero-2:#C3D4EC; --hero-3:#B4C9E6;
   --hero-ink:#3C4A66; --hero-ink-2:#4A5875;
+  /* The wash over the hero photograph. It is what makes the band legible, not
+     the photograph, so it must hold up on the bare gradient too — the hero is
+     white-on-dark whether the image arrives or not.
+
+     Two layers, because one flat vertical wash forced a choice between a
+     readable lede and a visible photograph. The ellipse darkens the middle,
+     where the centred column of text sits, and fades to nothing at the edges,
+     where the bridge and the water are the whole point of using a photograph.
+     The linear layer under it holds the foot down for the search panel. */
+  --hero-scrim:
+    radial-gradient(76% 64% at 50% 44%,rgba(9,14,26,.60) 0%,rgba(9,14,26,.28) 62%,rgba(9,14,26,0) 100%),
+    linear-gradient(180deg,rgba(9,14,26,.46) 0%,rgba(9,14,26,.30) 42%,rgba(9,14,26,.58) 100%);
+  /* Blue that has to read on a white pill in both themes, so it cannot be
+     --blue: the dark theme lifts that to #7B8EF7, which is 3.0:1 on white. */
+  --on-photo-blue:#3247BC;
   --muted-icon:#C3C9D6;
 
   --shadow-card:0 1px 2px rgba(31,42,78,.05), 0 6px 18px rgba(31,42,78,.06);
@@ -129,6 +144,12 @@
   --map-bg:#1A202A;
   --hero-1:#151B27; --hero-2:#111722; --hero-3:#0E131C;
   --hero-ink:#AEBBD3; --hero-ink-2:#94A3BE;
+  /* Same photograph, carried heavier: a bright midday aerial at light-theme
+     strength is a lit panel in a dark room. */
+  --hero-scrim:
+    radial-gradient(76% 64% at 50% 44%,rgba(6,9,16,.66) 0%,rgba(6,9,16,.36) 62%,rgba(6,9,16,0) 100%),
+    linear-gradient(180deg,rgba(6,9,16,.58) 0%,rgba(6,9,16,.44) 42%,rgba(6,9,16,.70) 100%);
+  --on-photo-blue:#3247BC;
   --muted-icon:#39414F;
 
   --shadow-card:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
@@ -191,22 +212,121 @@ img{max-width:100%;display:block}
 .navlogout:hover{color:var(--ink)}
 .navflag{font-family:var(--q);font-weight:700;font-size:12px;background:var(--amber-soft);
   color:var(--amber-ink);padding:5px 11px;border-radius:var(--r-pill)}
+.navsignin,.navprimary{font-weight:700;font-size:14px;color:var(--heading);white-space:nowrap}
+.navprimary:hover,.navsignin:hover{color:var(--blue)}
+
+/* ---------------------------------------------------------- account menu */
+/*
+   The header used to carry one link per role, laid out in a row, and it only
+   ever had a link for the moderator: an officer and a technician signed in to a
+   site with no route to their own console. A row does not scale to five roles
+   and it had already run out of width on a phone, so the roles moved into a
+   menu and the bar keeps one link for whatever this account came to do.
+
+   Built on <details>, so it opens with no JavaScript at all.
+*/
+.usermenu{position:relative}
+.usermenu > summary{
+  display:flex;align-items:center;gap:3px;cursor:pointer;list-style:none;
+  padding:3px 4px 3px 3px;border-radius:var(--r-pill);border:1.5px solid transparent;color:var(--slate);
+}
+.usermenu > summary::-webkit-details-marker{display:none}
+.usermenu > summary:hover{border-color:var(--line);background:var(--surface-2)}
+.usermenu > summary svg{width:14px;height:14px;transition:transform .15s}
+.usermenu[open] > summary svg{transform:rotate(180deg)}
+.usermenu[open] > summary{border-color:var(--line);background:var(--surface-2)}
+.usermenu-guest > summary svg{width:20px;height:20px}
+
+.usermenu-pop{
+  position:absolute;top:calc(100% + 9px);right:0;z-index:60;width:248px;
+  background:var(--surface);border:1px solid var(--line);border-radius:13px;
+  box-shadow:var(--shadow-pop);padding:7px;
+  /* Taller than a phone in landscape once a lister is also staff. */
+  max-height:min(560px,calc(100vh - var(--nav-h) - 24px));overflow-y:auto;
+}
+.usermenu-id{padding:9px 10px 11px;border-bottom:1px solid var(--line);margin-bottom:5px;display:grid;gap:1px}
+.usermenu-id strong{font-family:var(--q);font-weight:700;font-size:14px;color:var(--heading)}
+.usermenu-id span{font-family:var(--i);font-size:11.5px;color:var(--slate);word-break:break-all}
+.usermenu-role{font-family:var(--m)!important;font-size:10px!important;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--blue)!important;margin-top:3px}
+
+.usermenu-g{padding:5px 0;border-bottom:1px solid var(--line)}
+.usermenu-g:last-of-type{border-bottom:0}
+.usermenu-h{font-family:var(--m);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--slate-2);margin:3px 10px 4px}
+.usermenu-g a{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;
+  font-weight:600;font-size:13.5px;color:var(--ink)}
+.usermenu-g a:hover{background:var(--surface-2);color:var(--blue)}
+.usermenu-g a svg{width:15px;height:15px;color:var(--slate-2);flex:none}
+.usermenu-g a:hover svg{color:var(--blue)}
+
+.usermenu-out{border-top:1px solid var(--line);margin-top:5px;padding-top:5px}
+.usermenu-out button{width:100%;text-align:left;background:none;border:0;cursor:pointer;
+  font-family:var(--q);font-weight:700;font-size:13.5px;color:var(--slate);padding:8px 10px;border-radius:8px}
+.usermenu-out button:hover{background:var(--bad-soft);color:var(--bad-ink)}
+
+/* The guest menu and the Browse group exist only where .navlinks does not. */
+.usermenu-guest{display:none}
+@media (max-width:960px){
+  .usermenu-guest{display:block}
+  .navsignin{display:none}
+}
+@media (min-width:961px){
+  .usermenu-browse{display:none}
+}
 
 /* -------------------------------------------------------------------- hero */
-.hero{position:relative;padding:62px 0 96px;overflow:hidden;background:linear-gradient(180deg,var(--hero-1) 0%,var(--hero-2) 55%,var(--hero-3) 100%)}
-.hero .sky{position:absolute;inset:0;pointer-events:none;width:100%;height:100%}
+/*
+   The band carries a photograph now, and everything in it is written for
+   light-on-photograph. Those colours do NOT flip with the theme, because the
+   photograph does not — only the scrim over it deepens. Hence the four token
+   overrides scoped to .hero: every descendant that reaches for --heading or
+   --hero-ink gets the on-photo value without a single rule being duplicated
+   per theme.
+
+   The gradient stays underneath as the ground. Between a 404 and a slow first
+   paint there is always a moment without a photograph, and the scrim is a
+   separate layer over that ground, so the band is dark and the text is legible
+   either way. The photograph is the improvement; it is not the contrast.
+*/
+.hero{
+  position:relative;padding:66px 0 96px;overflow:hidden;
+  background:linear-gradient(180deg,var(--hero-1) 0%,var(--hero-2) 55%,var(--hero-3) 100%);
+  --heading:#FFFFFF;
+  --hero-ink:rgba(255,255,255,.93);
+  --hero-ink-2:rgba(255,255,255,.78);
+  /* what3words' red is 2.3:1 against the scrim. Lifted to 8.4:1, and still
+     unmistakably the w3w red rather than some other accent. */
+  --w3w:#FFB0B5;
+}
+.heroshot{position:absolute;inset:0;display:block}
+.heroshot img{width:100%;height:100%;display:block;object-fit:cover;object-position:50% 64%}
+/* On the <picture> rather than a div of its own: one fewer empty element to
+   explain, and it still paints when the image inside fails. */
+.heroshot::after{content:"";position:absolute;inset:0;background:var(--hero-scrim)}
 .hero-in{position:relative;max-width:860px;margin:0 auto;text-align:center}
-.hero h1{font-weight:700;font-size:46px;line-height:1.08;letter-spacing:-.025em;margin:0 0 12px;color:var(--heading);text-wrap:balance}
-.hero .lede{margin:0 auto 26px;color:var(--hero-ink);font-size:16px;max-width:54ch;font-weight:500}
-.segs{display:inline-flex;background:rgba(255,255,255,.75);border-radius:var(--r-pill);padding:4px;gap:2px;margin-bottom:14px}
+/* Two shadows on each: a tight one that hugs the glyph edges and carries the
+   contrast wherever the photograph happens to be pale, and a wide one that
+   settles the text onto the image instead of leaving it floating over it. The
+   lede gets the harder tight shadow — it is the smallest thing on the band and
+   the one an orange roof behind it would eat. */
+.hero h1{font-weight:700;font-size:46px;line-height:1.08;letter-spacing:-.025em;margin:0 0 12px;color:var(--heading);text-wrap:balance;text-shadow:0 1px 2px rgba(6,10,20,.45),0 2px 22px rgba(6,10,20,.5)}
+.hero .lede{margin:0 auto 26px;color:var(--hero-ink);font-size:16px;max-width:54ch;font-weight:500;text-shadow:0 1px 2px rgba(6,10,20,.62),0 1px 16px rgba(6,10,20,.55)}
+/* Dark glass, not the white strip it was: white labels on a white strip is
+   how this would have broken the moment a photograph went behind it. */
+.segs{display:inline-flex;background:rgba(10,16,28,.44);border:1px solid rgba(255,255,255,.17);
+  -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);
+  border-radius:var(--r-pill);padding:4px;gap:2px;margin-bottom:14px}
 .segs a{font-weight:700;font-size:13.5px;padding:8px 18px;border-radius:var(--r-pill);color:var(--heading)}
-.segs a[aria-current="page"]{background:var(--surface);color:var(--blue);box-shadow:0 1px 3px rgba(31,42,78,.12)}
+.segs a[aria-current="page"]{background:#FFFFFF;color:var(--on-photo-blue);box-shadow:0 1px 3px rgba(6,10,20,.28)}
 .searchpanel{background:rgba(255,255,255,.96);border-radius:18px;padding:12px;box-shadow:var(--shadow-pop);display:grid;grid-template-columns:1.5fr 1fr 1fr auto;gap:9px;text-align:left}
 .field{background:var(--paper);border:1.5px solid var(--line);border-radius:11px;padding:7px 14px}
 .field label{display:block;font-family:var(--m);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--slate-2);margin-bottom:1px}
 .field input,.field select{width:100%;border:0;background:none;font-family:var(--q);font-weight:600;font-size:14.5px;color:var(--ink);padding:2px 0;outline:none}
 .field input::placeholder{color:var(--slate-2);font-weight:500}
-.w3w-hint{font-family:var(--m);font-size:11px;color:var(--hero-ink-2);margin:11px 0 0;display:flex;gap:6px;justify-content:center;align-items:center}
+/* Wraps: at 375px the flex row had no way to break, so the sentence squeezed
+   onto two lines while the address sat beside it on one. */
+.w3w-hint{font-family:var(--m);font-size:11px;color:var(--hero-ink-2);margin:11px 0 0;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;text-shadow:0 1px 2px rgba(6,10,20,.7)}
 .w3w-hint b{color:var(--w3w);font-weight:500}
 
 /* --------------------------------------------------------------- card (M2) */
@@ -457,7 +577,12 @@ img{max-width:100%;display:block}
   .dbody{grid-template-columns:1fr}
   .pricecard{position:static}
   .searchpanel{grid-template-columns:1fr}
+  /* The stacked panel makes the band much taller, so the photograph gets less
+     padding around it and is held higher — cover on a tall, narrow box would
+     otherwise crop to water and road and lose the housing entirely. */
+  .hero{padding:44px 0 62px}
   .hero h1{font-size:34px}
+  .heroshot img{object-position:50% 46%}
   .navlinks{display:none}
   .vb-in{grid-template-columns:1fr;gap:24px}
 }
@@ -1235,6 +1360,10 @@ body:has(.consent) .leaflet-bottom{bottom:var(--consent-h)}
   font-variant-numeric:tabular-nums;line-height:1}
 .proofband dd span{font-size:15px;color:var(--slate-2)}
 .proofband .dd-sure{color:var(--sure)}
+/* One figure in the band leads somewhere, so it has to look like it does
+   without breaking the row of numbers it sits in. */
+.proofband dd a{color:var(--blue);text-decoration:none;border-bottom:2px solid var(--blue-soft)}
+.proofband dd a:hover{border-bottom-color:var(--blue)}
 
 .sec-tint{background:var(--paper)}
 .sec-more{margin:20px 0 0;font-family:var(--q);font-weight:700;font-size:14px}
@@ -1261,3 +1390,93 @@ body:has(.consent) .leaflet-bottom{bottom:var(--consent-h)}
   .proofband dl > div{border-right:0}
   .proofband dd{font-size:22px}
 }
+
+/* ------------------------------------------------- contact block (FR-M9-02)
+   Each mode is its own form now, so the forms are the grid items and the
+   button inside has to fill one. Without this the row collapses to two
+   shrink-wrapped buttons at the left edge. */
+.contact form{margin:0;display:block}
+.contact form .btn{width:100%}
+.contacthint{margin:2px 0 0;font-family:var(--i);font-size:12px;line-height:1.5;color:var(--slate)}
+
+/* The channel, after it has been asked for and logged. Written out as well as
+   linked: a tel: does nothing on a desktop, and the number is what somebody
+   wants to read off the screen. */
+.revealed{display:grid;gap:3px;padding:12px 14px;margin-bottom:4px;
+  border:1px solid var(--ok-line);border-radius:11px;background:var(--ok-soft)}
+.revealed-label{font-family:var(--m);font-size:10px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ok-ink)}
+.revealed-value{font-family:var(--q);font-weight:700;font-size:18px;color:var(--heading);
+  text-decoration:none;word-break:break-word}
+a.revealed-value:hover{text-decoration:underline}
+.revealed-none{font-family:var(--i);font-weight:400;font-size:13px;color:var(--slate)}
+
+/* ============================================================================
+   Coming off the market, and the archive it feeds (FR-M2-07, FR-M2-09)
+   ========================================================================= */
+
+/*
+   The lister's unlisting control.
+
+   A disclosure, not a button, because there is no safe default for the
+   outcome — and a popover rather than an inline panel, so opening it does not
+   shove every listing below it down the page while the lister is reading the
+   options.
+*/
+.unlist{position:relative}
+.unlist > summary{
+  list-style:none;cursor:pointer;text-align:center;white-space:nowrap;
+  font-family:var(--q);font-weight:700;font-size:13px;padding:8px 15px;border-radius:var(--r-pill);
+  background:var(--surface);color:var(--heading);border:1.5px solid var(--line);
+}
+.unlist > summary::-webkit-details-marker{display:none}
+.unlist > summary:hover{border-color:var(--slate-2)}
+.unlist[open] > summary{border-color:var(--slate-2);background:var(--surface-2)}
+
+/* Outranks `.listacts form{display:contents}`, which exists so a lone submit
+   button lines up with the links beside it and would otherwise dissolve this
+   form's box and scatter its fields. */
+.listacts .unlist form,.unlist form{
+  display:grid;gap:7px;position:absolute;right:0;top:calc(100% + 7px);z-index:40;width:265px;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow-pop);padding:13px;text-align:left;
+}
+.unlist-q{font-family:var(--q);font-weight:700;font-size:13.5px;color:var(--heading);margin:0 0 1px}
+.unlist-opt{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;
+  color:var(--ink);cursor:pointer;padding:5px 7px;border-radius:8px}
+.unlist-opt:hover{background:var(--surface-2)}
+.unlist-opt input{accent-color:var(--blue);width:15px;height:15px;flex:none}
+.unlist-note{font-family:var(--i);font-size:11.5px;line-height:1.45;color:var(--slate);margin:2px 0 0}
+
+/* The qualification that travels with a closed listing wherever it is shown. */
+.closednote{font-family:var(--m);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--slate-2);margin:-3px 0 0}
+
+/* ------------------------------------------------------------ the archive */
+.archivepulse{font-family:var(--i);font-size:14px;color:var(--slate);margin:14px 0 0}
+.archivepulse strong{font-family:var(--q);font-weight:700;font-size:19px;color:var(--heading);
+  margin-right:3px;font-variant-numeric:tabular-nums}
+
+.archivetabs{display:flex;flex-wrap:wrap;gap:7px;margin-top:20px}
+.archivetabs a{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:var(--r-pill);
+  border:1.5px solid var(--line);background:var(--surface);font-weight:700;font-size:13.5px;color:var(--heading)}
+.archivetabs a:hover{border-color:var(--slate-2)}
+.archivetabs a[aria-current="page"]{background:var(--navy);border-color:var(--navy);color:var(--on-navy)}
+.archivetabs a span{font-family:var(--m);font-size:11px;font-weight:400;color:var(--slate-2);
+  font-variant-numeric:tabular-nums}
+.archivetabs a[aria-current="page"] span{color:var(--on-navy);opacity:.72}
+
+/* Above the grid, not below it: what the prices on this page do and do not
+   mean has to be read before the prices are. */
+.archivenote{font-family:var(--i);font-size:13px;line-height:1.55;color:var(--slate);
+  background:var(--surface-2);border:1px solid var(--line);border-left:3px solid var(--slate-2);
+  border-radius:9px;padding:12px 15px;margin:0 0 26px;max-width:78ch}
+.archivenote strong{color:var(--ink)}
+
+.archivecta{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:26px;text-align:center}
+.archivecta h2{margin-top:0}
+.archivecta p{max-width:56ch;margin:0 auto 16px;color:var(--slate);font-size:14.5px}
+
+/* The admin listings table gained a second action per row. */
+.rowacts{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap}

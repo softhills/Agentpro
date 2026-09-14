@@ -73,6 +73,34 @@
                 </select>
             </div>
 
+            {{--
+                FR-M2-04. Three tags, not four: "Price drop" is missing on
+                purpose. It is applied from price history, so it belongs to what
+                the listing has actually done rather than to what its lister
+                would like a seeker to believe.
+
+                Payment plan and financing are discovery tags only (PRD §4) —
+                they help somebody find the listing and originate nothing, which
+                the hint says here rather than in a policy nobody reads.
+            --}}
+            <div class="fieldset">
+                <span class="flabel">Tags</span>
+                @php $chosen = old('tags', $property->tags ?? []); @endphp
+                @foreach (\App\Support\Vocab::LISTER_TAGS as $value)
+                    @php $label = \App\Support\Vocab::TAGS[$value]; @endphp
+                    <label class="prefrow">
+                        <input type="checkbox" name="tags[]" value="{{ $value }}"
+                               @checked(in_array($value, (array) $chosen, true))>
+                        <span><strong>{{ $label }}</strong></span>
+                    </label>
+                @endforeach
+                <span class="fhint">
+                    Seekers filter on these. "Payment plan" and "Financing" mean a buyer can ask
+                    you about one — Agentpro arranges neither, and tagging a listing you cannot
+                    offer terms on will get it reported.
+                </span>
+            </div>
+
             <div class="fieldset">
                 <label class="flabel" for="description">Description</label>
                 <textarea id="description" name="description" rows="5" class="finput">{{ old('description', $property->description) }}</textarea>

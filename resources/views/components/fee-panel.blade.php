@@ -85,17 +85,79 @@
         </div>
     </div>
 
-    {{-- FR-M9-02: the three contact modes. Every initiation is logged against
-         the listing, which is also what feeds lister analytics. --}}
-    <div class="contact">
-        <div class="row">
-            <button type="button" class="btn btn-blue btn-block"><x-icon name="phone" />Call</button>
-            <button type="button" class="btn btn-wa btn-block">
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.7-4.4-3.9-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.6-.3h.5c.2 0 .4 0 .6.4l.8 1.9c.1.2 0 .4-.1.5l-.3.4c-.1.2-.3.3-.1.6.1.3.6 1.1 1.4 1.8 1 .9 1.8 1.1 2 1.2.2.1.4.1.5-.1l.7-.8c.2-.2.3-.2.6-.1l1.8.9c.3.1.4.2.5.3 0 .1 0 .6-.2 1Z"/></svg>
-                WhatsApp
-            </button>
-        </div>
-        <button type="button" class="btn btn-ghost btn-block">Email the agent</button>
-        <button type="button" class="btn btn-navy btn-block">Request a viewing</button>
+    {{--
+        FR-M9-02: the three contact modes, every initiation logged.
+
+        These were four <button type="button"> elements wired to nothing. They
+        are forms now, and the lister's number is deliberately NOT in this
+        markup — pressing one records the initiation and the server hands back
+        the channel, which is what keeps contact details off a page anybody can
+        view-source (SEC-10) and behind the account FR-M1-03 requires.
+    --}}
+    <div class="contact" id="contact">
+        @auth
+            @php $revealed = session('contact'); @endphp
+
+            @if ($revealed)
+                {{-- Written out as well as linked: on a desktop a tel: does
+                     nothing useful, and a seeker wants to read the number off
+                     the screen and dial it on their phone. --}}
+                <div class="revealed">
+                    <span class="revealed-label">{{ $revealed['label'] }}</span>
+                    @if ($revealed['href'])
+                        <a href="{{ $revealed['href'] }}"
+                           @if ($revealed['mode'] === 'whatsapp') target="_blank" rel="noopener" @endif
+                           class="revealed-value">{{ $revealed['value'] }}</a>
+                    @else
+                        <span class="revealed-value revealed-none">
+                            This lister has not given us a number. Try email.
+                        </span>
+                    @endif
+                </div>
+            @endif
+
+            <div class="row">
+                <form method="POST" action="{{ route('interact.contact', $property) }}">
+                    @csrf
+                    <input type="hidden" name="mode" value="phone">
+                    <button class="btn btn-blue btn-block"><x-icon name="phone" />Call</button>
+                </form>
+                <form method="POST" action="{{ route('interact.contact', $property) }}">
+                    @csrf
+                    <input type="hidden" name="mode" value="whatsapp">
+                    <button class="btn btn-wa btn-block">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.7-4.4-3.9-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.6-.3h.5c.2 0 .4 0 .6.4l.8 1.9c.1.2 0 .4-.1.5l-.3.4c-.1.2-.3.3-.1.6.1.3.6 1.1 1.4 1.8 1 .9 1.8 1.1 2 1.2.2.1.4.1.5-.1l.7-.8c.2-.2.3-.2.6-.1l1.8.9c.3.1.4.2.5.3 0 .1 0 .6-.2 1Z"/></svg>
+                        WhatsApp
+                    </button>
+                </form>
+            </div>
+
+            <form method="POST" action="{{ route('interact.contact', $property) }}">
+                @csrf
+                <input type="hidden" name="mode" value="email">
+                <button class="btn btn-ghost btn-block">Email the agent</button>
+            </form>
+
+            {{-- In-platform scheduling against real availability is FR-M9-12
+                 and deferred to R2. Until then this opens an email with the
+                 viewing already written, which is what the button says it
+                 does — rather than a button that says it and does not. --}}
+            <form method="POST" action="{{ route('interact.contact', $property) }}">
+                @csrf
+                <input type="hidden" name="mode" value="email">
+                <input type="hidden" name="intent" value="viewing">
+                <button class="btn btn-navy btn-block">Request a viewing</button>
+            </form>
+        @else
+            {{-- FR-M1-03: an account is the price of acting on a listing, not
+                 of seeing one. A link to sign in beats a button that fails. --}}
+            <a href="{{ route('login') }}" class="btn btn-blue btn-block">
+                <x-icon name="phone" />Sign in to contact {{ $property->lister->name }}
+            </a>
+            <p class="contacthint">
+                Browsing needs no account. One is required to call, message or request a
+                viewing, so that a lister knows who is asking.
+            </p>
+        @endauth
     </div>
 </div>

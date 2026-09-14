@@ -4,8 +4,10 @@ namespace App\Queries;
 
 use App\Enums\LifecycleState;
 use App\Models\Property;
+use App\Support\Vocab;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * The search query (M5).
@@ -48,6 +50,9 @@ class PropertySearch
             // field it filters is a rename waiting to go wrong.
             'build_status' => ['nullable', 'in:fully_built,under_construction'],
             'finish'     => ['nullable', 'in:furnished,unfurnished,core,carcass'],
+            // FR-M5-03, the last two of its twelve filters.
+            'tag'        => ['nullable', 'string', Rule::in(array_keys(Vocab::TAGS))],
+            'title_type' => ['nullable', 'string', Rule::in(Vocab::titleTypeKeys())],
             'realsure'   => ['nullable', 'boolean'],
             'has_3d'     => ['nullable', 'boolean'],
             'has_video'  => ['nullable', 'boolean'],
@@ -146,6 +151,24 @@ class PropertySearch
             $query->where('finish', $f['finish']);
         }
 
+        /*
+         * FR-M6-04 as a filter. A listing matches if any of its declared titles
+         * is the one asked for — a property routinely carries two or three, and
+         * a seeker asking for Certificate of Occupancy wants the listings that
+         * have one, not the listings that have only that.
+         *
+         * Stage is deliberately not part of this. "In progress" is still a
+         * declaration worth surfacing, and filtering it out silently would hide
+         * listings whose paperwork is underway — which is most of this market.
+         */
+        if (! empty($f['title_type'])) {
+            $query->whereHas('titleClaims', fn ($q) => $q->where('title_type', $f['title_type']));
+        }
+
+        if (! empty($f['tag'])) {
+            $this->applyTag($query, $f['tag']);
+        }
+
         if (! empty($f['area'])) {
             $query->whereHas('area', fn ($q) => $q->where('slug', $f['area']));
         }
@@ -199,6 +222,45 @@ class PropertySearch
         }
 
         return $this->applySort($query, $f['sort'] ?? 'newest');
+    }
+
+    /**
+     * FR-M2-04 as a filter, and price_drop is the awkward one.
+     *
+     * Three of the four tags are lister-chosen and live in a JSON column. The
+     * fourth is derived from price history and is never stored, because the
+     * requirement says it is applied automatically — and a column somebody can
+     * set is a column that gets set by a lister whose price never moved.
+     *
+     * So the filter has to derive it, and it has to derive it the *same way*
+     * the badge on the card does, or search will promise a price drop the
+     * listing does not show. Unit::hasPriceDrop() takes the most recent history
+     * entry whose price differs from the current one and asks whether it was
+     * higher; the SQL below is that sentence, exactly.
+     */
+    private function applyTag(Builder $query, string $tag): void
+    {
+        if ($tag !== 'price_drop') {
+            $query->whereJsonContains('tags', $tag);
+
+            return;
+        }
+
+        $query->whereHas('units', function ($unit) {
+            $unit->whereExists(function ($exists) {
+                $exists->selectRaw('1')
+                    ->from('price_histories as ph')
+                    ->whereColumn('ph.unit_id', 'units.id')
+                    ->whereColumn('ph.price', '>', 'units.price')
+                    // The most recent entry that actually changed the price.
+                    // Without this, a listing that dropped and then went back up
+                    // would still match on the older, higher figure.
+                    ->whereRaw('ph.effective_at = (
+                        SELECT MAX(ph2.effective_at) FROM price_histories ph2
+                        WHERE ph2.unit_id = units.id AND ph2.price <> units.price
+                    )');
+            });
+        });
     }
 
     private function applySort(Builder $query, string $sort): Builder

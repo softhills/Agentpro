@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Lister;
 
 use App\Actions\SubmitListingForReview;
+use App\Actions\UnlistListing;
 use App\Enums\LifecycleState;
 use App\Http\Controllers\Controller;
 use App\Models\Amenity;
@@ -53,6 +54,7 @@ class ListingController extends Controller
                 'intent'        => $data['intent'],
                 'build_status'  => $data['build_status'],
                 'finish'        => $data['finish'] ?? null,
+                'tags'          => array_values($data['tags'] ?? []),
                 'address_line'  => $data['address_line'],
                 'city'          => $area?->city ?? $data['city'],
                 'state'         => $area?->state ?? $data['state'],
@@ -114,6 +116,7 @@ class ListingController extends Controller
                 'intent'       => $data['intent'],
                 'build_status' => $data['build_status'],
                 'finish'       => $data['finish'] ?? null,
+                'tags'         => array_values($data['tags'] ?? []),
                 'address_line' => $data['address_line'],
                 'city'         => $area?->city ?? $data['city'],
                 'state'        => $area?->state ?? $data['state'],
@@ -146,6 +149,66 @@ class ListingController extends Controller
             ->with('status', 'Submitted for review. Decisions usually come within 6 working hours.');
     }
 
+    /**
+     * FR-M2-09: the property is let, sold, or otherwise off the market.
+     *
+     * The outcome is required and has no default. A single "unlist" button
+     * would have been less typing for everybody, and it would also have thrown
+     * away the only fact worth keeping about a listing that has ended — and
+     * with it the archive, which is the evidence that anything happens here at
+     * all.
+     */
+    public function unlist(Request $request, Property $property, UnlistListing $unlister)
+    {
+        $this->authorize('unlist', $property);
+
+        $data = $request->validate([
+            'outcome' => ['required', 'in:'.implode(',', array_keys(Vocab::CLOSE_OUTCOMES))],
+            /*
+             * Restricted to the lister's own subset even though the admin form
+             * posts to a different route. A findings code — fraud, a title
+             * dispute — is something the platform concludes about a listing,
+             * never something its owner can stamp on it.
+             */
+            'reason_code' => [
+                'required_if:outcome,other', 'nullable',
+                'in:'.implode(',', Vocab::LISTER_UNPUBLISH_REASONS),
+            ],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'outcome.required'     => 'Tell us why it is coming down — sold, rented, or something else.',
+            'reason_code.required_if' => 'Pick a reason so we know what happened to the listing.',
+        ]);
+
+        $property = $unlister->handle(
+            $property,
+            $request->user(),
+            $data['outcome'],
+            $data['reason_code'] ?? null,
+            $data['note'] ?? null,
+        );
+
+        return redirect()->route('lister.dashboard')->with('status', match ($data['outcome']) {
+            'sold'   => 'Marked as sold. It now appears in the sold and let archive.',
+            'rented' => 'Marked as rented. It now appears in the sold and let archive.',
+            default  => 'Unlisted. It is no longer visible to seekers.',
+        });
+    }
+
+    /** An undo for a closing the lister declared. See UnlistListing::relist(). */
+    public function relist(Request $request, Property $property, UnlistListing $unlister)
+    {
+        $this->authorize('relist', $property);
+
+        $property = $unlister->relist($property, $request->user());
+
+        return redirect()->route('lister.dashboard')->with('status',
+            $property->lifecycle_state === LifecycleState::Expired
+                ? 'Back on the market — but its display period has run out, so renew it to make it visible again.'
+                : 'Back on the market.'
+        );
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private function validated(Request $request): array
@@ -157,6 +220,14 @@ class ListingController extends Controller
             'intent'       => ['required', 'in:rent,sale'],
             'build_status' => ['required', 'in:fully_built,under_construction'],
             'finish'       => ['nullable', 'in:furnished,unfurnished,core,carcass'],
+            /*
+             * FR-M2-04. price_drop is excluded by name: it is derived from
+             * price history, and a lister who could tick it would be claiming
+             * a reduction that never happened — which is the one thing a tag
+             * on this platform must never be able to do.
+             */
+            'tags'         => ['nullable', 'array', 'max:'.count(Vocab::LISTER_TAGS)],
+            'tags.*'       => ['in:'.implode(',', Vocab::LISTER_TAGS)],
             'area_id'      => ['nullable', 'exists:areas,id'],
             'address_line' => ['required', 'string', 'max:200'],
             'city'         => ['required_without:area_id', 'nullable', 'string', 'max:80'],

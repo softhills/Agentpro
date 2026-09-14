@@ -111,6 +111,19 @@ final class Vocab
     ];
 
     /**
+     * The tags a lister may actually set.
+     *
+     * price_drop is absent, and this list exists so that fact is enforced in
+     * one place rather than asserted in several. It gates the listing form's
+     * validation and Property::allTags() alike — the second one matters most,
+     * because a value written straight into the column by a seeder, a console
+     * command or a future import would otherwise be believed.
+     *
+     * @var list<string>
+     */
+    public const LISTER_TAGS = ['special_offer', 'payment_plan', 'financing'];
+
+    /**
      * FR-M2-06 / FR-M12-01: the reason-code catalogue.
      *
      * A closed list rather than free text, because reject reasons are the raw
@@ -131,14 +144,68 @@ final class Vocab
     ];
 
     /** FR-M2-07: taking a live listing down. */
+    /**
+     * Why a listing is coming off the market (FR-M2-07, FR-M2-09).
+     *
+     * Asked as an outcome rather than as a reason code, because the answer
+     * decides where the listing goes rather than merely annotating it: sold and
+     * rented are public states that carry the listing into the archive, and
+     * everything else is an unpublish that ends its public life quietly.
+     *
+     * "Other" is last and unglamorous on purpose. If picking it were as easy as
+     * the first two, it would absorb the closings that are actually sales, and
+     * the archive would undercount the only thing it exists to show.
+     *
+     * @var array<string,string>
+     */
+    public const CLOSE_OUTCOMES = [
+        'sold'   => 'Sold',
+        'rented' => 'Rented',
+        'other'  => 'Other reason',
+    ];
+
+    /** The states each outcome lands the listing in. */
+    public const CLOSE_OUTCOME_STATES = [
+        'sold'   => 'sold',
+        'rented' => 'rented',
+        'other'  => 'unpublished',
+    ];
+
     public const UNPUBLISH_REASONS = [
         'lister_request'   => 'Requested by the lister',
         'no_longer_available' => 'Property is no longer available',
+        'listing_error'    => 'Listed in error',
         'upheld_report'    => 'Report from a seeker upheld',
         'suspected_fraud'  => 'Suspected fraudulent listing',
         'title_dispute'    => 'Title dispute raised',
         'policy_breach'    => 'Breach of listing policy',
     ];
+
+    /**
+     * The subset a lister may choose when unlisting their own property.
+     *
+     * The rest of UNPUBLISH_REASONS are findings — a report upheld, suspected
+     * fraud, a title dispute — and a finding is something the platform records
+     * about a listing, not something its owner can stamp on it. Letting a
+     * lister write "suspected fraud" into their own audit trail would corrupt
+     * the only record that says who concluded what.
+     *
+     * @var list<string>
+     */
+    public const LISTER_UNPUBLISH_REASONS = [
+        'no_longer_available',
+        'lister_request',
+        'listing_error',
+    ];
+
+    /** @return array<string,string> */
+    public static function listerUnpublishReasons(): array
+    {
+        return array_intersect_key(
+            self::UNPUBLISH_REASONS,
+            array_flip(self::LISTER_UNPUBLISH_REASONS)
+        );
+    }
 
     /** FR-M6-07 */
     public const REPORT_REASONS = [
@@ -149,6 +216,16 @@ final class Vocab
         'wrong_location' => 'Location is wrong',
         'offensive'      => 'Offensive or inappropriate content',
     ];
+
+    /**
+     * Every title key, flattened out of the presentation groups.
+     *
+     * @return list<string>
+     */
+    public static function titleTypeKeys(): array
+    {
+        return array_merge(...array_map('array_keys', array_values(self::TITLE_TYPES)));
+    }
 
     public static function titleTypeLabel(string $key): string
     {

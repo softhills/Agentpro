@@ -88,32 +88,17 @@ class ModerateListing
         return $updated;
     }
 
-    /**
-     * FR-M2-07 — admin can take a live listing down at any time.
+    /*
+     * FR-M2-07 — taking a live listing down — used to live here as
+     * unpublish(). It moved to UnlistListing when the platform started asking
+     * *why* a listing is coming off the market, because the answer can be
+     * "sold", and a class whose own docblock says it is the only path into
+     * public visibility is the wrong home for the three paths out of it.
      *
-     * Unpublished, not deleted: the listing, its media and its audit trail stay
-     * intact, because an unpublish is frequently the first step of a dispute.
+     * Unpublished, not deleted, either way: the listing, its media and its
+     * audit trail stay intact, because an unpublish is frequently the first
+     * step of a dispute.
      */
-    public function unpublish(Property $property, User $moderator, string $reasonCode, ?string $note = null): Property
-    {
-        return DB::transaction(function () use ($property, $moderator, $reasonCode, $note) {
-            $before = ['lifecycle_state' => $property->lifecycle_state->value];
-
-            $property->update([
-                'lifecycle_state'       => LifecycleState::Unpublished->value,
-                'rejection_reason_code' => $reasonCode,
-                'rejection_note'        => $note,
-            ]);
-
-            Audit::record('listing.unpublished', $property, $before, [
-                'lifecycle_state' => LifecycleState::Unpublished->value,
-                'reason_code'     => $reasonCode,
-                'note'            => $note,
-            ], $moderator->id);
-
-            return $property->fresh();
-        });
-    }
 
     /** Moderator picks the listing up, so two people do not review the same one. */
     public function claim(Property $property, User $moderator): Property

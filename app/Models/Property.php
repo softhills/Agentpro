@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\LifecycleState;
 use App\Enums\MediaKind;
+use App\Support\Vocab;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,8 +33,10 @@ class Property extends Model
         'submitted_at'         => 'datetime',
         'published_at'         => 'datetime',
         'expires_at'           => 'datetime',
+        'closed_at'            => 'datetime',
         'content_updated_at'   => 'datetime',
         'realsure_verified_at' => 'datetime',
+        'tags'                 => 'array',
     ];
 
     /** Public URLs key on the uuid, never the sequential id (SEC-10). */
@@ -114,6 +117,25 @@ class Property extends Model
     }
 
     /**
+     * The public sold-and-let archive.
+     *
+     * Three conditions, and each one is doing work. Closed says the property
+     * found a buyer or a tenant. `closed_at` says it got there through the
+     * unlisting flow, so there is a date and an actor on the audit trail behind
+     * it — a row that arrived in this state by some other route is not evidence
+     * of anything. `published_at` says it was on the market first: without it, a
+     * draft could be created and flipped straight to sold, and the one page on
+     * this site whose entire purpose is to be believable would be the easiest
+     * one to fake.
+     */
+    public function scopeClosedPublicly(Builder $q): Builder
+    {
+        return $q->whereIn('lifecycle_state', LifecycleState::closed())
+            ->whereNotNull('closed_at')
+            ->whereNotNull('published_at');
+    }
+
+    /**
      * Viewport search. MBRContains is index-accelerated on the SPATIAL index and
      * behaves identically on MySQL 8 and MariaDB, which is why the search pane
      * does not need a separate search cluster (PRD §17).
@@ -156,6 +178,41 @@ class Property extends Model
     public function isRealsureVerified(): bool
     {
         return $this->realsure_verified_at !== null;
+    }
+
+    /**
+     * Every tag on this listing, lister-chosen and derived together (FR-M2-04).
+     *
+     * price_drop is folded in here rather than stored, so the one place that
+     * answers "what tags does this listing carry" cannot disagree with the
+     * badge on the card — both end up reading Unit::hasPriceDrop().
+     *
+     * @return list<string>
+     */
+    public function allTags(): array
+    {
+        /*
+         * Intersected against LISTER_TAGS, not all of TAGS. price_drop is in
+         * the vocabulary but is not something anybody may store, so a value
+         * written straight into the column — by a seeder, a console command, a
+         * future import — is dropped here rather than believed. The form
+         * validation is the other layer; this is the one that decides.
+         */
+        $tags = array_values(array_intersect(
+            (array) ($this->tags ?? []),
+            Vocab::LISTER_TAGS
+        ));
+
+        if ($this->headlineUnit()?->hasPriceDrop()) {
+            $tags[] = 'price_drop';
+        }
+
+        return $tags;
+    }
+
+    public function hasTag(string $tag): bool
+    {
+        return in_array($tag, $this->allTags(), true);
     }
 
     /** FR-M2-14: "New" within a configurable window. */

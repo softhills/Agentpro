@@ -81,28 +81,59 @@
         </svg>
       </button>
       @guest
-        <a href="{{ route('login') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Sign in</a>
+        <a href="{{ route('login') }}" class="navsignin">Sign in</a>
         <a href="{{ route('register') }}" class="btn btn-blue btn-sm">List a property</a>
+
+        {{-- Below 960px .navlinks is hidden and a guest had no way to reach
+             anything but the home page. Same disclosure pattern as the account
+             menu, and it exists only at those widths. --}}
+        <details class="usermenu usermenu-guest">
+          <summary aria-label="Menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/>
+            </svg>
+          </summary>
+          <div class="usermenu-pop">
+            <div class="usermenu-g">
+              <p class="usermenu-h">Browse</p>
+              <a href="{{ route('search', ['intent' => 'rent']) }}">Rent</a>
+              <a href="{{ route('search', ['intent' => 'sale']) }}">Buy</a>
+              <a href="{{ route('search', ['type' => 'land']) }}">Land</a>
+              <a href="{{ route('pages.areas') }}">Areas</a>
+              <a href="{{ route('pages.agents') }}">Agents</a>
+              <a href="{{ route('pages.realsure') }}">RealSure</a>
+              <a href="{{ route('pages.closed') }}">Sold and let</a>
+            </div>
+            <div class="usermenu-g">
+              <p class="usermenu-h">Account</p>
+              <a href="{{ route('login') }}">Sign in</a>
+              <a href="{{ route('register') }}">Create an account</a>
+            </div>
+          </div>
+        </details>
       @else
-        @if (auth()->user()->isStaff('moderator'))
-          <a href="{{ route('admin.queue') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Queue</a>
-        @endif
-        @if (auth()->user()->canList())
-          <a href="{{ route('lister.dashboard') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Your listings</a>
-        @else
-          <a href="{{ route('saved-searches.index') }}" style="font-weight:700;font-size:14px;color:var(--navy)">Saved searches</a>
-        @endif
+        {{-- One link in the bar, for whatever this account came here to do.
+             Everything else is in the menu — see partials/account-menu. --}}
+        @php
+          $me = auth()->user();
+          $primary = match (true) {
+              $me->isStaff('moderator')         => [route('admin.queue'), 'Queue'],
+              $me->isStaff('realsure_officer')  => [route('realsure.queue'), 'Verifications'],
+              $me->isStaff('technician')        => [route('technician.assignments'), 'Assignments'],
+              $me->canList()                    => [route('lister.dashboard'), 'Your listings'],
+              default                           => [route('saved-searches.index'), 'Saved searches'],
+          };
+        @endphp
+        <a href="{{ $primary[0] }}" class="navprimary">{{ $primary[1] }}</a>
+
         {{-- Verification state is surfaced in the chrome, not buried in the
              dashboard: a lister whose checks are pending should not have to go
              looking for the reason submission is refused. --}}
-        @if (auth()->user()->canList() && ! auth()->user()->isVerified())
+        @if ($me->canList() && ! $me->isVerified())
           <a href="{{ route('verify.show') }}" class="navflag">Verify</a>
         @endif
-        <form method="POST" action="{{ route('logout') }}" style="display:inline">
-          @csrf
-          <button type="submit" class="navlogout">Sign out</button>
-        </form>
-        <span class="avatar" title="{{ auth()->user()->name }}">{{ auth()->user()->initials() }}</span>
+
+        @include('partials.account-menu')
       @endguest
     </div>
   </div>
@@ -116,7 +147,8 @@
   <div class="container in">
     <strong style="color:var(--on-navy);font-size:15px">Agentpro</strong>
     <a href="{{ route('pages.realsure') }}">RealSure</a><a href="{{ route('pages.areas') }}">Areas</a><a
-       href="{{ route('pages.agents') }}">Agents</a><a href="{{ route('pages.about') }}">About</a><a
+       href="{{ route('pages.agents') }}">Agents</a><a href="{{ route('pages.closed') }}">Sold and let</a><a
+       href="{{ route('pages.about') }}">About</a><a
        href="{{ route('pages.terms') }}">Terms</a><a href="{{ route('pages.privacy') }}">Privacy</a>
     <p class="legal">
       Title information shown on listings is declared by the lister. Agentpro makes no
@@ -135,6 +167,32 @@
             var dark = root.getAttribute('data-theme') === 'dark';
             root.setAttribute('data-theme', dark ? 'light' : 'dark');
             try { localStorage.setItem('agentpro-theme', dark ? 'light' : 'dark'); } catch (e) {}
+        });
+    });
+
+    /*
+     * Conveniences for the header menus, not the mechanism.
+     *
+     * <details> opens and closes them on its own, so this file failing to load
+     * leaves a menu that still works — it just stays open until you click the
+     * summary again. Everything below is what a browser does not give you for
+     * free: close when the click lands elsewhere, close on Escape, and never
+     * leave two of them open at once.
+     */
+    document.addEventListener('click', function (event) {
+        document.querySelectorAll('details.usermenu[open]').forEach(function (menu) {
+            if (! menu.contains(event.target)) { menu.open = false; }
+        });
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') { return; }
+
+        document.querySelectorAll('details.usermenu[open]').forEach(function (menu) {
+            menu.open = false;
+            // Focus goes back to the control that opened it, or the next tab
+            // lands at the top of the document.
+            menu.querySelector('summary').focus();
         });
     });
 })();

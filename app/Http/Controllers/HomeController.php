@@ -55,6 +55,15 @@ class HomeController extends Controller
             'areas'    => Area::whereHas('properties', fn ($q) => $q
                 ->where('lifecycle_state', LifecycleState::Published->value))->count(),
             /*
+             * FR-M2-09. The one figure here that is about something finishing
+             * rather than something being available, and the only evidence a
+             * first-time visitor has that anything on this site actually
+             * completes. Zero is a real answer on a new marketplace, so the
+             * band omits it entirely rather than printing a nought — see the
+             * view.
+             */
+            'closed'   => Property::closedPublicly()->count(),
+            /*
              * FR-M7-01 makes the itemised cost breakdown a blocking rule, so
              * this is 100% by construction. It is on the page precisely because
              * it sounds like a boast and is actually a description of how

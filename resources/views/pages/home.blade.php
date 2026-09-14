@@ -5,13 +5,33 @@
 @section('content')
 
 <section class="hero">
-    <svg class="sky" viewBox="0 0 1200 400" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0 300 L120 250 L120 400 L0 400Z" fill="#A8BDD8" opacity=".55"/>
-        <path d="M150 268 L150 400 L260 400 L260 214 L205 190Z" fill="#9BB2D0" opacity=".5"/>
-        <path d="M880 230 L880 400 L1000 400 L1000 196 L940 172Z" fill="#9BB2D0" opacity=".5"/>
-        <path d="M1030 278 L1030 400 L1200 400 L1200 246Z" fill="#A8BDD8" opacity=".55"/>
-        <path d="M0 372 Q300 352 600 372 T1200 366 L1200 400 L0 400Z" fill="#8FA9C9" opacity=".45"/>
-    </svg>
+    {{--
+        A photograph of the actual place, not a vector skyline.
+
+        What stood here was five flat polygons that could have been any city on
+        earth, on the front door of a product whose entire claim is that what it
+        shows you is real. This is the Lekki–Ikoyi link bridge with Ikoyi's
+        housing stock behind it — a seeker in Lagos recognises it in under a
+        second, which is the whole job of a banner.
+
+        Decorative, so alt is empty: the headline beside it already says what
+        the page is, and a screen reader announcing "aerial view of a bridge"
+        would add nothing a seeker can act on.
+
+        Two files rather than one. The 760px crop is 102KB against the desktop
+        crop's 248KB, and a seeker on a metered Nigerian connection should not
+        pay for pixels their phone cannot show (NFR-02). Dimensions are stated
+        so the band does not reflow when the photograph arrives.
+
+        Licence: Unsplash, by Tunde Buremo — free for commercial use, no
+        permission needed. It is a stand-in. A production Agentpro should carry
+        photography it commissioned, and the README says so.
+    --}}
+    <picture class="heroshot">
+        <source media="(max-width:640px)" srcset="{{ asset('img/hero-lagos-760.jpg') }}">
+        <img src="{{ asset('img/hero-lagos-1440.jpg') }}" alt=""
+             width="1440" height="660" fetchpriority="high" decoding="async">
+    </picture>
 
     <div class="container hero-in">
         <h1>Find a home you can actually trust</h1>
@@ -89,6 +109,18 @@
                     <dt>Full cost shown</dt>
                     <dd>100<span>%</span></dd>
                 </div>
+                {{-- The only figure in the band that leads anywhere, because it
+                     is the only one a visitor would want to check: a count of
+                     completions is worth nothing if you cannot see them. Hidden
+                     at zero rather than printed as a nought — a new marketplace
+                     advertising that nothing has sold yet is telling the truth
+                     in the least useful possible way. --}}
+                @if ($proof['closed'] > 0)
+                    <div>
+                        <dt>Sold or let</dt>
+                        <dd><a href="{{ route('pages.closed') }}">{{ number_format($proof['closed']) }}</a></dd>
+                    </div>
+                @endif
             </dl>
         </div>
     </section>

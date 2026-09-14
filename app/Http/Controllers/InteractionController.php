@@ -6,6 +6,7 @@ use App\Models\Interaction;
 use App\Models\Property;
 use App\Support\Analytics;
 use App\Support\Audit;
+use App\Support\PhoneNumber;
 use App\Support\Vocab;
 use Illuminate\Http\Request;
 
@@ -94,7 +95,12 @@ class InteractionController extends Controller
     public function contact(Request $request, Property $property)
     {
         $data = $request->validate([
-            'mode' => ['required', 'in:phone,whatsapp,email'],
+            'mode'   => ['required', 'in:phone,whatsapp,email'],
+            // A viewing request is an email contact with a different subject.
+            // The real thing — in-platform scheduling against technician
+            // availability — is FR-M9-12 and deferred to R2; this at least
+            // starts the conversation rather than being a button that lies.
+            'intent' => ['nullable', 'in:enquiry,viewing'],
         ]);
 
         $this->record($request, $property, 'contact', ['contact_mode' => $data['mode']]);
@@ -109,7 +115,75 @@ class InteractionController extends Controller
          */
         Analytics::record(Analytics::CONTACT, $property, context: $data['mode']);
 
-        return response()->json(['recorded' => true]);
+        /*
+         * The lister's details are handed back here rather than rendered into
+         * the listing page.
+         *
+         * Two reasons. FR-M1-03 requires an account to contact a lister, and a
+         * phone number sitting in the HTML is available to anyone who views
+         * source — account or not. And a marketplace's contact details are the
+         * single most scrapeable thing it holds (SEC-10): put them behind a
+         * POST and a bot has to be signed in and leave a row in `interactions`
+         * for every one it takes.
+         *
+         * It also means the initiation is logged before the channel opens,
+         * which is what makes the count right even when the seeker abandons
+         * the call.
+         */
+        $details = $this->channelFor($property, $data['mode'], $data['intent'] ?? 'enquiry');
+
+        if ($request->expectsJson()) {
+            return response()->json(['recorded' => true] + $details);
+        }
+
+        return back()->with('contact', $details)->withFragment('contact');
+    }
+
+    /**
+     * How to actually reach this lister, for one mode.
+     *
+     * Returns the number or address written out as well as a link. On a desktop
+     * a `tel:` does nothing useful, and "click here to call" with no number
+     * visible is a dead end — the seeker wants to read it off the screen and
+     * dial it on their phone.
+     *
+     * @return array<string,?string>
+     */
+    private function channelFor(Property $property, string $mode, string $intent): array
+    {
+        $lister = $property->lister()->first();
+        $subject = ($intent === 'viewing' ? 'Viewing request' : 'Enquiry').' — '.$property->title;
+
+        $body = $intent === 'viewing'
+            ? "Hello,\n\nI would like to arrange a viewing of ".$property->title
+                .' at '.$property->address_line.".\n\nWhen are you available?"
+            : "Hello,\n\nI am interested in ".$property->title
+                .' at '.$property->address_line.".\n\nIs it still available?";
+
+        return match ($mode) {
+            'phone' => [
+                'mode'  => 'phone',
+                'label' => 'Call '.$lister->name,
+                'value' => PhoneNumber::national($lister->phone),
+                'href'  => $lister->phone ? 'tel:'.PhoneNumber::e164($lister->phone) : null,
+            ],
+            'whatsapp' => [
+                'mode'  => 'whatsapp',
+                'label' => 'WhatsApp '.$lister->name,
+                'value' => PhoneNumber::national($lister->phone),
+                // wa.me wants digits with no plus and no spaces.
+                'href'  => PhoneNumber::msisdn($lister->phone)
+                    ? 'https://wa.me/'.PhoneNumber::msisdn($lister->phone).'?text='.rawurlencode($body)
+                    : null,
+            ],
+            default => [
+                'mode'  => 'email',
+                'label' => ($intent === 'viewing' ? 'Request a viewing from ' : 'Email ').$lister->name,
+                'value' => $lister->email,
+                'href'  => 'mailto:'.$lister->email
+                    .'?subject='.rawurlencode($subject).'&body='.rawurlencode($body),
+            ],
+        };
     }
 
     private function find(Request $request, Property $property, string $kind): ?Interaction

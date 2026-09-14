@@ -54,6 +54,33 @@
                 </select>
             </label>
 
+            {{-- FR-M5-03: the last two filters. Title sits beside the others
+                 rather than in an advanced panel, because in this market the
+                 paperwork is the purchase. --}}
+            <label @class(['fsel', 'on' => request('title_type')])>
+                <span class="sr-only">Title type</span>
+                <select name="title_type">
+                    <option value="">Title</option>
+                    @foreach (\App\Support\Vocab::TITLE_TYPES as $group => $types)
+                        <optgroup label="{{ $group }}">
+                            @foreach ($types as $value => $label)
+                                <option value="{{ $value }}" @selected(request('title_type') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endforeach
+                </select>
+            </label>
+
+            <label @class(['fsel', 'on' => request('tag')])>
+                <span class="sr-only">Listing tag</span>
+                <select name="tag">
+                    <option value="">Tag</option>
+                    @foreach (\App\Support\Vocab::TAGS as $value => $label)
+                        <option value="{{ $value }}" @selected(request('tag') === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </label>
+
             <label @class(['fsel', 'on' => request('beds')])>
                 <span class="sr-only">Bedrooms</span>
                 <select name="beds">
@@ -83,6 +110,16 @@
             <label @class(['fsel', 'on' => request('has_video')])>
                 <input type="checkbox" name="has_video" value="1" @checked(request('has_video')) style="accent-color:var(--on-navy)">
                 Has video
+            </label>
+
+            {{-- FR-M2-09. PropertySearch has accepted this filter since it was
+                 written and nothing in the interface ever offered it, so the
+                 only way to see a sold or let property in results was to type
+                 the parameter into the URL. Off by default: somebody looking
+                 for a home wants what they can still have. --}}
+            <label @class(['fsel', 'on' => request('include_closed')])>
+                <input type="checkbox" name="include_closed" value="1" @checked(request('include_closed')) style="accent-color:var(--on-navy)">
+                Include sold and let
             </label>
 
             <span class="spacer"></span>

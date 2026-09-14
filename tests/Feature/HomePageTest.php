@@ -159,4 +159,51 @@ class HomePageTest extends TestCase
         $this->assertSame('/storage/media/abc/def-800.webp', $url);
         $this->assertStringNotContainsString('some-other-host', $url);
     }
+
+    /**
+     * The banner photograph, and both of its crops.
+     *
+     * A missing file here fails silently — the scrim keeps the band dark and
+     * the headline readable, so nothing looks broken enough to notice, and the
+     * front door of the product quietly stops showing Lagos. The files are
+     * checked in; this is what says so out loud if one is ever dropped.
+     */
+    public function test_the_banner_carries_a_photograph_at_two_sizes(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+
+        $response->assertSee('img/hero-lagos-1440.jpg', false);
+        $response->assertSee('img/hero-lagos-760.jpg', false);
+
+        foreach (['hero-lagos-1440.jpg', 'hero-lagos-760.jpg'] as $file) {
+            $path = public_path('img/'.$file);
+
+            $this->assertFileExists($path);
+            $this->assertNotFalse(@getimagesize($path), $file.' is not a readable image.');
+        }
+
+        /*
+         * NFR-02 is a 1.2MB page budget on connections people pay for by the
+         * megabyte. The narrow crop is what a phone actually downloads, and it
+         * is the one worth holding a number against: re-export it at full
+         * quality and this fails rather than shipping.
+         */
+        $this->assertLessThan(
+            160 * 1024,
+            filesize(public_path('img/hero-lagos-760.jpg')),
+            'The phone crop of the banner has grown past its budget.'
+        );
+    }
+
+    /** The decorative banner must not be announced as content. */
+    public function test_the_banner_photograph_is_decorative(): void
+    {
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '/<img[^>]+hero-lagos-1440\.jpg[^>]*alt=""/s',
+            $html,
+            'The banner photograph should carry an empty alt — the headline beside it says what the page is.'
+        );
+    }
 }

@@ -24,7 +24,16 @@
 
     @if ($errors->any())
         <div class="alert alert-bad" role="alert">
-            <strong>This listing cannot be submitted yet:</strong>
+            {{-- The bag is shared, so the heading has to follow what is in it.
+                 "This listing cannot be submitted yet" above an unanswered
+                 unlisting prompt sends the lister to fix the wrong thing. --}}
+            <strong>
+                @if ($errors->hasAny(['outcome', 'reason_code']))
+                    That listing has not come off the market:
+                @else
+                    This listing cannot be submitted yet:
+                @endif
+            </strong>
             <ul>@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
         </div>
     @endif
@@ -153,6 +162,63 @@
                         @csrf
                         <button type="submit" class="btn btn-green btn-sm"
                                 @disabled($property->blockers)>Submit for review</button>
+                    </form>
+                @endcan
+
+                {{--
+                    FR-M2-09. A disclosure rather than a button, because there is
+                    no safe default for the outcome: this is the one question the
+                    lister has to answer for the archive to mean anything, and a
+                    single "Unlist" that quietly recorded "other" would empty the
+                    archive one convenient click at a time.
+
+                    No JavaScript — <details> is the whole mechanism.
+                --}}
+                @can('unlist', $property)
+                    <details class="unlist">
+                        <summary>Unlist</summary>
+                        <form method="POST" action="{{ route('lister.listings.unlist', $property) }}">
+                            @csrf
+                            <p class="unlist-q">Why is it coming off the market?</p>
+
+                            {{-- Ordered by what this listing is: a rental is far
+                                 more likely to be let than sold, and the first
+                                 option is the one people press. --}}
+                            @foreach ($property->intent === 'sale' ? ['sold', 'rented'] : ['rented', 'sold'] as $outcome)
+                                <label class="unlist-opt">
+                                    <input type="radio" name="outcome" value="{{ $outcome }}" required>
+                                    <span>{{ \App\Support\Vocab::CLOSE_OUTCOMES[$outcome] }}</span>
+                                </label>
+                            @endforeach
+
+                            <label class="unlist-opt">
+                                <input type="radio" name="outcome" value="other" required>
+                                <span>Other reason</span>
+                            </label>
+
+                            <select name="reason_code" class="finput" aria-label="Reason it is coming off the market">
+                                <option value="">If other — pick a reason</option>
+                                @foreach (\App\Support\Vocab::listerUnpublishReasons() as $code => $label)
+                                    <option value="{{ $code }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+
+                            <p class="unlist-note">
+                                Sold and rented listings move to the public
+                                <a href="{{ route('pages.closed') }}">sold and let archive</a>,
+                                where the asking price is shown and the agreed price is not.
+                                You can put it back on the market afterwards.
+                            </p>
+
+                            <button type="submit" class="btn btn-navy btn-sm">Take it off the market</button>
+                        </form>
+                    </details>
+                @endcan
+
+                @can('relist', $property)
+                    <form method="POST" action="{{ route('lister.listings.relist', $property) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-ghost btn-sm">Back on the market</button>
                     </form>
                 @endcan
             </div>

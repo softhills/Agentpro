@@ -264,6 +264,143 @@ class MapSearchTest extends TestCase
     }
 
     /**
+     * FR-M6-04 as a filter. In this market the paperwork is the purchase, so a
+     * seeker who will only look at a Certificate of Occupancy needs to say so.
+     */
+    public function test_title_type_filters_the_results(): void
+    {
+        $cofo = $this->listing(6.4478, 3.4723);
+        $gazette = $this->listing(6.4480, 3.4725);
+
+        \App\Models\TitleClaim::create([
+            'property_id' => $cofo->id, 'title_type' => 'certificate_of_occupancy',
+            'stage' => 'available', 'declared_at' => now(),
+        ]);
+        \App\Models\TitleClaim::create([
+            'property_id' => $gazette->id, 'title_type' => 'excision_gazette',
+            'stage' => 'in_progress', 'declared_at' => now(),
+        ]);
+
+        $this->assertSame([$cofo->id],
+            (new PropertySearch(['title_type' => 'certificate_of_occupancy']))->builder()->pluck('id')->all());
+
+        /*
+         * Stage is deliberately not part of the filter. "In progress" is still
+         * a declaration worth surfacing, and excluding it would hide the
+         * listings whose paperwork is underway — which is most of this market.
+         */
+        $this->assertSame([$gazette->id],
+            (new PropertySearch(['title_type' => 'excision_gazette']))->builder()->pluck('id')->all());
+    }
+
+    public function test_a_listing_matches_on_any_of_the_titles_it_declares(): void
+    {
+        $property = $this->listing(6.4478, 3.4723);
+
+        foreach (['certificate_of_occupancy', 'deed_of_assignment'] as $type) {
+            \App\Models\TitleClaim::create([
+                'property_id' => $property->id, 'title_type' => $type,
+                'stage' => 'available', 'declared_at' => now(),
+            ]);
+        }
+
+        // A property routinely carries two or three. Somebody asking for one of
+        // them wants the listings that have it, not the listings that have only
+        // it.
+        foreach (['certificate_of_occupancy', 'deed_of_assignment'] as $type) {
+            $this->assertSame([$property->id],
+                (new PropertySearch(['title_type' => $type]))->builder()->pluck('id')->all());
+        }
+    }
+
+    public function test_lister_chosen_tags_filter_the_results(): void
+    {
+        $offer = $this->listing(6.4478, 3.4723);
+        $offer->update(['tags' => ['special_offer', 'payment_plan']]);
+
+        $plain = $this->listing(6.4480, 3.4725);
+        $plain->update(['tags' => []]);
+
+        $this->assertSame([$offer->id],
+            (new PropertySearch(['tag' => 'special_offer']))->builder()->pluck('id')->all());
+        $this->assertSame([$offer->id],
+            (new PropertySearch(['tag' => 'payment_plan']))->builder()->pluck('id')->all());
+        $this->assertCount(0, (new PropertySearch(['tag' => 'financing']))->builder()->get());
+    }
+
+    /**
+     * The one that matters most.
+     *
+     * price_drop is never stored — FR-M2-04 says it is applied automatically
+     * from price history — so the filter has to derive it, and it has to derive
+     * it the same way the badge on the card does. If they ever disagree, search
+     * promises a reduction the listing does not show.
+     */
+    public function test_the_price_drop_filter_agrees_with_the_badge_on_the_card(): void
+    {
+        $dropped = $this->listing(6.4478, 3.4723, 7_500_000);
+        $steady  = $this->listing(6.4480, 3.4725, 9_000_000);
+        $rebound = $this->listing(6.4482, 3.4727, 12_000_000);
+
+        $history = function (Property $p, array $points) {
+            foreach ($points as [$price, $daysAgo]) {
+                \App\Models\PriceHistory::create([
+                    'unit_id' => $p->units()->first()->id, 'price' => $price,
+                    'price_period' => 'year', 'effective_at' => now()->subDays($daysAgo),
+                ]);
+            }
+        };
+
+        $history($dropped, [[9_000_000, 60], [7_500_000, 5]]);
+        $history($steady, [[9_000_000, 60]]);
+        // Came down, then went back up above where it started. The most recent
+        // change was a rise, so this is not a price drop — and a filter that
+        // matched on the older, lower figure would advertise one.
+        $history($rebound, [[10_000_000, 60], [8_000_000, 30], [12_000_000, 2]]);
+
+        $byFilter = (new PropertySearch(['tag' => 'price_drop']))->builder()->pluck('id')->sort()->values()->all();
+
+        $byBadge = Property::onMarket()->with('units.priceHistory')->get()
+            ->filter(fn (Property $p) => $p->headlineUnit()?->hasPriceDrop())
+            ->pluck('id')->sort()->values()->all();
+
+        $this->assertSame([$dropped->id], $byFilter);
+        $this->assertSame($byBadge, $byFilter, 'Search and the listing card disagree about a price drop.');
+    }
+
+    public function test_a_lister_cannot_award_themselves_a_price_drop(): void
+    {
+        $property = $this->listing(6.4478, 3.4723);
+
+        // It is not in the accepted set on the listing form, and setting the
+        // column by hand still does not make it true: allTags() derives it.
+        $property->update(['tags' => ['price_drop', 'special_offer']]);
+
+        $this->assertFalse($property->fresh()->hasTag('price_drop'));
+        $this->assertTrue($property->fresh()->hasTag('special_offer'));
+        $this->assertCount(0, (new PropertySearch(['tag' => 'price_drop']))->builder()->get());
+    }
+
+    public function test_invented_tags_and_titles_are_refused(): void
+    {
+        $this->listing(6.4478, 3.4723);
+
+        $this->get(route('search', ['tag' => 'hot_deal']))->assertSessionHasErrors('tag');
+        $this->get(route('search', ['title_type' => 'vibes_deed']))->assertSessionHasErrors('title_type');
+    }
+
+    public function test_both_filters_are_offered_on_the_search_page(): void
+    {
+        $this->listing(6.4478, 3.4723);
+
+        $this->get(route('search'))->assertOk()
+            ->assertSee('Certificate of Occupancy')
+            ->assertSee('Payment plan')
+            // Grouped as the PRD presents them, not one flat list of nineteen.
+            ->assertSee('Customary &amp; administrative', false);
+    }
+
+    /**
      * The split pane is sized in CSS off this wrapper, so the wrapper is a
      * structural contract rather than a div somebody can tidy away.
      *

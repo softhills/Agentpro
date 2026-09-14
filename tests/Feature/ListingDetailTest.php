@@ -56,6 +56,7 @@ class ListingDetailTest extends TestCase
             'uuid' => Str::uuid(), 'name' => 'Tunde Adeyemi',
             'email' => Str::lower(Str::random(10)).'@example.test',
             'password' => 'x', 'category' => 'sellers_agent',
+            'phone' => '+2348030000001',
             'verification_state' => 'verified',
         ]);
 
@@ -168,6 +169,134 @@ class ListingDetailTest extends TestCase
             ->assertSee('to report it', false);
 
         $this->assertSame(0, Interaction::count());
+    }
+
+    // ================================================================== contact
+
+    /**
+     * All four contact controls were <button type="button"> wired to nothing —
+     * Call and WhatsApp as dead as the two that got reported.
+     */
+    public function test_every_contact_control_reaches_the_lister(): void
+    {
+        $property = $this->listing();
+        $seeker = $this->seeker();
+
+        $expected = [
+            ['phone', [], 'tel:+2348030000001'],
+            ['whatsapp', [], 'https://wa.me/2348030000001'],
+            ['email', [], 'mailto:'],
+            // "Request a viewing" is an email with a different subject.
+            ['email', ['intent' => 'viewing'], 'mailto:'],
+        ];
+
+        foreach ($expected as [$mode, $extra, $needle]) {
+            $this->actingAs($seeker)
+                ->post(route('interact.contact', $property), ['mode' => $mode] + $extra)
+                ->assertRedirect();
+
+            $this->actingAs($seeker)->get(route('property.show', $property))
+                ->assertOk()
+                ->assertSee($needle, false);
+        }
+    }
+
+    public function test_a_viewing_request_says_what_it_is_for(): void
+    {
+        $property = $this->listing();
+
+        $this->actingAs($this->seeker())
+            ->post(route('interact.contact', $property), ['mode' => 'email', 'intent' => 'viewing']);
+
+        $mailto = urldecode(
+            $this->actingAs($this->seeker())->get(route('property.show', $property))->getContent()
+        );
+
+        $this->assertStringContainsString('Viewing request', $mailto);
+        $this->assertStringContainsString('arrange a viewing', $mailto);
+    }
+
+    /**
+     * The reason the details are handed back by the server rather than rendered
+     * into the page: a phone number in the HTML is available to anybody who
+     * views source, account or not, and contact details are the most scrapeable
+     * thing a marketplace holds (SEC-10, FR-M1-03).
+     */
+    public function test_a_guest_is_offered_sign_in_and_never_the_number(): void
+    {
+        $property = $this->listing();
+
+        $html = $this->get(route('property.show', $property))->assertOk()->getContent();
+
+        $this->assertStringContainsString('Sign in to contact', $html);
+        $this->assertStringNotContainsString('2348030000001', $html);
+        $this->assertStringNotContainsString('tel:', $html);
+        $this->assertStringNotContainsString('wa.me', $html);
+
+        // And the endpoint itself is closed to them.
+        $this->post(route('interact.contact', $property), ['mode' => 'phone'])
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_the_number_is_not_in_the_page_until_it_is_asked_for(): void
+    {
+        $property = $this->listing();
+        $seeker = $this->seeker();
+
+        // Signed in, but has not pressed anything yet.
+        $html = $this->actingAs($seeker)->get(route('property.show', $property))->getContent();
+
+        $this->assertStringNotContainsString('2348030000001', $html);
+        $this->assertStringContainsString('Email the agent', $html);
+    }
+
+    public function test_each_initiation_is_counted_by_mode(): void
+    {
+        $property = $this->listing();
+        $seeker = $this->seeker();
+
+        foreach (['phone', 'whatsapp', 'email'] as $mode) {
+            $this->actingAs($seeker)->post(route('interact.contact', $property), ['mode' => $mode]);
+        }
+
+        // One standing relationship — the interaction is unique per person and
+        // listing — but three initiations, which is the distinction FR-M13-01
+        // needs and `interactions` cannot express.
+        $this->assertSame(1, Interaction::where('kind', 'contact')->count());
+
+        $modes = DB::table('analytics_events')->where('name', 'contact')
+            ->pluck('context')->sort()->values()->all();
+
+        $this->assertSame(['email', 'phone', 'whatsapp'], $modes);
+    }
+
+    /**
+     * A lister with no number on file is a real state — phone is nullable and
+     * registration by email does not collect one. Better to say so than to hand
+     * back a tel: link to nothing.
+     */
+    public function test_a_lister_with_no_number_says_so_rather_than_failing(): void
+    {
+        $property = $this->listing();
+        $property->lister->forceFill(['phone' => null])->save();
+
+        $this->actingAs($this->seeker())
+            ->post(route('interact.contact', $property), ['mode' => 'phone'])
+            ->assertRedirect();
+
+        $this->actingAs($this->seeker())->get(route('property.show', $property))
+            ->assertOk()
+            ->assertSee('has not given us a number')
+            ->assertDontSee('tel:', false);
+    }
+
+    public function test_an_invented_contact_mode_is_refused(): void
+    {
+        $property = $this->listing();
+
+        $this->actingAs($this->seeker())
+            ->post(route('interact.contact', $property), ['mode' => 'carrier_pigeon'])
+            ->assertSessionHasErrors('mode');
     }
 
     // ================================================================ freshness

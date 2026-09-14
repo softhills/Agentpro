@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\ModerateListing;
+use App\Actions\UnlistListing;
 use App\Enums\LifecycleState;
 use App\Http\Controllers\Controller;
 use App\Models\Property;
@@ -85,6 +86,7 @@ class ModerationController extends Controller
             'duplicates' => $duplicates->for($property),
             'rejectReasons'    => Vocab::REJECT_REASONS,
             'unpublishReasons' => Vocab::UNPUBLISH_REASONS,
+            'closeOutcomes'    => Vocab::CLOSE_OUTCOMES,
         ]);
     }
 
@@ -114,17 +116,60 @@ class ModerationController extends Controller
             ->with('status', 'Returned to lister: '.$property->title);
     }
 
-    public function unpublish(Request $request, Property $property, ModerateListing $moderate)
+    /**
+     * FR-M2-07 / FR-M2-09: take a live listing off the market.
+     *
+     * Asks the same question the lister's own form asks — sold, rented, or
+     * something else — because it is the same question, and an admin who knows
+     * the flat was let has no business recording that as an anonymous
+     * "unpublished". The difference is the reason list: a moderator may record
+     * findings (fraud, a title dispute) that a lister may not.
+     */
+    public function unlist(Request $request, Property $property, UnlistListing $unlister)
     {
         $data = $request->validate([
-            'reason_code' => ['required', 'in:'.implode(',', array_keys(Vocab::UNPUBLISH_REASONS))],
-            'note'        => ['nullable', 'string', 'max:1000'],
+            'outcome'     => ['required', 'in:'.implode(',', array_keys(Vocab::CLOSE_OUTCOMES))],
+            'reason_code' => [
+                'required_if:outcome,other', 'nullable',
+                'in:'.implode(',', array_keys(Vocab::UNPUBLISH_REASONS)),
+            ],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'reason_code.required_if' => 'Record why this listing is being taken down.',
         ]);
 
-        $moderate->unpublish($property, $request->user(), $data['reason_code'], $data['note'] ?? null);
+        if (! $property->lifecycle_state->canBeUnlisted()) {
+            return back()->withErrors([
+                'outcome' => 'This listing is not on the market, so there is nothing to take down.',
+            ]);
+        }
 
-        return redirect()
-            ->route('admin.queue')
-            ->with('status', 'Unpublished: '.$property->title);
+        $unlister->handle(
+            $property,
+            $request->user(),
+            $data['outcome'],
+            $data['reason_code'] ?? null,
+            $data['note'] ?? null,
+        );
+
+        return redirect()->route('admin.queue')->with('status', match ($data['outcome']) {
+            'sold'   => 'Recorded as sold: '.$property->title,
+            'rented' => 'Recorded as rented: '.$property->title,
+            default  => 'Unpublished: '.$property->title,
+        });
+    }
+
+    /** Puts a listing closed as sold or rented back on the market. */
+    public function relist(Request $request, Property $property, UnlistListing $unlister)
+    {
+        if (! $property->lifecycle_state->canBeRelisted()) {
+            return back()->withErrors([
+                'outcome' => 'Only a listing closed as sold or rented can be put back on the market.',
+            ]);
+        }
+
+        $unlister->relist($property, $request->user());
+
+        return redirect()->route('admin.queue')->with('status', 'Back on the market: '.$property->title);
     }
 }

@@ -43,6 +43,28 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
+        /*
+         * Never in production, and not merely as advice.
+         *
+         * This seeder creates six accounts whose password is the word
+         * "password", two of them full admins. `migrate --seed` is in every
+         * Laravel deployment guide ever written, including the one in
+         * docs/DEPLOY-CPANEL.md, and the cost of somebody typing it once
+         * against a live database is an administrator account with a guessable
+         * password on a platform that holds identity documents.
+         *
+         * `--force` exists to get past the "are you sure" prompt on a
+         * production migration, so it cannot be what protects this. The
+         * environment is the only thing that can.
+         */
+        if (app()->environment('production')) {
+            throw new \RuntimeException(
+                'The development seeder will not run in production: it creates admin '
+                .'accounts with the password "password". Run `php artisan migrate --force` '
+                .'on its own, and create the first administrator by hand.'
+            );
+        }
+
         $this->seedAreas();
         $this->seedAmenities();
 
@@ -199,6 +221,51 @@ class DatabaseSeeder extends Seeder
             'attended_at' => now()->subDays(6)->setTime(10, 12),
             'capture_reference' => 'SxQL3iGyvQk',
         ]);
+
+        /*
+         * FR-M4-09: work in front of the technician, not behind them.
+         *
+         * The only seeded job used to be the delivered one, which meant the
+         * field tool — the console a technician signs in to use — opened on
+         * "Nothing assigned" every time. A screen that is empty in the
+         * development seed is a screen nobody can check, and this one is a
+         * single-purpose tool: the queue is the whole product.
+         *
+         * Two jobs, at the two states that behave differently. One booked for
+         * a future date, which is what the technician turns up to. One
+         * attended but not yet captured, which is the state the capture form
+         * exists for and the one that gets stuck in real operations.
+         *
+         * On another lister's stock, deliberately. The four orders above are
+         * the agent's and exist so that *their* dashboard demonstrates the
+         * money states — one of them is the "paid for and nothing booked"
+         * alert, which a scan job attached to it would silently switch off. A
+         * technician serves every lister anyway, so a queue holding only one
+         * agent's work would be the less realistic fixture.
+         */
+        $others = Property::where('lister_id', '!=', $agent->id)
+            ->where('lifecycle_state', 'published')
+            ->orderBy('id')->take(2)->get();
+
+        foreach ($others as $i => $property) {
+            $paid = $order($property, 'scan_3d', 150000, 4 + $i);
+
+            ScanJob::create([
+                'uuid' => Str::uuid(),
+                'property_id' => $property->id,
+                'order_id' => $paid->id,
+                'area_id' => $property->area_id,
+                'technician_id' => $technician->id,
+                // Booked for a future visit, and attended but not yet
+                // captured — the state that gets stuck in real operations and
+                // the one the capture form exists for.
+                'state' => $i === 0 ? 'scheduled' : 'captured',
+                'scheduled_for' => $i === 0
+                    ? now()->addDays(2)->setTime(11, 0)
+                    : now()->subDay()->setTime(9, 30),
+                'attended_at' => $i === 0 ? null : now()->subDay()->setTime(9, 41),
+            ]);
+        }
 
         // FR-M4-07: paid, nothing booked. The dashboard is supposed to shout.
         $order($properties[1], 'scan_3d', 150000, 4);
@@ -440,7 +507,7 @@ class DatabaseSeeder extends Seeder
                 'title' => '4-Bed Terrace Duplex + BQ',
                 'area' => 'wuse-ii', 'address' => 'Off Aminu Kano Crescent',
                 'lat' => 9.0781, 'lng' => 7.4603, 'w3w' => '///pouch.lofty.grain',
-                'type' => 'house', 'intent' => 'sale', 'finish' => 'core',
+                'type' => 'house', 'intent' => 'sale', 'finish' => 'core', 'tags' => ['payment_plan'],
                 'lister' => $developer, 'realsure' => true, 'days_ago' => 0,
                 'description' => 'Twelve-unit terrace development in Wuse II, six units remaining. Core finishing with POP, fitted kitchens and a detached BQ per unit. Payment plan available over eighteen months.',
                 'units' => [
@@ -466,7 +533,7 @@ class DatabaseSeeder extends Seeder
                 'title' => '1,000 m² Residential Plot',
                 'area' => 'jabi', 'address' => 'Jabi District, Cadastral Zone B06',
                 'lat' => 9.0668, 'lng' => 7.4186, 'w3w' => '///cheer.risen.lasted',
-                'type' => 'land', 'intent' => 'sale', 'finish' => null,
+                'type' => 'land', 'intent' => 'sale', 'finish' => null, 'tags' => ['payment_plan', 'financing'],
                 'lister' => $agent, 'realsure' => false, 'days_ago' => 8,
                 'description' => 'Fenced corner plot of 1,000 square metres in Jabi, with Certificate of Occupancy and a registered survey plan. Drone survey and perimeter walkthrough available.',
                 'units' => [
@@ -484,7 +551,7 @@ class DatabaseSeeder extends Seeder
                 'title' => '5-Bed Detached House, Maitama',
                 'area' => 'maitama', 'address' => 'Off Gana Street',
                 'lat' => 9.0861, 'lng' => 7.4947, 'w3w' => '///hotels.gallery.formal',
-                'type' => 'house', 'intent' => 'sale', 'finish' => 'furnished',
+                'type' => 'house', 'intent' => 'sale', 'finish' => 'furnished', 'tags' => ['special_offer'],
                 'lister' => $agent, 'realsure' => true, 'days_ago' => 16,
                 'description' => 'Five-bedroom detached house on a mature Maitama street, fully furnished, with staff quarters, standby generator and treated water. Suited to diplomatic or corporate occupancy.',
                 'units' => [
@@ -519,6 +586,80 @@ class DatabaseSeeder extends Seeder
                 'amenities' => ['24-hour-power', 'elevator', 'swimming-pool', 'gym', 'estate-security', 'cctv', 'serviced-service-charge', 'parking-space', 'all-rooms-ensuite'],
                 'media' => ['photo' => 22, 'video' => 121, 'tour_3d' => true, 'pano_360' => true],
             ],
+
+            /*
+             * The archive (FR-M2-09).
+             *
+             * Three listings that were on the market and have come off it, so
+             * /sold is not an empty page in development. They are separate
+             * rows rather than three of the eight above flipped to sold,
+             * because the point of the archive is that it sits *alongside* live
+             * stock — closing a third of the inventory to demonstrate it would
+             * make the rest of the site look emptier than the product is.
+             *
+             * Each one published well before it closed, which is what
+             * scopeClosedPublicly() insists on: the archive only shows
+             * properties that were genuinely on the market first.
+             */
+            [
+                'title' => '4-Bed Terrace, Ikoyi',
+                'area' => 'ikoyi', 'address' => 'Off Bourdillon Road',
+                'lat' => 6.4496, 'lng' => 3.4401, 'w3w' => '///harder.cheeks.trials',
+                'type' => 'house', 'intent' => 'sale', 'finish' => 'unfurnished',
+                'lister' => $agent, 'realsure' => true, 'days_ago' => 96,
+                'closed' => ['sold', 9],
+                'description' => 'Four-bedroom terrace in a gated block of six off Bourdillon, with a private BQ, two parking bays and shared estate security. Sold with Governor\'s consent perfected.',
+                'units' => [
+                    ['label' => null, 'price' => 420000000, 'period' => 'once', 'beds' => 4, 'baths' => 4, 'toilets' => 5, 'sqm' => 310],
+                ],
+                'fees' => [
+                    ['Agency fee', 21000000, 'percentage', 5, false, 'Agent'],
+                    ['Legal fee', 8400000, 'percentage', 2, false, 'Solicitor'],
+                    ["Governor's consent / perfection", 33600000, 'percentage', 8, false, 'Lagos State'],
+                ],
+                'titles' => [['certificate_of_occupancy', 'available'], ['deed_of_assignment', 'available'], ['governors_consent', 'available']],
+                'amenities' => ['24-hour-power', 'gated-estate', 'estate-security', 'cctv', 'bq-included', 'parking-space', 'pop-ceiling', 'all-rooms-ensuite'],
+                'media' => ['photo' => 18, 'video' => 96, 'floor_plan' => true],
+            ],
+            [
+                'title' => '2-Bed Flat, Yaba',
+                'area' => 'yaba', 'address' => 'Off Herbert Macaulay Way',
+                'lat' => 6.5081, 'lng' => 3.3743, 'w3w' => '///caring.sleepy.gallons',
+                'type' => 'apartment', 'intent' => 'rent', 'finish' => 'unfurnished',
+                'lister' => $developer, 'realsure' => false, 'days_ago' => 61,
+                'closed' => ['rented', 21],
+                'description' => 'Two-bedroom flat in a block of four off Herbert Macaulay, walking distance to the tech cluster. Prepaid meter, borehole and a shared standby generator.',
+                'units' => [
+                    ['label' => null, 'price' => 3200000, 'period' => 'year', 'beds' => 2, 'baths' => 2, 'toilets' => 3, 'sqm' => 84],
+                ],
+                'fees' => [
+                    ['Agency fee', 320000, 'percentage', 10, false, 'Agent'],
+                    ['Legal fee', 160000, 'percentage', 5, false, 'Solicitor'],
+                    ['Caution deposit', 320000, 'fixed', null, true, 'Landlord'],
+                ],
+                'titles' => [['deed_of_assignment', 'available']],
+                'amenities' => ['generator-included', 'treated-borehole', 'parking-space', 'pop-ceiling'],
+                'media' => ['photo' => 14],
+            ],
+            [
+                'title' => '900sqm Plot, Jabi',
+                'area' => 'jabi', 'address' => 'Jabi District, off the lake road',
+                'lat' => 9.0668, 'lng' => 7.4183, 'w3w' => '///stumble.paving.cricket',
+                'type' => 'land', 'intent' => 'sale', 'finish' => null,
+                'lister' => $agent, 'realsure' => true, 'days_ago' => 134,
+                'closed' => ['sold', 38],
+                'description' => 'Nine hundred square metre residential plot in Jabi, fenced and gated, with an FCDA allocation and building plan approval already obtained.',
+                'units' => [
+                    ['label' => null, 'price' => 185000000, 'period' => 'once', 'beds' => null, 'baths' => null, 'toilets' => null, 'sqm' => 900],
+                ],
+                'fees' => [
+                    ['Agency fee', 9250000, 'percentage', 5, false, 'Agent'],
+                    ['Legal fee', 3700000, 'percentage', 2, false, 'Solicitor'],
+                ],
+                'titles' => [['certificate_of_occupancy', 'available'], ['fcda', 'available'], ['building_plan_approval', 'available']],
+                'amenities' => ['gated-estate'],
+                'media' => ['photo' => 9],
+            ],
         ];
 
         foreach ($rows as $row) {
@@ -542,6 +683,9 @@ class DatabaseSeeder extends Seeder
             'intent' => $row['intent'],
             'build_status' => 'fully_built',
             'finish' => $row['finish'],
+            // FR-M2-04. price_drop is absent by design — it is derived from
+            // price history, so a listing earns it rather than declaring it.
+            'tags' => $row['tags'] ?? [],
             'address_line' => $row['address'],
             'city' => $area->city,
             'state' => $area->state,
@@ -549,7 +693,10 @@ class DatabaseSeeder extends Seeder
             'lng' => $row['lng'],
             'location' => DB::raw(sprintf("ST_GeomFromText('POINT(%F %F)')", $row['lng'], $row['lat'])),
             'what3words' => $row['w3w'],
-            'lifecycle_state' => 'published',
+            // FR-M2-09: a closed listing keeps published_at, because it was
+            // published — that is precisely what makes it archive material.
+            'lifecycle_state' => isset($row['closed']) ? $row['closed'][0] : 'published',
+            'closed_at' => isset($row['closed']) ? now()->subDays($row['closed'][1]) : null,
             'submitted_at' => $publishedAt->copy()->subDay(),
             'published_at' => $publishedAt,
             'expires_at' => $publishedAt->copy()->addDays(config('agentpro.display_duration_days')),

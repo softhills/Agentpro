@@ -100,6 +100,57 @@ class PagesController extends Controller
     }
 
     /**
+     * What has sold and let (FR-M2-09).
+     *
+     * A marketplace with no visible completions reads as a marketplace where
+     * nothing happens, and a seeker deciding whether to trust a new platform
+     * with a deposit has no other way to check. So the listings that ended are
+     * a page rather than a filter buried in search.
+     *
+     * The care needed here is about what it must not imply. Agentpro is not a
+     * party to these transactions: it does not broker the sale, it does not see
+     * the money, and it therefore does not know what the property went for. So
+     * the archive shows the **asking** price, labelled as the asking price, and
+     * says on the page that the outcome is what the lister reported. A page of
+     * "SOLD ₦85,000,000" would read better and would be a claim nobody here is
+     * in a position to make.
+     *
+     * What keeps it honest against a lister farming it for exposure is in
+     * Property::scopeClosedPublicly() — it was on the market, and it was closed
+     * through a flow that left an audit record naming who closed it and when.
+     */
+    public function closed(Request $request)
+    {
+        $outcome = $request->query('outcome');
+
+        if (! in_array($outcome, ['sold', 'rented'], true)) {
+            $outcome = null;
+        }
+
+        $archive = Property::closedPublicly();
+
+        $listings = (clone $archive)
+            ->when($outcome, fn ($q) => $q->where('lifecycle_state', $outcome))
+            ->with(['units.feeLines', 'media', 'area', 'lister:id,name,verification_state'])
+            ->orderByDesc('closed_at')
+            ->paginate(24)
+            ->withQueryString();
+
+        return view('pages.closed', [
+            'listings' => $listings,
+            'outcome'  => $outcome,
+            'counts'   => [
+                'all'    => (clone $archive)->count(),
+                'sold'   => (clone $archive)->where('lifecycle_state', LifecycleState::Sold->value)->count(),
+                'rented' => (clone $archive)->where('lifecycle_state', LifecycleState::Rented->value)->count(),
+                // The figure that says whether this is a going concern rather
+                // than a history of one.
+                'recent' => (clone $archive)->where('closed_at', '>=', now()->subDays(30))->count(),
+            ],
+        ]);
+    }
+
+    /**
      * The verified lister directory (FR-M1-07).
      *
      * Only verified listers appear. An unverified account has passed no check,
