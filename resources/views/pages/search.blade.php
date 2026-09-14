@@ -42,6 +42,18 @@
                 </select>
             </label>
 
+            {{-- FR-M5-03 "property status". Sits next to Type because the two
+                 answer the same question — what kind of thing am I buying —
+                 and a seeker filtering for land is rarely after off-plan. --}}
+            <label @class(['fsel', 'on' => request('build_status')])>
+                <span class="sr-only">Property status</span>
+                <select name="build_status">
+                    <option value="">Status</option>
+                    <option value="fully_built" @selected(request('build_status') === 'fully_built')>Fully built</option>
+                    <option value="under_construction" @selected(request('build_status') === 'under_construction')>Under construction</option>
+                </select>
+            </label>
+
             <label @class(['fsel', 'on' => request('beds')])>
                 <span class="sr-only">Bedrooms</span>
                 <select name="beds">

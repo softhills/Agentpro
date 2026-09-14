@@ -43,6 +43,10 @@ class PropertySearch
             'max_price'  => ['nullable', 'numeric', 'min:0', 'max:99999999999'],
             'beds'       => ['nullable', 'integer', 'min:0', 'max:20'],
             'baths'      => ['nullable', 'integer', 'min:0', 'max:20'],
+            // FR-M5-03 calls this "property status". Kept as build_status here
+            // to match the column, because a filter key that differs from the
+            // field it filters is a rename waiting to go wrong.
+            'build_status' => ['nullable', 'in:fully_built,under_construction'],
             'finish'     => ['nullable', 'in:furnished,unfurnished,core,carcass'],
             'realsure'   => ['nullable', 'boolean'],
             'has_3d'     => ['nullable', 'boolean'],
@@ -125,6 +129,17 @@ class PropertySearch
 
         if (! empty($f['type'])) {
             $query->where('listing_type', $f['type']);
+        }
+
+        /*
+         * FR-M2-02 as a filter (FR-M5-03).
+         *
+         * Off-plan is a different purchase from a finished flat — different
+         * money, different risk, different timeline — so a seeker who wants one
+         * rarely wants the other, and until now there was no way to say which.
+         */
+        if (! empty($f['build_status'])) {
+            $query->where('build_status', $f['build_status']);
         }
 
         if (! empty($f['finish'])) {

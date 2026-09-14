@@ -7,6 +7,7 @@ use App\Models\Area;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
+use App\Queries\PropertySearch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -210,6 +211,58 @@ class MapSearchTest extends TestCase
     }
 
     /** SEC-10: the pin endpoint is the cheapest way to scrape inventory. */
+    /**
+     * FR-M5-03 lists "property status" among the filters, and the column has
+     * existed since the first migration — it was simply never wired to search,
+     * so there was no way to ask for off-plan or to exclude it.
+     */
+    public function test_property_status_filters_the_results(): void
+    {
+        $built = $this->listing(6.4478, 3.4723);
+        $offPlan = $this->listing(6.4480, 3.4725);
+        $offPlan->update(['build_status' => 'under_construction']);
+
+        $onlyBuilt = $this->get(route('search', ['build_status' => 'fully_built']))->assertOk();
+        $onlyBuilt->assertSee($built->title)->assertDontSee($offPlan->slug, false);
+
+        $ids = (new PropertySearch(['build_status' => 'under_construction']))
+            ->builder()->pluck('id')->all();
+
+        $this->assertSame([$offPlan->id], $ids);
+
+        // Unfiltered, both are still there — the filter must not become a
+        // default that quietly hides half the market.
+        $this->assertCount(2, (new PropertySearch([]))->builder()->get());
+    }
+
+    public function test_property_status_reaches_the_map_and_survives_a_saved_search(): void
+    {
+        $this->listing(6.4478, 3.4723);
+        $offPlan = $this->listing(6.4480, 3.4725);
+        $offPlan->update(['build_status' => 'under_construction']);
+
+        // The map pans by rebuilding the query string, so a filter that the
+        // pin endpoint ignored would silently repopulate on the first drag.
+        $markers = $this->pins(16, ['build_status' => 'under_construction']);
+        $this->assertCount(1, $markers['markers']);
+
+        // Saved searches store whatever passes validation, so a rule that was
+        // added without a matching validator would be dropped on save.
+        $criteria = PropertySearch::fromRequest(
+            \Illuminate\Http\Request::create('/search', 'GET', ['build_status' => 'under_construction'])
+        )->filters();
+
+        $this->assertSame('under_construction', $criteria['build_status']);
+    }
+
+    public function test_an_invented_property_status_is_refused_rather_than_ignored(): void
+    {
+        $this->listing(6.4478, 3.4723);
+
+        $this->get(route('search', ['build_status' => 'nearly_done']))
+            ->assertSessionHasErrors('build_status');
+    }
+
     /**
      * The split pane is sized in CSS off this wrapper, so the wrapper is a
      * structural contract rather than a div somebody can tidy away.
