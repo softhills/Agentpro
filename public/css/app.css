@@ -1219,3 +1219,45 @@ body:has(.consent) .leaflet-bottom{bottom:var(--consent-h)}
 .reportform{display:grid;gap:12px;max-width:440px;margin-top:14px}
 .reportpanel .allclear{margin-top:12px}
 @media (max-width:700px){ .dmap{height:240px} }
+
+/* ----------------------------------------------------- landing page evidence
+   A band of live figures under the hero. Deliberately plain: these earn their
+   place by being true and checkable, not by being large, and dressing them up
+   would undercut the one thing they are there to establish. */
+.proofband{background:var(--surface);border-bottom:1px solid var(--line);padding:22px 0}
+.proofband dl{margin:0;display:grid;gap:1px 0;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));text-align:center}
+.proofband dl > div{padding:4px 12px;border-right:1px solid var(--line)}
+.proofband dl > div:last-child{border-right:0}
+.proofband dt{font-family:var(--m);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--slate-2);margin:0 0 5px}
+.proofband dd{margin:0;font-family:var(--q);font-weight:700;font-size:26px;color:var(--heading);
+  font-variant-numeric:tabular-nums;line-height:1}
+.proofband dd span{font-size:15px;color:var(--slate-2)}
+.proofband .dd-sure{color:var(--sure)}
+
+.sec-tint{background:var(--paper)}
+.sec-more{margin:20px 0 0;font-family:var(--q);font-weight:700;font-size:14px}
+.sec-more a{color:var(--blue);text-decoration:none}
+.sec-more a:hover{text-decoration:underline}
+
+/* Areas with stock. The count and the entry price are the two things a seeker
+   scanning a grid of place names is comparing. */
+.placegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:11px}
+.placecard{display:flex;flex-direction:column;justify-content:space-between;gap:12px;
+  padding:15px 17px;min-height:96px;border:1px solid var(--line);border-radius:12px;
+  background:var(--surface);text-decoration:none;color:inherit}
+.placecard:hover{border-color:var(--blue);box-shadow:var(--shadow-card)}
+.placecard-name{font-family:var(--q);font-weight:700;font-size:15.5px;color:var(--heading);
+  display:grid;gap:2px}
+.placecard-name em{font-style:normal;font-family:var(--i);font-weight:400;font-size:12px;
+  color:var(--slate-2)}
+.placecard-meta{font-family:var(--i);font-size:12.5px;color:var(--slate);display:grid;gap:1px}
+.placecard-meta b{font-family:var(--q);font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+.placecard-meta em{font-style:normal;color:var(--slate-2);font-size:12px}
+
+@media (max-width:640px){
+  .proofband dl{grid-template-columns:repeat(2,1fr);gap:16px 0}
+  .proofband dl > div{border-right:0}
+  .proofband dd{font-size:22px}
+}

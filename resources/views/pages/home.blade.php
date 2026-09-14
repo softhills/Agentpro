@@ -55,6 +55,45 @@
     </div>
 </section>
 
+{{--
+    Live figures, not a target and not a claim.
+
+    A landing page saying "thousands of listings" when there are eighty is the
+    same overselling this platform exists to stop, and a visitor who counts the
+    search results afterwards learns something worse than a small number. The
+    fee figure looks like a boast and is actually a description of how
+    publishing works: FR-M7-01 blocks a listing without a complete breakdown,
+    so anything under 100% here is a bug report.
+--}}
+@if ($proof['live'] > 0)
+    <section class="proofband">
+        <div class="container">
+            <dl>
+                <div>
+                    <dt>On the market</dt>
+                    <dd>{{ number_format($proof['live']) }}</dd>
+                </div>
+                <div>
+                    <dt>RealSure verified</dt>
+                    <dd class="dd-sure">{{ number_format($proof['verified']) }}</dd>
+                </div>
+                <div>
+                    <dt>Verified listers</dt>
+                    <dd>{{ number_format($proof['listers']) }}</dd>
+                </div>
+                <div>
+                    <dt>Areas with stock</dt>
+                    <dd>{{ $proof['areas'] }}</dd>
+                </div>
+                <div>
+                    <dt>Full cost shown</dt>
+                    <dd>100<span>%</span></dd>
+                </div>
+            </dl>
+        </div>
+    </section>
+@endif
+
 <section class="sec">
     <div class="container">
         <div class="sec-head">
@@ -74,6 +113,58 @@
         </div>
     </div>
 </section>
+
+{{-- Only areas that actually have something in them. A grid of place names
+     leading to empty result pages teaches a visitor that the links do not
+     work, which is the lesson risk R9 warns about for the map. --}}
+@if ($places->isNotEmpty())
+    <section class="sec sec-tint">
+        <div class="container">
+            <div class="sec-head">
+                <h2>Where people are looking</h2>
+                <p>Every area with something on the market today, busiest first.</p>
+            </div>
+
+            <div class="placegrid">
+                @foreach ($places as $place)
+                    <a href="{{ route('search', ['area' => $place->slug]) }}" class="placecard">
+                        <span class="placecard-name">
+                            {{ $place->name }}
+                            <em>{{ $place->city }}</em>
+                        </span>
+                        <span class="placecard-meta">
+                            <b>{{ $place->live }}</b> {{ Str::plural('listing', $place->live) }}
+                            @if ($place->cheapest)
+                                <em>from {{ \App\Support\Money::naira($place->cheapest) }}</em>
+                            @endif
+                        </span>
+                    </a>
+                @endforeach
+            </div>
+
+            <p class="sec-more"><a href="{{ route('pages.areas') }}">Every area we cover →</a></p>
+        </div>
+    </section>
+@endif
+
+@if ($recent->isNotEmpty())
+    <section class="sec">
+        <div class="container">
+            <div class="sec-head">
+                <h2>Just listed</h2>
+                <p>Newest on the market. Nothing here appears above — this is the rest of it.</p>
+            </div>
+
+            <div class="grid3">
+                @foreach ($recent as $property)
+                    <x-property-card :property="$property" />
+                @endforeach
+            </div>
+
+            <p class="sec-more"><a href="{{ route('search') }}">Search everything →</a></p>
+        </div>
+    </section>
+@endif
 
 {{-- Replaces the theme's about-with-video-thumbnails block. It earns the slot by
      explaining RealSure, which is the one thing a first-time visitor has no

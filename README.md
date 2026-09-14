@@ -54,7 +54,11 @@ binaries, or put them on `PATH`.
 composer install
 cp .env.example .env
 php artisan key:generate
+php artisan storage:link
 ```
+
+`storage:link` is not optional — without it the seeded photographs have no
+public path and every listing falls back to placeholder artwork.
 
 Create the database, then:
 
@@ -64,7 +68,10 @@ php artisan serve
 ```
 
 The seed loads development inventory across the ten 3D coverage areas, because
-the map-first search looks broken on an empty city (PRD risk R9).
+the map-first search looks broken on an empty city (PRD risk R9). The first run
+downloads about 5MB of photographs and takes a minute or two; they are cached
+under `storage/app/seed-photos`, so later runs are quick. With no network it
+falls back to placeholder artwork and still finishes.
 
 Seeded accounts — all password `password`:
 
@@ -378,6 +385,44 @@ completed rows would turn the panel into a list of ticks that reads as a full
 audit. A badge that does not say what was checked is worth nothing, and one
 that hides what was *not* checked is worse than nothing.
 
+**The seed loads real photographs, through the real upload pipeline.** Grey
+placeholder rectangles tell you nothing about whether the media pipeline works,
+whether the cards are the right shape, or whether nine photographs in a gallery
+is too many. `SeedPhotos` fetches a curated set of Unsplash images (Unsplash
+Licence — free use, no permission required; development fixtures, never shipped)
+and hands each one to `StoreListingPhoto`, the same action a lister's upload
+goes through. So the seed exercises content sniffing, the responsive WebP
+renditions, EXIF stripping and the perceptual hash — it is the only fixture in
+the project that produces a real file, and therefore the only one that can prove
+that pipeline works.
+
+The photographs are cached under `storage/app/seed-photos` (gitignored), fetched
+once, and pinned by id so every run produces the same listing-to-photograph
+mapping — a random image service would make two screenshots impossible to
+compare. With no network the whole thing degrades to the placeholder artwork,
+because a seeder that fails on a train is a seeder people stop running. Covers
+come from a pool matched to the listing type, so a house leads with its exterior
+and a flat with a room, and no two listings open on the same image.
+
+**The public media disk builds relative URLs, not `APP_URL.'/storage'`.** With
+the default, every photograph resolved to port 80 while the application was
+served on 8000 — nothing displayed, and it went unnoticed for as long as the
+seed produced only placeholders, which need no file at all. That disk is
+development-only (production points `agentpro.media.disk` at S3), so its only
+consumer is a browser rendering a page it already fetched from this host.
+
+**Property status is a filter now (FR-M5-03).** The column has existed since
+the first migration and drives 3D-capture eligibility, but it was never wired
+to search — so there was no way to ask for off-plan or to exclude it, which in
+this market is a different purchase entirely: different money, different risk,
+different timeline. The filter key is `build_status` rather than the PRD's
+wording "property status", because a filter key that differs from the column it
+filters is a rename waiting to go wrong.
+
+Two of that requirement's twelve filters are still missing: **tags** and
+**title type**. Both are larger than this one — tags are partly derived, and
+title type is a nineteen-value grouped vocabulary that needs real UI.
+
 **The search split is sized by flex, not by guessing at the chrome.** It used
 to be `calc(100vh - 66px - 60px)`, and the 60px was wrong: the filter bar wraps,
 so it measures 105px at common widths and more when the chips run to three
@@ -568,6 +613,13 @@ page can reach behaviour that already worked — saving, hiding and reporting we
 tested end to end while the listing page wired to none of them. It also pins the
 two judgement calls: price history appears only after the price has moved, and
 the demand figure stays hidden below the floor.
+
+`HomePageTest` holds one line: everything on the landing page is counted, not
+claimed. A marketplace landing page is the easiest place in a product to start
+overstating — "thousands of listings" when there are eight, a grid of areas that
+lead to empty results, the same six properties under two headings to make the
+inventory look twice the size — and each of those is a small lie a visitor can
+check in one click.
 
 `CorporatePagesTest` protects two things: that these pages exist at all — every
 one of them was a dead `href="#"`, and one rotting back to nothing would be
