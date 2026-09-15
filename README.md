@@ -72,6 +72,22 @@ php artisan migrate --seed
 php artisan serve
 ```
 
+`--seed` runs `DatabaseSeeder`, which is development-only — it refuses outright
+when `APP_ENV=production`, because it creates six accounts whose password is the
+word `password`. The reference data it depends on lives separately in
+`ReferenceDataSeeder` (areas and amenities), which is safe to run anywhere and
+is what a deployment runs:
+
+```bash
+php artisan db:seed --class=ReferenceDataSeeder --force
+```
+
+That one seeds only an empty table. It is therefore a no-op after the first run
+and will never resurrect an amenity an administrator deleted, or overwrite an
+area they renamed — neither model soft-deletes, so "deliberately removed" and
+"never seeded" are indistinguishable, and the convenient kind of idempotency
+would quietly undo them on every deploy.
+
 The seed loads development inventory across the ten 3D coverage areas, because
 the map-first search looks broken on an empty city (PRD risk R9). The first run
 downloads about 5MB of photographs and takes a minute or two; they are cached
