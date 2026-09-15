@@ -206,7 +206,7 @@
 </div>{{-- /.searchpane --}}
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}">
+<link rel="stylesheet" href="{{ \App\Support\Asset::url('vendor/leaflet/leaflet.css') }}">
 @endpush
 
 @push('scripts')
@@ -215,8 +215,8 @@
      device class NFR-01 is written for. Vendored rather than CDN-loaded because
      search is the product's front door and should not depend on a third party
      being reachable. --}}
-<script src="{{ asset('vendor/leaflet/leaflet.js') }}"></script>
-<script src="{{ asset('js/search-map.js') }}"></script>
+<script src="{{ \App\Support\Asset::url('vendor/leaflet/leaflet.js') }}"></script>
+<script src="{{ \App\Support\Asset::url('js/search-map.js') }}"></script>
 @endpush
 
 @endsection

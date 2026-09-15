@@ -105,6 +105,74 @@ class ModerationTest extends TestCase
         );
     }
 
+    /**
+     * FR-M12-02: the moderator can see the photographs they are judging.
+     *
+     * This strip rendered decorative placeholder artwork — not as a fallback
+     * when an asset was missing, but hard-coded, for every listing. Nothing
+     * errored and the screen looked complete, so listings were approved and
+     * rejected against pictures of a generic building while one of the
+     * rejection reasons on the same page reads "photographs missing, unusable
+     * or not of this property".
+     *
+     * Asserting the real URL is present is the whole test: a placeholder is
+     * indistinguishable from a photograph to anything except the src.
+     */
+    public function test_the_review_screen_shows_the_actual_photographs(): void
+    {
+        $property = $this->submittedListing();
+
+        $photo = $property->media->where('kind', 'photo')->first();
+        $photo->update([
+            'disk'       => 'public',
+            'path'       => 'media/'.$property->uuid.'/original.webp',
+            'renditions' => [
+                '400'  => 'media/'.$property->uuid.'/x-400.webp',
+                '1600' => 'media/'.$property->uuid.'/x-1600.webp',
+            ],
+        ]);
+
+        $response = $this->actingAs($this->moderator())
+            ->get(route('admin.review', $property))
+            ->assertOk();
+
+        $response->assertSee('x-400.webp', false);
+        // Opens full size: 88px of a room is enough to count photographs and
+        // not enough to judge one.
+        $response->assertSee('x-1600.webp', false);
+    }
+
+    /**
+     * Every photograph, not the first eight.
+     *
+     * A listing may carry thirty, and the one that is a photograph of a
+     * different building is not reliably among the first eight. A reviewer
+     * shown a silent subset is worse off than one who knows it is a subset.
+     */
+    public function test_the_review_screen_does_not_hide_photographs_behind_a_cap(): void
+    {
+        $property = $this->submittedListing();
+
+        foreach (range(1, 12) as $i) {
+            MediaAsset::create([
+                'uuid' => Str::uuid(), 'property_id' => $property->id, 'kind' => 'photo',
+                'source' => 'lister', 'moderation_state' => 'approved',
+                'sort_order' => 100 + $i,
+                'disk' => 'public',
+                'renditions' => ['400' => 'media/extra-'.$i.'-400.webp'],
+            ]);
+        }
+
+        $html = $this->actingAs($this->moderator())
+            ->get(route('admin.review', $property))
+            ->assertOk()
+            ->getContent();
+
+        foreach (range(1, 12) as $i) {
+            $this->assertStringContainsString('extra-'.$i.'-400.webp', $html);
+        }
+    }
+
     public function test_the_console_is_invisible_to_non_staff(): void
     {
         $property = $this->submittedListing();
