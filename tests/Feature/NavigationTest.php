@@ -172,4 +172,24 @@ class NavigationTest extends TestCase
         $this->assertStringContainsString(route('login'), $header);
         $this->assertStringContainsString(route('pages.areas'), $header);
     }
+
+    /**
+     * Stylesheets and scripts carry a version, so a deploy is visible.
+     *
+     * There is no build step here and nothing fingerprints these filenames, so
+     * css/app.css is a URL whose contents change and whose name does not. A
+     * deployment went out, the server was confirmed to be serving the new file,
+     * and the change was still invisible in the browser — which on a public
+     * site is indistinguishable from not having deployed at all.
+     */
+    public function test_the_stylesheet_is_cache_busted(): void
+    {
+        $html = $this->get(route("home"))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression(
+            "/css\/app\.css\?v=\d+/",
+            $html,
+            "The stylesheet must carry a version, or browsers keep serving the copy they already have."
+        );
+    }
 }

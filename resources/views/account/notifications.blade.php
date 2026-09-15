@@ -152,5 +152,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/push.js') }}" defer></script>
+<script src="{{ \App\Support\Asset::url('js/push.js') }}" defer></script>
 @endpush

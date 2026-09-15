@@ -59,9 +59,33 @@
 
             <section class="formsec">
                 <h2>Media <span class="mutedcount">{{ $property->media->count() }} assets</span></h2>
+                {{--
+                    The real photographs, all of them.
+
+                    This strip rendered <x-placeholder> — not as a fallback, but
+                    hard-coded, for every listing. A moderation console that
+                    cannot show the moderator the photographs is not a
+                    moderation console: "photographs missing, unusable or not of
+                    this property" is one of the rejection reasons on this very
+                    screen, and it was being judged against decorative artwork.
+
+                    Not capped at eight either. A listing may carry thirty, and
+                    the one that is a photograph of a different building is not
+                    reliably in the first eight — a reviewer who sees a subset
+                    is worse off than one who knows they are seeing a subset.
+
+                    Each opens the full-size original in a new tab, because 88px
+                    of a room is enough to count the photographs and not enough
+                    to judge one.
+                --}}
                 <div class="mediastrip">
-                    @forelse ($property->media->where('kind', 'photo')->take(8) as $i => $m)
-                        <span class="mediathumb"><x-placeholder :seed="$property->id + $i" /></span>
+                    @forelse ($property->media->where('kind', 'photo') as $m)
+                        <a href="{{ $m->url('1600') ?? $m->url() }}" target="_blank" rel="noopener"
+                           class="mediathumb" title="Open full size">
+                            <x-property-image :asset="$m" :seed="$property->id"
+                                              :alt="'Photograph submitted for '.$property->title"
+                                              rendition="400" sizes="88px" />
+                        </a>
                     @empty
                         <p class="fhint">No photographs supplied.</p>
                     @endforelse

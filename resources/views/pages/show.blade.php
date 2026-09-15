@@ -381,10 +381,10 @@
 @endsection
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}">
+<link rel="stylesheet" href="{{ \App\Support\Asset::url('vendor/leaflet/leaflet.css') }}">
 @endpush
 
 @push('scripts')
-<script src="{{ asset('vendor/leaflet/leaflet.js') }}"></script>
-<script src="{{ asset('js/detail-map.js') }}" defer></script>
+<script src="{{ \App\Support\Asset::url('vendor/leaflet/leaflet.js') }}"></script>
+<script src="{{ \App\Support\Asset::url('js/detail-map.js') }}" defer></script>
 @endpush
