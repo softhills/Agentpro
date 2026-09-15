@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\TaxonomyController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\HomeController;
@@ -158,6 +159,18 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:20,1')->name('saved-searches.store');
     Route::put('/saved-searches/{savedSearch}', [SavedSearchController::class, 'update'])->name('saved-searches.update');
     Route::delete('/saved-searches/{savedSearch}', [SavedSearchController::class, 'destroy'])->name('saved-searches.destroy');
+
+    /*
+    | Changing your own password (SEC-06).
+    |
+    | Throttled, and on the update rather than the form: the rule requires the
+    | current password, which makes this endpoint a place to guess it from. Six
+    | an hour is far more than anybody changing their own password needs and far
+    | fewer than guessing one takes.
+    */
+    Route::get('/account/password', [PasswordController::class, 'edit'])->name('password.edit');
+    Route::put('/account/password', [PasswordController::class, 'update'])
+        ->middleware('throttle:6,60')->name('password.update');
 
     Route::get('/account/notifications', [NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
     Route::put('/account/notifications', [NotificationPreferenceController::class, 'update'])->name('notifications.update');
