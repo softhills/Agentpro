@@ -323,15 +323,26 @@ https://<domain>/public/   → 404
 cd ~/agentpro
 
 php artisan migrate --force
+php artisan db:seed --class=ReferenceDataSeeder --force
 php artisan storage:link
 ```
 
-> ### Never run the seeder on a live site
+The second line is not optional. It loads the **areas and amenities** — the
+options in the listing form's area and amenity fields, the facets in search, the
+rows behind `/areas`, and the flag that decides where 3D capture can be booked.
+Without them a lister opens the form and finds nothing to choose.
+
+It only populates an empty table, so running it on every deploy is harmless and
+it will never undo an administrator: an area renamed or an amenity deleted in
+the taxonomy console stays that way.
+
+> ### Never run the full seeder on a live site
 >
-> `db:seed` creates six accounts whose password is the word `password`, two of
-> them full administrators. `--force` gets past the production prompt, so it is
-> not what protects you. The seeder now refuses to run when `APP_ENV=production`
-> — do not work around it. Run `migrate --force` **on its own**.
+> `db:seed` with no `--class` runs `DatabaseSeeder`, which creates six accounts
+> whose password is the word `password`, two of them full administrators.
+> `--force` gets past the production prompt, so it is not what protects you.
+> That seeder refuses to run when `APP_ENV=production` — do not work around it.
+> Always name the class.
 
 `storage:link` is not optional: without it every uploaded photograph has no
 public path and listings fall back to placeholder artwork.

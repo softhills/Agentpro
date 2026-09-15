@@ -44,6 +44,13 @@ echo "==> Database"
 # what is NOT here: --seed. See the guard at the top of DatabaseSeeder.
 $PHP artisan migrate --force
 
+# Reference data — areas and amenities, without which the listing form has
+# nothing to offer. Named explicitly, never a bare `db:seed`, which would run
+# the development seeder and its six accounts with the password "password".
+# Only touches an empty table, so running it every deploy is a no-op after the
+# first and never undoes an administrator's edits.
+$PHP artisan db:seed --class=ReferenceDataSeeder --force
+
 if [ -n "${WEBROOT:-}" ]; then
     echo "==> Public assets -> $WEBROOT"
     # index.php is deliberately excluded. On this layout it has been edited to

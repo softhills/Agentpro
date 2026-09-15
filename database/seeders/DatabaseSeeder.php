@@ -65,8 +65,16 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        $this->seedAreas();
-        $this->seedAmenities();
+        /*
+         * Areas and amenities are not fixtures, so they do not live here.
+         * They are the options in the listing form, the facets in search and
+         * the flag that decides where 3D capture can be booked — a production
+         * install needs them, and this seeder refuses to run there.
+         *
+         * Called rather than copied: two lists of Lagos areas that have to be
+         * kept in step is two lists that stop being in step.
+         */
+        $this->call(ReferenceDataSeeder::class);
 
         $agent = User::create([
             'uuid' => Str::uuid(),
@@ -347,74 +355,6 @@ class DatabaseSeeder extends Seeder
                     ]);
                 }
             }
-        }
-    }
-
-    private function seedAreas(): void
-    {
-        // The ten coverage areas named in the spec, plus nearby areas that are
-        // deliberately NOT covered — the 3D upgrade must be seen to refuse them.
-        $areas = [
-            ['Victoria Island', 'Lagos', 'Lagos', true, 6.4281, 3.4219],
-            ['Ikoyi', 'Lagos', 'Lagos', true, 6.4488, 3.4390],
-            ['Banana Island', 'Lagos', 'Lagos', true, 6.4419, 3.4470],
-            ['Lekki Phase 1', 'Lagos', 'Lagos', true, 6.4478, 3.4723],
-            ['Yaba', 'Lagos', 'Lagos', true, 6.5095, 3.3711],
-            ['Maitama', 'Abuja', 'FCT', true, 9.0854, 7.4915],
-            ['Asokoro', 'Abuja', 'FCT', true, 9.0392, 7.5250],
-            ['Jabi', 'Abuja', 'FCT', true, 9.0640, 7.4200],
-            ['Wuse II', 'Abuja', 'FCT', true, 9.0765, 7.4620],
-            ['Central Business District', 'Abuja', 'FCT', true, 9.0400, 7.4900],
-            // Outside coverage
-            ['Ajah', 'Lagos', 'Lagos', false, 6.4698, 3.5852],
-            ['Gbagada', 'Lagos', 'Lagos', false, 6.5568, 3.3903],
-            ['Gwarinpa', 'Abuja', 'FCT', false, 9.1090, 7.4030],
-        ];
-
-        foreach ($areas as [$name, $city, $state, $coverage, $lat, $lng]) {
-            Area::create([
-                'name' => $name,
-                'slug' => Str::slug($name),
-                'city' => $city,
-                'state' => $state,
-                'is_scan_coverage' => $coverage,
-                'centroid_lat' => $lat,
-                'centroid_lng' => $lng,
-            ]);
-        }
-    }
-
-    private function seedAmenities(): void
-    {
-        // FR-M5-09. This is the set that actually drives decisions here; a US
-        // amenity list (pets, in-unit laundry) would filter on nothing.
-        $amenities = [
-            ['24-hour power', 'power'],
-            ['Inverter + solar', 'power'],
-            ['Generator included', 'power'],
-            ['Treated borehole', 'water'],
-            ['Water treatment plant', 'water'],
-            ['Gated estate', 'security'],
-            ['Estate security', 'security'],
-            ['CCTV', 'security'],
-            ['BQ included', 'space'],
-            ['Parking space', 'space'],
-            ['Elevator', 'space'],
-            ['Swimming pool', 'leisure'],
-            ['Gym', 'leisure'],
-            ['POP ceiling', 'finish'],
-            ['Fitted kitchen', 'finish'],
-            ['All rooms ensuite', 'finish'],
-            ['Serviced (service charge)', 'finish'],
-        ];
-
-        foreach ($amenities as $i => [$name, $group]) {
-            Amenity::create([
-                'name' => $name,
-                'slug' => Str::slug($name),
-                'group' => $group,
-                'sort_order' => $i,
-            ]);
         }
     }
 
