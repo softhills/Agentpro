@@ -52,6 +52,52 @@ class ListingSubmissionTest extends TestCase
     }
 
     /** A listing complete enough to submit, minus whatever the test removes. */
+    /**
+     * A payload the update endpoint accepts, mirroring completeListing().
+     *
+     * The controller validates the whole listing on every save — units, fees
+     * and titles included — so a test that only wants to change one field still
+     * has to send a complete one. Built from the listing rather than from
+     * constants, so this does not quietly start asserting a different property
+     * than the one under test.
+     *
+     * @return array<string,mixed>
+     */
+    private function validPayload(Property $property): array
+    {
+        $unit = $property->headlineUnit();
+
+        return [
+            'title'        => $property->title,
+            'description'  => $property->description,
+            'listing_type' => $property->listing_type,
+            'intent'       => $property->intent,
+            'build_status' => $property->build_status,
+            'area_id'      => $property->area_id,
+            'address_line' => $property->address_line,
+            'city'         => $property->city,
+            'state'        => $property->state,
+            'lat'          => $property->lat,
+            'lng'          => $property->lng,
+            'unit' => [
+                'price'          => $unit->price,
+                'price_period'   => $unit->price_period->value,
+                'bedrooms'       => $unit->bedrooms,
+                'bathrooms'      => $unit->bathrooms,
+                'toilets'        => $unit->toilets,
+                'floor_area_sqm' => $unit->floor_area_sqm,
+            ],
+            'fees' => $unit->feeLines->map(fn ($fee) => [
+                'label'         => $fee->label,
+                'amount'        => $fee->amount,
+                'is_refundable' => $fee->is_refundable ? '1' : '0',
+                'payee'         => $fee->payee,
+            ])->all(),
+            'titles' => $property->titleClaims
+                ->mapWithKeys(fn ($claim) => [$claim->title_type => $claim->stage])->all(),
+        ];
+    }
+
     private function completeListing(User $lister): Property
     {
         $property = Property::create([
@@ -163,6 +209,64 @@ class ListingSubmissionTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame(LifecycleState::Draft, $property->fresh()->lifecycle_state);
+    }
+
+    /**
+     * Every chip in the section index points at a section that exists.
+     *
+     * An anchor to a missing id is the quietest possible bug: nothing errors,
+     * nothing logs, the page simply does not move and the lister concludes the
+     * navigation is broken. Renaming or removing a section is exactly the edit
+     * that causes it, which is why this compares the two lists rather than
+     * asserting a fixed set.
+     */
+    public function test_the_section_index_only_points_at_sections_that_exist(): void
+    {
+        $property = $this->completeListing($this->lister());
+
+        $html = $this->actingAs($property->lister)
+            ->get(route('lister.listings.edit', $property))
+            ->assertOk()
+            ->getContent();
+
+        $nav = Str::before(Str::after($html, '<nav class="formnav"'), '</nav>');
+
+        preg_match_all('/href="#([a-z-]+)"/', $nav, $targets);
+        $this->assertNotEmpty($targets[1], 'The section index rendered no links at all.');
+
+        foreach ($targets[1] as $id) {
+            $this->assertStringContainsString('id="'.$id.'"', $html, 'The section index links to #'.$id.', which is not on the page.');
+        }
+    }
+
+    /**
+     * Amenities still round-trip now that the section is a <details>.
+     *
+     * Folding it shut changes nothing about submission — the inputs are the
+     * same inputs inside the same form, and a closed <details> posts exactly
+     * what an open one does — but that is a claim worth having a test behind,
+     * because the obvious worry about collapsing a form section is that its
+     * fields stop being sent.
+     */
+    public function test_amenities_survive_being_in_a_collapsible_section(): void
+    {
+        $property = $this->completeListing($this->lister());
+
+        $amenities = collect([
+            ['name' => '24-hour power', 'slug' => '24-hour-power', 'category' => 'power'],
+            ['name' => 'Treated borehole', 'slug' => 'treated-borehole', 'category' => 'water'],
+        ])->map(fn ($row, $i) => Amenity::create($row + ['sort_order' => $i]))
+          ->pluck('id')->all();
+
+        $this->actingAs($property->lister)->put(
+            route('lister.listings.update', $property),
+            $this->validPayload($property) + ['amenities' => $amenities]
+        )->assertRedirect();
+
+        $this->assertEqualsCanonicalizing(
+            $amenities,
+            $property->fresh()->amenities->pluck('id')->all()
+        );
     }
 
     /** SEC-03 — the uuid is an identifier, not a capability. */

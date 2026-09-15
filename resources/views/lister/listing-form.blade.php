@@ -24,13 +24,35 @@
     <x-flash />
     <x-form-errors />
 
+    {{--
+        Section index.
+
+        A listing form is eight sections and roughly a screen and a half of
+        scrolling each, and the two that block publishing — the cost breakdown
+        and the title — sit in the middle where nobody scrolls to first. Plain
+        anchors, so it works with no JavaScript and every chip is a real link a
+        lister can open in a new tab or come back to.
+    --}}
+    <nav class="formnav" aria-label="Sections of this listing">
+        <a href="#s-property">Property</a>
+        <a href="#s-location">Location</a>
+        <a href="#s-price">Price</a>
+        <a href="#s-fees">Move-in cost <span>required</span></a>
+        <a href="#s-title">Title <span>required</span></a>
+        <a href="#s-amenities">Amenities</a>
+        @if ($isEdit)
+            <a href="#s-photos">Photographs <span>required</span></a>
+            <a href="#s-video">Video</a>
+        @endif
+    </nav>
+
     <form method="POST"
           action="{{ $isEdit ? route('lister.listings.update', $property) : route('lister.listings.store') }}"
           class="stack">
         @csrf
         @if ($isEdit) @method('PUT') @endif
 
-        <section class="formsec">
+        <section class="formsec" id="s-property">
             <h2>The property</h2>
 
             <x-field name="title" label="Listing title" :value="old('title', $property->title)" required
@@ -108,7 +130,7 @@
             </div>
         </section>
 
-        <section class="formsec">
+        <section class="formsec" id="s-location">
             <h2>Where it is</h2>
 
             <div class="fieldset">
@@ -140,7 +162,7 @@
                      hint="Shown as a link on the listing. We never fetch or follow it." />
         </section>
 
-        <section class="formsec">
+        <section class="formsec" id="s-price">
             <h2>Price and size</h2>
 
             <div class="row3">
@@ -189,7 +211,7 @@
         {{-- FR-M7-01. This section is why a listing cannot be submitted on a
              price alone: the platform's whole promise is that the advertised
              figure is not a surprise at signing. --}}
-        <section class="formsec formsec-required">
+        <section class="formsec formsec-required" id="s-fees">
             <h2>Cost to move in <span class="reqflag">Required to publish</span></h2>
             <p class="secblurb">
                 Every fee a tenant or buyer must pay on top of the price. A listing
@@ -227,7 +249,7 @@
             </div>
         </section>
 
-        <section class="formsec formsec-required">
+        <section class="formsec formsec-required" id="s-title">
             <h2>Title documents <span class="reqflag">At least one required</span></h2>
             <p class="secblurb">
                 Declare what exists and what is still in progress. Agentpro shows this
@@ -253,8 +275,27 @@
             @endforeach
         </section>
 
-        <section class="formsec">
-            <h2>Amenities</h2>
+        {{--
+            Folded shut by default, and the only section that is.
+
+            It is the longest block on the page by some distance — every amenity
+            in the taxonomy, as a checkbox — and the only one that blocks
+            nothing. Open it and the checkboxes are still plain inputs inside
+            the same form, so a closed <details> submits exactly what an open
+            one does; nothing is lost by never opening it.
+
+            It counts what is already ticked in the summary, because a folded
+            section that gives no sign of its contents is a section people
+            re-open every time to check.
+        --}}
+        @php $amenityCount = count(old('amenities', $selectedAmenities)); @endphp
+        <details class="formsec formfold" id="s-amenities" @if ($amenityCount) open @endif>
+            <summary>
+                <h2>Amenities</h2>
+                <span class="mutedcount">
+                    {{ $amenityCount ? $amenityCount.' selected' : 'optional · '.$amenities->count().' to choose from' }}
+                </span>
+            </summary>
             <div class="amengrid">
                 @foreach ($amenities as $amenity)
                     <label class="checkline">
@@ -264,7 +305,7 @@
                     </label>
                 @endforeach
             </div>
-        </section>
+        </details>
 
         <div class="formactions" style="margin-bottom:0">
             <button type="submit" class="btn btn-blue">{{ $isEdit ? 'Save changes' : 'Save draft' }}</button>
@@ -276,16 +317,29 @@
     </form>
 
     @if ($isEdit)
-        {{-- Media lives outside the main form: uploads are multipart and post to
-             their own endpoints, so a half-finished listing draft is never lost
-             to a failed image upload, and vice versa. --}}
+        {{--
+            Media lives outside the main form: uploads are multipart and post to
+            their own endpoints, so a half-finished listing draft is never lost
+            to a failed image upload, and vice versa.
+
+            Correct, and confusing without a word of explanation — the Save
+            button above looks like the end of the page, and then the page keeps
+            going. The divider says why, so nobody presses Save expecting it to
+            do something about the photographs.
+        --}}
+        <div class="formsplit">
+            <span>Media saves on its own</span>
+            <p>Each upload is saved the moment it finishes. The Save button above is only for the details.</p>
+        </div>
+
+        {{-- Media lives outside the main form: see the divider above. --}}
         @php
             $photos = $property->media->where('kind', 'photo')->sortBy('sort_order');
             $video  = $property->media->firstWhere('kind', 'video');
             $min    = (int) config('agentpro.media.min_photos');
         @endphp
 
-        <section class="formsec formsec-required" style="margin-top:16px">
+        <section class="formsec formsec-required" id="s-photos" style="margin-top:16px">
             <h2>
                 Photographs
                 <span class="reqflag">{{ $min }} required</span>
@@ -326,16 +380,26 @@
                 <p class="fhint">No photographs yet. A listing cannot be submitted without {{ $min }}.</p>
             @endif
 
+            {{-- The count is stated against the requirement rather than on its
+                 own, because "3 uploaded" answers a question nobody asked —
+                 what a lister wants to know is whether they can submit yet. --}}
+            @if ($photos->count() < $min)
+                <p class="mediashort">
+                    {{ $min - $photos->count() }} more {{ Str::plural('photograph', $min - $photos->count()) }}
+                    needed before this listing can be submitted.
+                </p>
+            @endif
+
             <form method="POST" action="{{ route('lister.media.photos', $property) }}"
                   enctype="multipart/form-data" class="uploadrow">
                 @csrf
                 <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp"
-                       multiple required class="finput">
+                       multiple required class="finput" aria-label="Choose photographs to upload">
                 <button type="submit" class="btn btn-blue">Upload</button>
             </form>
         </section>
 
-        <section class="formsec" style="margin-top:16px">
+        <section class="formsec" id="s-video" style="margin-top:16px">
             <h2>Walkthrough video <span class="mutedcount">optional · one per listing</span></h2>
             <p class="secblurb">
                 MP4, MOV, WebM or MKV, up to {{ round(config('agentpro.media.max_video_kb') / 1024) }} MB.
