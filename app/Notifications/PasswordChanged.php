@@ -51,4 +51,21 @@ class PasswordChanged extends AgentproNotification
         return 'Agentpro: your password was just changed and other sessions were '
             .'signed out. If this was not you, contact us immediately.';
     }
+
+    /**
+     * The in-app inbox copy. `via()` always includes the database channel, so
+     * every notification needs this — and a faked notification in a test does
+     * not, which is how a missing one stays missing until something sends for
+     * real.
+     */
+    public function toArray(object $notifiable): array
+    {
+        return [
+            'type'  => 'account.password_changed',
+            'title' => 'Your password was changed',
+            'body'  => 'Everywhere else you were signed in has been signed out. '
+                      .'If this was not you, act now.',
+            'url'   => route('password.edit'),
+        ];
+    }
 }

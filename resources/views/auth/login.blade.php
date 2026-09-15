@@ -25,6 +25,8 @@
             <button type="submit" class="btn btn-brand btn-block">Sign in</button>
         </form>
 
+        @include("partials.google-button")
+
         <p class="authalt">No account yet? <a href="{{ route('register') }}">Create one</a></p>
     </div>
 </div>

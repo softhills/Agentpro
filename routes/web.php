@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\SettlementAdminController;
 use App\Http\Controllers\Admin\TaxonomyController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -128,6 +129,18 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/login', [LoginController::class, 'show'])->name('login');
     Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:20,1');
+
+    /*
+    | Google sign-in (FR-M1-02).
+    |
+    | Both 404 when no client id is configured, so an unconfigured install has
+    | no half-working auth surface. Throttled because the callback creates
+    | accounts, and an endpoint that creates accounts is one worth capping.
+    */
+    Route::get('/auth/google', [GoogleController::class, 'redirect'])
+        ->middleware('throttle:20,1')->name('auth.google');
+    Route::get('/auth/google/callback', [GoogleController::class, 'callback'])
+        ->middleware('throttle:20,1')->name('auth.google.callback');
 });
 
 Route::post('/logout', [LoginController::class, 'destroy'])

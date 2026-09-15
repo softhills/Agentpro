@@ -79,6 +79,22 @@ final class PersonalData
                 'why'      => 'Deleting them is also what stops the notifications.',
                 'section'  => 'devices',
             ],
+            'social_accounts' => [
+                'label'    => 'Google and other sign-in providers you linked',
+                'disposal' => self::DELETE,
+                /*
+                 * Deleted outright rather than anonymised. The row is a pointer
+                 * at an identity held by somebody else — it exists only to let
+                 * that provider sign you in here, and once the account is gone
+                 * there is nothing for it to point at. Keeping an anonymised
+                 * shell would also keep the provider's subject id, which is the
+                 * identifier, so anonymising it would preserve exactly the part
+                 * that identifies a person.
+                 */
+                'why'      => 'A link to your Google account. It only exists to sign you in, '
+                             .'so it goes when the account does.',
+                'section'  => 'devices',
+            ],
             'notifications' => [
                 'label'    => 'Your notification inbox',
                 'disposal' => self::DELETE,

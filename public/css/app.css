@@ -1606,3 +1606,13 @@ a.revealed-value:hover{text-decoration:underline}
 .launchstate-dev{font-family:var(--m)!important;font-size:11.5px!important;color:var(--slate-2);
   margin-top:24px!important;padding-top:16px;border-top:1px dashed var(--line)}
 .launchstate-dev code{font-size:11.5px}
+
+/* ------------------------------------------------- social sign-in (M1) */
+/* "or" rule between the password form and the provider button. */
+.authsplit{display:flex;align-items:center;gap:12px;margin:18px 0 14px;
+  font-family:var(--m);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--slate-2)}
+.authsplit::before,.authsplit::after{content:"";flex:1;height:1px;background:var(--line)}
+/* Google's mark keeps its own colours in both themes — it is their brand, not
+   ours, and recolouring it is against their guidelines. */
+.googlebtn{gap:10px}
+.googlebtn svg{width:17px;height:17px;flex:none}

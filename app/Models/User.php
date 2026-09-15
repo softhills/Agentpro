@@ -101,6 +101,25 @@ class User extends Authenticatable
         return $role === null || $this->staff_role === $role || $this->staff_role === 'admin';
     }
 
+    /** FR-M1-02: the providers this account can sign in with. */
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
+
+    /**
+     * Whether this account has a password at all.
+     *
+     * An account created through Google has none, and never had one. The
+     * account screen asks this to decide whether to offer "set a password" or
+     * "change your password" — and the two are different operations, because
+     * only one of them can ask for the current password first.
+     */
+    public function hasPassword(): bool
+    {
+        return filled($this->password);
+    }
+
     public function payoutAccounts(): HasMany
     {
         return $this->hasMany(PayoutAccount::class);

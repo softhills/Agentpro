@@ -35,4 +35,23 @@ return [
         ],
     ],
 
+    /*
+     * Google sign-in (FR-M1-02).
+     *
+     * Absent by default, and the application checks rather than assumes: with
+     * no client id the routes 404 and the button is not rendered. A "Continue
+     * with Google" button that leads to a configuration error is worse than no
+     * button, because the person has already decided how they want to sign in
+     * by the time it fails.
+     *
+     * The redirect must be an absolute https URL and must match the one
+     * registered in the Google Cloud console character for character —
+     * including the trailing slash, or its absence.
+     */
+    'google' => [
+        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect'      => env('GOOGLE_REDIRECT_URI'),
+    ],
+
 ];

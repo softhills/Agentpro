@@ -47,6 +47,8 @@
             <button type="submit" class="btn btn-brand btn-block">Create account</button>
         </form>
 
+        @include("partials.google-button")
+
         <p class="authalt">Already have an account? <a href="{{ route('login') }}">Sign in</a></p>
     </div>
 </div>
