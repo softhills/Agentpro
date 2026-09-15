@@ -93,6 +93,7 @@
             <p class="usermenu-h">Account</p>
             <a href="{{ route('saved-searches.index') }}"><x-icon name="search" />Saved searches</a>
             <a href="{{ route('notifications.edit') }}"><x-icon name="bell" />Notifications</a>
+            <a href="{{ route('password.edit') }}"><x-icon name="shield" />Change password</a>
             {{-- NDPA ss. 34 and 38. Reachable in two clicks from every page, on
                  purpose: a right to your data that takes a support ticket to
                  exercise is not much of a right. --}}
