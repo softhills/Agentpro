@@ -120,7 +120,7 @@
                 <form method="POST" action="{{ route('interact.contact', $property) }}">
                     @csrf
                     <input type="hidden" name="mode" value="phone">
-                    <button class="btn btn-blue btn-block"><x-icon name="phone" />Call</button>
+                    <button class="btn btn-brand btn-block"><x-icon name="phone" />Call</button>
                 </form>
                 <form method="POST" action="{{ route('interact.contact', $property) }}">
                     @csrf
@@ -146,12 +146,12 @@
                 @csrf
                 <input type="hidden" name="mode" value="email">
                 <input type="hidden" name="intent" value="viewing">
-                <button class="btn btn-navy btn-block">Request a viewing</button>
+                <button class="btn btn-deep btn-block">Request a viewing</button>
             </form>
         @else
             {{-- FR-M1-03: an account is the price of acting on a listing, not
                  of seeing one. A link to sign in beats a button that fails. --}}
-            <a href="{{ route('login') }}" class="btn btn-blue btn-block">
+            <a href="{{ route('login') }}" class="btn btn-brand btn-block">
                 <x-icon name="phone" />Sign in to contact {{ $property->lister->name }}
             </a>
             <p class="contacthint">

@@ -19,7 +19,7 @@
                 <p>Reference {{ $order->uuid }}</p>
             </div>
         </div>
-        <a href="{{ route('scan.schedule', $order) }}" class="btn btn-blue btn-block">Check again</a>
+        <a href="{{ route('scan.schedule', $order) }}" class="btn btn-brand btn-block">Check again</a>
         <p class="authalt"><a href="{{ route('lister.dashboard') }}">Back to your listings</a></p>
     </div>
 </div>

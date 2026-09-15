@@ -27,7 +27,7 @@
                 <p class="listmeta">
                     Contact: {{ $job->property->lister->name }}
                     @if ($job->property->lister->phone)
-                        · <a href="tel:{{ $job->property->lister->phone }}" style="font-weight:700;color:var(--blue-dark)">{{ $job->property->lister->phone }}</a>
+                        · <a href="tel:{{ $job->property->lister->phone }}" style="font-weight:700;color:var(--brand-dark)">{{ $job->property->lister->phone }}</a>
                     @endif
                 </p>
             </div>
@@ -39,7 +39,7 @@
                     </form>
                 @endunless
                 <details class="capturebox">
-                    <summary class="btn btn-blue btn-sm">Attach capture</summary>
+                    <summary class="btn btn-brand btn-sm">Attach capture</summary>
                     <form method="POST" action="{{ route('technician.capture', $job) }}" class="stack" style="margin-top:9px">
                         @csrf
                         <input name="capture_reference" class="finput finput-sm" placeholder="Matterport space id" required>

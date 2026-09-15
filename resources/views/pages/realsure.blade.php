@@ -17,7 +17,7 @@
         read it before they pick up the phone.
       </p>
       <p class="cactions">
-        <a href="{{ route('search', ['realsure' => 1]) }}" class="btn btn-blue">See RealSure listings</a>
+        <a href="{{ route('search', ['realsure' => 1]) }}" class="btn btn-brand">See RealSure listings</a>
         <a href="#components" class="btn btn-ghost">What gets checked</a>
       </p>
     </div>
@@ -119,7 +119,7 @@
         A full engagement is currently {{ Money::naira($price) }}.
       </p>
       <p class="cactions">
-        <a href="mailto:{{ config('agentpro.company.email') }}?subject=RealSure enquiry" class="btn btn-blue">
+        <a href="mailto:{{ config('agentpro.company.email') }}?subject=RealSure enquiry" class="btn btn-brand">
           Talk to us about RealSure
         </a>
         @guest

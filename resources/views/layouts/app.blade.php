@@ -55,12 +55,23 @@
 
 <header class="nav">
   <div class="container" style="display:flex;align-items:center;gap:28px;width:100%">
+    {{--
+        The wordmark, as text rather than an image.
+
+        The brand mark is "Agentpro" plus the degree ring — no house icon, which
+        is what stood here. Set in live text so it inherits the theme colour
+        (the supplied artwork is white, which would disappear on this header),
+        stays sharp at every size and on every screen, costs nothing to
+        download, and leaves the company name as real text for search engines
+        and screen readers rather than something only sighted users can read.
+
+        The ring is drawn in CSS rather than typed as "°", because the degree
+        character's size and vertical position are decided by whichever font
+        loads — including the fallback — and a logo that moves when a webfont
+        fails is not a logo.
+    --}}
     <a href="{{ route('home') }}" class="logo">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M3 11.2 12 4l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8.8Z" fill="#3E57E3"/>
-        <path d="M12 4 3 11.2" stroke="#1F2A4E" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      Agentpro
+      Agentpro<span class="logo-ring" aria-hidden="true"></span>
     </a>
     <nav class="navlinks" aria-label="Main">
       <a href="{{ route('search', ['intent' => 'rent']) }}" @class(['cur' => request('intent') === 'rent'])>Rent</a>
@@ -82,7 +93,7 @@
       </button>
       @guest
         <a href="{{ route('login') }}" class="navsignin">Sign in</a>
-        <a href="{{ route('register') }}" class="btn btn-blue btn-sm">List a property</a>
+        <a href="{{ route('register') }}" class="btn btn-brand btn-sm">List a property</a>
 
         {{-- Below 960px .navlinks is hidden and a guest had no way to reach
              anything but the home page. Same disclosure pattern as the account
@@ -145,7 +156,8 @@
 
 <footer class="foot">
   <div class="container in">
-    <strong style="color:var(--on-navy);font-size:15px">Agentpro</strong>
+    {{-- The same mark, not a second one typed out by hand. --}}
+    <span class="logo">Agentpro<span class="logo-ring" aria-hidden="true"></span></span>
     <a href="{{ route('pages.realsure') }}">RealSure</a><a href="{{ route('pages.areas') }}">Areas</a><a
        href="{{ route('pages.agents') }}">Agents</a><a href="{{ route('pages.closed') }}">Sold and let</a><a
        href="{{ route('pages.about') }}">About</a><a

@@ -81,10 +81,10 @@
                     </p>
                 @endif
 
-                <button type="submit" class="btn btn-blue btn-block">Submit for verification</button>
+                <button type="submit" class="btn btn-brand btn-block">Submit for verification</button>
             </form>
         @elseif ($user->verification_state === 'verified')
-            <a href="{{ route('lister.dashboard') }}" class="btn btn-blue btn-block">Go to your dashboard</a>
+            <a href="{{ route('lister.dashboard') }}" class="btn btn-brand btn-block">Go to your dashboard</a>
         @endif
     </div>
 </div>

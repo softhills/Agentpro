@@ -47,7 +47,7 @@
         the stock exists.
       </p>
       <p class="cactions">
-        <a href="{{ route('search') }}" class="btn btn-blue">Search and save one</a>
+        <a href="{{ route('search') }}" class="btn btn-brand">Search and save one</a>
       </p>
     </section>
   </div>

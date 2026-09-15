@@ -156,7 +156,7 @@
                         <span class="fhint">Internal. Not shown on the listing.</span>
                     </div>
 
-                    <button class="btn btn-blue btn-sm">Save this check</button>
+                    <button class="btn btn-brand btn-sm">Save this check</button>
                 </form>
             </details>
         @endforeach

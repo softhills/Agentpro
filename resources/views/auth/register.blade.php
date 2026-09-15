@@ -44,7 +44,7 @@
             <x-field name="password" label="Password" type="password" required autocomplete="new-password" hint="At least 10 characters, with letters and numbers." />
             <x-field name="password_confirmation" label="Confirm password" type="password" required autocomplete="new-password" />
 
-            <button type="submit" class="btn btn-blue btn-block">Create account</button>
+            <button type="submit" class="btn btn-brand btn-block">Create account</button>
         </form>
 
         <p class="authalt">Already have an account? <a href="{{ route('login') }}">Sign in</a></p>

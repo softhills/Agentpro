@@ -44,7 +44,7 @@
                         available until {{ $openExport->expires_at->format('D j M, g:ia') }}
                     </span>
                 </div>
-                <a href="{{ route('privacy.download', $openExport) }}" class="btn btn-blue btn-sm">Download</a>
+                <a href="{{ route('privacy.download', $openExport) }}" class="btn btn-brand btn-sm">Download</a>
             </div>
         @elseif ($openExport)
             {{--
@@ -82,7 +82,7 @@
                         account behind a link in an email. It is deleted after
                         {{ $expiryHours }} hours; asking again is free.
                     </p>
-                    <button class="btn btn-blue">Request a copy</button>
+                    <button class="btn btn-brand">Request a copy</button>
                 </form>
             </details>
         @endif
@@ -140,7 +140,7 @@
 
             <form method="POST" action="{{ route('privacy.cancel', $openErasure) }}" class="stack">
                 @csrf
-                <button class="btn btn-blue">Stop this — keep my account</button>
+                <button class="btn btn-brand">Stop this — keep my account</button>
             </form>
 
             <p class="prefnote">

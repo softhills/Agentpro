@@ -23,7 +23,7 @@
         @if ($job->canReschedule())
             <p class="fhint">You can still change the date up to {{ config('agentpro.scan.reschedule_notice_hours') }} hours beforehand.</p>
         @endif
-        <a href="{{ route('lister.dashboard') }}" class="btn btn-blue btn-block">Back to your listings</a>
+        <a href="{{ route('lister.dashboard') }}" class="btn btn-brand btn-block">Back to your listings</a>
     </div>
 </div>
 @endsection

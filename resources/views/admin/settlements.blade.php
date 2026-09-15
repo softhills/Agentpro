@@ -7,7 +7,7 @@
 @section('admin_actions')
 <form method="POST" action="{{ route('admin.settlements.reconcile') }}">
     @csrf
-    <button class="btn btn-blue btn-sm">Reconcile now</button>
+    <button class="btn btn-brand btn-sm">Reconcile now</button>
 </form>
 @endsection
 

@@ -24,7 +24,7 @@
             <option value="{{ $value }}" @selected($category === $value)>{{ $label }}</option>
           @endforeach
         </select>
-        <button class="btn btn-blue">Search</button>
+        <button class="btn btn-brand">Search</button>
         @if ($term || $category)
           <a href="{{ route('pages.agents') }}" class="linkbtn">Clear</a>
         @endif

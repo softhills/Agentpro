@@ -20,7 +20,7 @@
                 <p>You can turn anything back on from your notification settings.</p>
             </div>
         </div>
-        <a href="{{ route('notifications.edit') }}" class="btn btn-blue btn-block">Notification settings</a>
+        <a href="{{ route('notifications.edit') }}" class="btn btn-brand btn-block">Notification settings</a>
     </div>
 </div>
 @endsection

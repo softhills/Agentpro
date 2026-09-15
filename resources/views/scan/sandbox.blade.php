@@ -30,7 +30,7 @@
             which is the point.
         </p>
 
-        <a href="{{ route('scan.schedule', $order) }}" class="btn btn-blue">I have sent it — continue</a>
+        <a href="{{ route('scan.schedule', $order) }}" class="btn btn-brand">I have sent it — continue</a>
     </section>
 </div>
 @endsection

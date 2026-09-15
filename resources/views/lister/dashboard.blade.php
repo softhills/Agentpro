@@ -15,7 +15,7 @@
         <div class="dashactions">
             <a href="{{ route('lister.payouts') }}" class="btn btn-ghost">Getting paid</a>
             @can('create', App\Models\Property::class)
-                <a href="{{ route('lister.listings.create') }}" class="btn btn-blue">Add a listing</a>
+                <a href="{{ route('lister.listings.create') }}" class="btn btn-brand">Add a listing</a>
             @endcan
         </div>
     </div>
@@ -52,7 +52,7 @@
             <p style="margin:4px 0 10px">
                 You can build drafts now. Submitting for review needs a verified account.
             </p>
-            <a href="{{ route('verify.show') }}" class="btn btn-navy btn-sm">
+            <a href="{{ route('verify.show') }}" class="btn btn-deep btn-sm">
                 {{ $user->verification_state === 'pending' ? 'Check status' : 'Verify now' }}
             </a>
         </div>
@@ -67,7 +67,7 @@
                 {{ $order->property?->title }} — choose a visit date whenever you are ready.
                 Nothing expires.
             </p>
-            <a href="{{ route('scan.schedule', $order) }}" class="btn btn-navy btn-sm">Choose a date</a>
+            <a href="{{ route('scan.schedule', $order) }}" class="btn btn-deep btn-sm">Choose a date</a>
         </div>
     @endforeach
 
@@ -210,7 +210,7 @@
                                 You can put it back on the market afterwards.
                             </p>
 
-                            <button type="submit" class="btn btn-navy btn-sm">Take it off the market</button>
+                            <button type="submit" class="btn btn-deep btn-sm">Take it off the market</button>
                         </form>
                     </details>
                 @endcan

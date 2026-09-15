@@ -56,7 +56,7 @@
             @elseif ($payout->account?->isPayable())
                 <form method="POST" action="{{ route('admin.payouts.approve', $payout) }}" class="inlineform">
                     @csrf
-                    <button class="btn btn-blue btn-sm">Approve &amp; send</button>
+                    <button class="btn btn-brand btn-sm">Approve &amp; send</button>
                 </form>
             @endif
 
@@ -108,7 +108,7 @@
     </p>
 
     <details class="addbox">
-        <summary class="btn btn-blue btn-sm">Add a credit</summary>
+        <summary class="btn btn-brand btn-sm">Add a credit</summary>
         <form method="POST" action="{{ route('admin.payouts.credit') }}" class="taxform">
             @csrf
             <div class="fieldset">
@@ -139,7 +139,7 @@
                 <input id="credit_memo" name="memo" class="finput" maxlength="200" required
                        placeholder="Launch incentive — 5 verified listings in September">
             </div>
-            <button class="btn btn-blue btn-sm">Credit</button>
+            <button class="btn btn-brand btn-sm">Credit</button>
         </form>
     </details>
 </section>

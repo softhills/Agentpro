@@ -80,7 +80,7 @@
         verified before it goes live, and every listing shows the full cost of moving in before
         you call anyone.
       </p>
-      <a href="{{ route('search') }}" class="btn btn-blue">Browse what is available</a>
+      <a href="{{ route('search') }}" class="btn btn-brand">Browse what is available</a>
     </section>
   </div>
 </div>

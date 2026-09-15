@@ -68,7 +68,7 @@
                     <option value="250000000">&#8358;250,000,000</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-blue">Search</button>
+            <button type="submit" class="btn btn-brand">Search</button>
         </form>
 
         <p class="w3w-hint">Also searchable by what3words — try <b>///plant.chief.maker</b></p>
@@ -164,10 +164,10 @@
                 </p>
                 <div class="launchstate-acts">
                     @guest
-                        <a href="{{ route('register') }}" class="btn btn-blue">List a property</a>
+                        <a href="{{ route('register') }}" class="btn btn-brand">List a property</a>
                     @else
                         @can('create', App\Models\Property::class)
-                            <a href="{{ route('lister.listings.create') }}" class="btn btn-blue">List a property</a>
+                            <a href="{{ route('lister.listings.create') }}" class="btn btn-brand">List a property</a>
                         @endcan
                     @endguest
                     <a href="{{ route('pages.realsure') }}" class="btn btn-ghost">What we check</a>
@@ -251,7 +251,7 @@
                 <li><x-icon name="check" stroke-width="2.5" />Community and neighbour investigation</li>
                 <li><x-icon name="check" stroke-width="2.5" />On-site capture by an Agentpro technician</li>
             </ul>
-            <a href="{{ route('pages.realsure') }}" class="btn btn-blue">How RealSure works</a>
+            <a href="{{ route('pages.realsure') }}" class="btn btn-brand">How RealSure works</a>
         </div>
 
         <div class="vbplayer">

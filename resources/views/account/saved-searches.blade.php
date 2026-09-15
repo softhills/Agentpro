@@ -9,7 +9,7 @@
             <h1>Saved searches</h1>
             <p>We check these for you and tell you when something new matches.</p>
         </div>
-        <a href="{{ route('search') }}" class="btn btn-blue">Start a new search</a>
+        <a href="{{ route('search') }}" class="btn btn-brand">Start a new search</a>
     </div>
 
     <x-flash />

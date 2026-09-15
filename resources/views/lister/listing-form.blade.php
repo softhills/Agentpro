@@ -308,7 +308,7 @@
         </details>
 
         <div class="formactions" style="margin-bottom:0">
-            <button type="submit" class="btn btn-blue">{{ $isEdit ? 'Save changes' : 'Save draft' }}</button>
+            <button type="submit" class="btn btn-brand">{{ $isEdit ? 'Save changes' : 'Save draft' }}</button>
             <a href="{{ route('lister.dashboard') }}" class="btn btn-ghost">Cancel</a>
             @if ($isEdit)
                 <p class="formnote">Drafts are private. Submit for review from your dashboard when the listing is complete.</p>
@@ -395,7 +395,7 @@
                 @csrf
                 <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp"
                        multiple required class="finput" aria-label="Choose photographs to upload">
-                <button type="submit" class="btn btn-blue">Upload</button>
+                <button type="submit" class="btn btn-brand">Upload</button>
             </form>
         </section>
 
@@ -436,7 +436,7 @@
                     @csrf
                     <input type="file" name="video" accept="video/mp4,video/quicktime,video/webm,video/x-matroska"
                            required class="finput">
-                    <button type="submit" class="btn btn-blue">Upload video</button>
+                    <button type="submit" class="btn btn-brand">Upload video</button>
                 </form>
             @endif
         </section>

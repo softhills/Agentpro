@@ -103,12 +103,12 @@
             </label>
 
             <label @class(['fsel', 'on' => request('realsure')])>
-                <input type="checkbox" name="realsure" value="1" @checked(request('realsure')) style="accent-color:var(--on-navy)">
+                <input type="checkbox" name="realsure" value="1" @checked(request('realsure')) style="accent-color:var(--on-deep)">
                 RealSure only
             </label>
 
             <label @class(['fsel', 'on' => request('has_video')])>
-                <input type="checkbox" name="has_video" value="1" @checked(request('has_video')) style="accent-color:var(--on-navy)">
+                <input type="checkbox" name="has_video" value="1" @checked(request('has_video')) style="accent-color:var(--on-deep)">
                 Has video
             </label>
 
@@ -118,7 +118,7 @@
                  the parameter into the URL. Off by default: somebody looking
                  for a home wants what they can still have. --}}
             <label @class(['fsel', 'on' => request('include_closed')])>
-                <input type="checkbox" name="include_closed" value="1" @checked(request('include_closed')) style="accent-color:var(--on-navy)">
+                <input type="checkbox" name="include_closed" value="1" @checked(request('include_closed')) style="accent-color:var(--on-deep)">
                 Include sold and let
             </label>
 
@@ -177,10 +177,10 @@
                             <input type="hidden" name="{{ $key }}" value="{{ $value }}">
                         @endif
                     @endforeach
-                    <button type="submit" class="btn btn-blue btn-sm">Save search</button>
+                    <button type="submit" class="btn btn-brand btn-sm">Save search</button>
                 </form>
             @else
-                <a href="{{ route('login') }}" class="btn btn-blue btn-sm">Save search</a>
+                <a href="{{ route('login') }}" class="btn btn-brand btn-sm">Save search</a>
             @endauth
         </div>
 

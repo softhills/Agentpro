@@ -57,7 +57,7 @@
             </div>
 
             <div class="listacts">
-                <a href="{{ route('admin.review', $property) }}" class="btn btn-blue btn-sm">Review</a>
+                <a href="{{ route('admin.review', $property) }}" class="btn btn-brand btn-sm">Review</a>
             </div>
         </article>
     @empty

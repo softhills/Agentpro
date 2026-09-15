@@ -18,7 +18,7 @@
             <option value="{{ $c }}" @selected(request('category') === $c)>{{ ucfirst(str_replace('_',' ',$c)) }}</option>
         @endforeach
     </select>
-    <button type="submit" class="btn btn-blue btn-sm">Filter</button>
+    <button type="submit" class="btn btn-brand btn-sm">Filter</button>
 </form>
 
 <div class="tablewrap">

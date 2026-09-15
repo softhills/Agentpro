@@ -47,7 +47,7 @@
             </div>
 
             <div class="formactions" style="margin-bottom:0">
-                <button type="submit" class="btn btn-blue">Change password</button>
+                <button type="submit" class="btn btn-brand">Change password</button>
                 <a href="{{ route('home') }}" class="btn btn-ghost">Cancel</a>
             </div>
         </section>

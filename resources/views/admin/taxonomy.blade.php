@@ -30,7 +30,7 @@
     </p>
 
     <details class="addbox">
-        <summary class="btn btn-blue btn-sm">Add an amenity</summary>
+        <summary class="btn btn-brand btn-sm">Add an amenity</summary>
         <form method="POST" action="{{ route('admin.amenities.store') }}" class="taxform">
             @csrf
             <div class="fieldset">
@@ -59,7 +59,7 @@
                 <input type="checkbox" name="is_filterable" value="1" checked>
                 <span>Show as a search filter</span>
             </label>
-            <button class="btn btn-blue btn-sm">Add</button>
+            <button class="btn btn-brand btn-sm">Add</button>
         </form>
     </details>
 
@@ -153,7 +153,7 @@
     </p>
 
     <details class="addbox">
-        <summary class="btn btn-blue btn-sm">Add an area</summary>
+        <summary class="btn btn-brand btn-sm">Add an area</summary>
         <form method="POST" action="{{ route('admin.areas.store') }}" class="taxform">
             @csrf
             <div class="fieldset">
@@ -181,7 +181,7 @@
                 <label class="flabel" for="area_zoom">Default zoom</label>
                 <input id="area_zoom" name="default_zoom" type="number" class="finput" value="14" min="8" max="18">
             </div>
-            <button class="btn btn-blue btn-sm">Add</button>
+            <button class="btn btn-brand btn-sm">Add</button>
         </form>
     </details>
 

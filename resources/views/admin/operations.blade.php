@@ -76,7 +76,7 @@
             <label class="checkline"><input type="checkbox" name="times[]" value="09:00" checked><span>09:00</span></label>
             <label class="checkline"><input type="checkbox" name="times[]" value="13:00" checked><span>13:00</span></label>
         </div>
-        <button type="submit" class="btn btn-blue">Open slots</button>
+        <button type="submit" class="btn btn-brand">Open slots</button>
     </form>
     <p class="fhint">Sundays are skipped. Slots that already exist are left alone.</p>
 </section>

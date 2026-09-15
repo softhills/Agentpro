@@ -72,7 +72,7 @@
                     <input id="account_number" name="account_number" class="finput" inputmode="numeric"
                            maxlength="10" required value="{{ old('account_number') }}" placeholder="0123456789">
                 </div>
-                <button class="btn btn-blue">Check and save</button>
+                <button class="btn btn-brand">Check and save</button>
             </form>
         </details>
     </section>
@@ -94,7 +94,7 @@
                            min="{{ $minimum }}" max="{{ $balance }}" value="{{ $balance }}" required>
                     <span class="fhint">Up to {{ Money::naira($balance) }}.</span>
                 </div>
-                <button class="btn btn-blue">Request payout</button>
+                <button class="btn btn-brand">Request payout</button>
             </form>
         </section>
     @endif

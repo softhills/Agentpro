@@ -22,7 +22,7 @@
                 <span>Keep me signed in</span>
             </label>
 
-            <button type="submit" class="btn btn-blue btn-block">Sign in</button>
+            <button type="submit" class="btn btn-brand btn-block">Sign in</button>
         </form>
 
         <p class="authalt">No account yet? <a href="{{ route('register') }}">Create one</a></p>

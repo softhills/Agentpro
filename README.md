@@ -9,6 +9,39 @@ search, saved-search alerts, a property/unit inventory model.
 
 ---
 
+## Brand
+
+| | |
+|---|---|
+| Mark | **Agentpro** plus a degree ring. No icon. |
+| Colour | **Greige `#8B8474`** — "grey + beige" |
+| Typeface | **Gotham Rounded Bold** (Hoefler&Co) |
+
+**The wordmark is live text, not an image.** It inherits the theme, stays sharp
+at any size, downloads nothing, and leaves the company name as real text for
+search engines and screen readers. The ring is drawn in CSS rather than typed as
+`°`, because that character's size and baseline are decided by whichever font
+loads — including the fallback — and a mark that moves when a webfont fails is
+not a mark.
+
+**Gotham Rounded is not on the page, and deliberately.** It is a commercial
+Hoefler&Co face: setting live text in it on a website needs a paid webfont
+licence, priced per domain and pageview. The site sets the wordmark in Quicksand,
+which is the same genre — geometric, rounded — and already loaded for every
+heading. It is a near miss, not a match.
+
+The way to close that gap is **not** to buy a webfont licence. It is to ship the
+wordmark as an SVG of outlines, which is what a logo is: exact letterforms, no
+font to load, and covered by the desktop licence the logo was drawn with. Drop
+one at `public/img/logo.svg` and swap the text for it.
+
+**`--greige` and `--brand` are different values on purpose.** `#8B8474` reaches
+3.72:1 on white — enough for the wordmark and UI components, not enough for body
+text or links, which need 4.5:1. So the interface runs on `--brand: #6E685A`, the
+same hue darkened to 5.54:1 with a white label and 5.31:1 as link text. The brand
+colour is what you see; `--brand` is what you can read. Every pair was measured
+rather than eyeballed — see the token comments in `public/css/app.css`.
+
 ## Requirements
 
 | | Version | Notes |

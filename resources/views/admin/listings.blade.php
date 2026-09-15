@@ -14,7 +14,7 @@
             <option value="{{ $s }}" @selected(request('state') === $s)>{{ str_replace('_',' ',$s) }} ({{ $counts[$s] ?? 0 }})</option>
         @endforeach
     </select>
-    <button type="submit" class="btn btn-blue btn-sm">Filter</button>
+    <button type="submit" class="btn btn-brand btn-sm">Filter</button>
 </form>
 
 <div class="tablewrap">
@@ -60,7 +60,7 @@
                 @elseif ($p->lifecycle_state->canBeRelisted())
                     <a href="{{ route('admin.review', $p) }}" class="btn btn-ghost btn-sm">Relist</a>
                 @elseif (in_array($p->lifecycle_state->value, ['submitted','under_review'], true))
-                    <a href="{{ route('admin.review', $p) }}" class="btn btn-blue btn-sm">Review</a>
+                    <a href="{{ route('admin.review', $p) }}" class="btn btn-brand btn-sm">Review</a>
                 @endif
             </td>
         </tr>

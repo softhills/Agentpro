@@ -12,7 +12,7 @@
             <option value="{{ $a->prefix }}" @selected(request('action') === $a->prefix)>{{ $a->prefix }} ({{ $a->c }})</option>
         @endforeach
     </select>
-    <button type="submit" class="btn btn-blue btn-sm">Filter</button>
+    <button type="submit" class="btn btn-brand btn-sm">Filter</button>
 </form>
 
 <div class="tablewrap">

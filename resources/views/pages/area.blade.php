@@ -18,7 +18,7 @@
           changes — it is the only thing on the site that works before the stock does.
         </p>
         <p class="cactions">
-          <a href="{{ route('search', ['area' => $area->slug]) }}" class="btn btn-blue">Search and save one</a>
+          <a href="{{ route('search', ['area' => $area->slug]) }}" class="btn btn-brand">Search and save one</a>
         </p>
       @else
         {{--
@@ -44,7 +44,7 @@
         </dl>
 
         <p class="cactions">
-          <a href="{{ route('search', ['area' => $area->slug]) }}" class="btn btn-blue">
+          <a href="{{ route('search', ['area' => $area->slug]) }}" class="btn btn-brand">
             Search {{ $area->name }}
           </a>
           @if ($area->is_scan_coverage)

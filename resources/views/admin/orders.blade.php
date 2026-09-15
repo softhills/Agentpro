@@ -36,7 +36,7 @@
         <input type="checkbox" name="view" value="unsettled" @checked(request('view') === 'unsettled')>
         <span>Paid but never settled</span>
     </label>
-    <button type="submit" class="btn btn-blue btn-sm">Filter</button>
+    <button type="submit" class="btn btn-brand btn-sm">Filter</button>
 </form>
 
 <div class="tablewrap">
@@ -107,7 +107,7 @@
                             @else
                                 <form method="POST" action="{{ route('admin.refunds.approve', $refund) }}" class="inlineform">
                                     @csrf
-                                    <button class="btn btn-blue btn-sm">Approve &amp; send</button>
+                                    <button class="btn btn-brand btn-sm">Approve &amp; send</button>
                                 </form>
                             @endif
                         @endif

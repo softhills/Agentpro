@@ -107,7 +107,7 @@
             </label>
         </section>
 
-        <button type="submit" class="btn btn-blue">Save settings</button>
+        <button type="submit" class="btn btn-brand">Save settings</button>
     </form>
 
     @if ($devices->isNotEmpty())
