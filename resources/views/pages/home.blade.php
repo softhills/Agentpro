@@ -128,21 +128,61 @@
 
 <section class="sec">
     <div class="container">
-        <div class="sec-head">
-            <h2>Featured properties</h2>
-            <p>Every listing below is published by a verified lister and approved before it goes live.</p>
-        </div>
+        @if ($featured->isNotEmpty())
+            <div class="sec-head">
+                <h2>Featured properties</h2>
+                <p>Every listing below is published by a verified lister and approved before it goes live.</p>
+            </div>
 
-        <div class="grid3">
-            @forelse ($featured as $property)
-                <x-property-card :property="$property" />
-            @empty
-                <p class="empty" style="grid-column:1/-1">
-                    <strong>No published listings yet</strong>
-                    Run <code>php artisan migrate:fresh --seed</code> to load the development inventory.
+            <div class="grid3">
+                @foreach ($featured as $property)
+                    <x-property-card :property="$property" />
+                @endforeach
+            </div>
+        @else
+            {{--
+                The launch state, and it is a real page rather than an apology.
+
+                What stood here told the visitor to run
+                `php artisan migrate:fresh --seed` — a note to a developer,
+                printed on the public home page of a live site, instructing
+                anybody who read it to destroy the database. The heading above
+                it read "Every listing below is published by a verified lister"
+                with nothing below it.
+
+                An empty marketplace cannot pretend to have stock, so this says
+                so plainly and offers the one action that changes it. The person
+                most likely to be reading a property site with no property on it
+                is somebody who has property.
+            --}}
+            <div class="launchstate">
+                <h2>Nothing is live yet</h2>
+                <p>
+                    Agentpro is new. Listings appear here as soon as a verified lister publishes
+                    one — and every listing is checked before it goes live, which is the part
+                    that takes a day rather than a minute.
                 </p>
-            @endforelse
-        </div>
+                <div class="launchstate-acts">
+                    @guest
+                        <a href="{{ route('register') }}" class="btn btn-blue">List a property</a>
+                    @else
+                        @can('create', App\Models\Property::class)
+                            <a href="{{ route('lister.listings.create') }}" class="btn btn-blue">List a property</a>
+                        @endcan
+                    @endguest
+                    <a href="{{ route('pages.realsure') }}" class="btn btn-ghost">What we check</a>
+                </div>
+
+                {{-- The developer note, kept where it is useful and nowhere
+                     else. In production this branch does not render at all. --}}
+                @if (app()->environment('local'))
+                    <p class="launchstate-dev">
+                        Development: run <code>php artisan migrate:fresh --seed</code> to load the
+                        inventory.
+                    </p>
+                @endif
+            </div>
+        @endif
     </div>
 </section>
 
