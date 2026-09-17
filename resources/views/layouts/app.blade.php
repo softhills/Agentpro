@@ -8,6 +8,27 @@
 <title>@yield('title', 'Agentpro — verified property in Lagos and Abuja')</title>
 <meta name="description" content="@yield('meta_description', 'Verified property listings across Lagos and Abuja, with the full cost of moving in shown up front.')">
 
+{{--
+    Favicon: the "A" and the degree ring from the brand mark, in greige.
+
+    The SVG is the master and every current browser prefers it — one file, sharp
+    at any size, and the same geometry the wordmark uses. The .ico stays because
+    a browser that does not understand an SVG icon (and any crawler or feed
+    reader that simply asks for /favicon.ico) falls back to it; it carries 16,
+    32 and 48px so the small sizes are hinted rather than downscaled from one
+    bitmap, which is what turns a tab icon to mush.
+
+    The mark is drawn in the brand greige rather than --brand, because a favicon
+    sits on browser chrome we do not control and is not text anyone has to read;
+    it is also the one place the literal brand colour belongs. It carries no
+    background, so it works on a light and a dark tab strip alike. The Apple
+    touch icon is the inverse — white on greige, with the margin iOS expects,
+    because a transparent icon is composited onto black on a home screen.
+--}}
+<link rel="icon" href="{{ \App\Support\Asset::url('favicon.ico') }}" sizes="32x32">
+<link rel="icon" href="{{ \App\Support\Asset::url('favicon.svg') }}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{{ \App\Support\Asset::url('apple-touch-icon.png') }}">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
