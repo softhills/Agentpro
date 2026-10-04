@@ -270,7 +270,8 @@ class AdminAreaTest extends TestCase
         $technician = $this->user(['category' => 'seeker', 'is_staff' => true, 'staff_role' => 'technician']);
 
         $this->actingAs($this->admin())
-            ->post(route('admin.areas.slots', $area), [
+            ->post(route('admin.areas.slots'), [
+                'area_id' => $area->id,
                 'technician_id' => $technician->id,
                 'from'  => now()->next('Monday')->toDateString(),
                 'days'  => 7,
@@ -287,6 +288,53 @@ class AdminAreaTest extends TestCase
         foreach ($slots as $slot) {
             $this->assertNotSame('Sunday', \Illuminate\Support\Carbon::parse($slot->slot_date)->format('l'));
         }
+    }
+
+    /**
+     * The area is chosen on the form, not fixed by the page that rendered it.
+     *
+     * It used to travel in the form's action, filled in from the first open
+     * area on the screen, which made every other area unreachable: the table
+     * above the form would mark one "nothing bookable" and submitting the form
+     * underneath it opened slots somewhere else entirely.
+     */
+    public function test_capacity_goes_to_the_area_the_form_names(): void
+    {
+        $first  = $this->area();
+        $second = Area::create([
+            'name' => 'Maitama', 'slug' => 'maitama', 'city' => 'Abuja', 'state' => 'FCT',
+            'is_scan_coverage' => true,
+        ]);
+        $technician = $this->user(['category' => 'seeker', 'is_staff' => true, 'staff_role' => 'technician']);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.areas.slots'), [
+                'area_id' => $second->id,
+                'technician_id' => $technician->id,
+                'from'  => now()->next('Monday')->toDateString(),
+                'days'  => 2,
+                'times' => ['09:00'],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(2, DB::table('technician_slots')->where('area_id', $second->id)->count());
+        $this->assertSame(0, DB::table('technician_slots')->where('area_id', $first->id)->count());
+    }
+
+    /** Every area is offered, so the one that needs capacity can be picked. */
+    public function test_the_capacity_form_offers_every_area(): void
+    {
+        $this->area();
+        Area::create([
+            'name' => 'Gbagada', 'slug' => 'gbagada', 'city' => 'Lagos', 'state' => 'Lagos',
+            'is_scan_coverage' => true,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->get(route('admin.operations'))
+            ->assertOk()
+            ->assertSee('name="area_id"', false)
+            ->assertSee('Gbagada — Lagos', false);
     }
 
     // -------------------------------------------------------------------- audit

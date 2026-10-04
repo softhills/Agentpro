@@ -32,10 +32,44 @@ class ReferenceDataTest extends TestCase
         $this->assertGreaterThan(0, Area::count());
         $this->assertGreaterThan(0, Amenity::count());
 
-        // FR-M4-05: 3D capture is bookable only where there is coverage, so
-        // both answers have to exist or the refusal can never be demonstrated.
-        $this->assertTrue(Area::where('is_scan_coverage', true)->exists());
-        $this->assertTrue(Area::where('is_scan_coverage', false)->exists());
+        /*
+         * Every area is open for capture now, in all three cities.
+         *
+         * This assertion used to require one of each, so that the refusal in
+         * FR-M4-05 could be seen in a development database. It no longer can
+         * be, and that is a deliberate consequence of opening the last of the
+         * closed areas rather than an accident: the refusal itself is covered
+         * by ScanPurchaseTest, which builds an area with coverage off instead
+         * of borrowing one from the reference data.
+         */
+        $this->assertFalse(
+            Area::where('is_scan_coverage', false)->exists(),
+            'An area was seeded closed for capture.',
+        );
+    }
+
+    /**
+     * The three cities the site advertises, and no more. A home page promising
+     * Enugu with no Enugu area to search is a promise the listing form cannot
+     * keep.
+     */
+    public function test_it_seeds_the_cities_the_site_advertises(): void
+    {
+        $this->seed(ReferenceDataSeeder::class);
+
+        $this->assertSame(
+            ['Abuja', 'Enugu', 'Lagos'],
+            Area::query()->distinct()->orderBy('city')->pluck('city')->all(),
+        );
+
+        // Enugu is open for capture like the other two. Coverage still is not
+        // something naming an area confers — TaxonomyTest covers that an area
+        // added in the console arrives closed — it is a decision taken here and
+        // on the coverage screen.
+        $this->assertSame(
+            Area::where('city', 'Enugu')->count(),
+            Area::where('city', 'Enugu')->where('is_scan_coverage', true)->count(),
+        );
     }
 
     /** A deploy runs it every time. Twice must equal once. */

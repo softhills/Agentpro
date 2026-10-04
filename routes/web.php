@@ -288,7 +288,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/operations', [OperationsController::class, 'index'])->name('operations');
         Route::put('/areas/{area}/coverage', [OperationsController::class, 'toggleCoverage'])->name('areas.coverage');
-        Route::post('/areas/{area}/slots', [OperationsController::class, 'addSlots'])->name('areas.slots');
+        Route::post('/areas/slots', [OperationsController::class, 'addSlots'])->name('areas.slots');
 
         // FR-M13-02/03: where people fall out of each funnel. Moderator-level,
         // like the rest of the reporting — it carries no money and no personal

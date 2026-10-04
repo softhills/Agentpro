@@ -1,6 +1,6 @@
 # Agentpro
 
-Verified property marketplace for Lagos and Abuja. Server-rendered PHP/MariaDB —
+Verified property marketplace for Lagos, Abuja and Enugu. Server-rendered PHP/MariaDB —
 Laravel 12, Blade, plain CSS. No SPA, no front-end build step required to run.
 
 Design direction follows the approved RealPress skin (with the three WCAG
@@ -121,6 +121,14 @@ area they renamed — neither model soft-deletes, so "deliberately removed" and
 "never seeded" are indistinguishable, and the convenient kind of idempotency
 would quietly undo them on every deploy.
 
+Which also means an install that was seeded before a city was added will never
+pick it up from the seeder. Those arrive as a migration instead — see the
+`add_enugu_areas` pair — because a migration is the one thing that runs exactly
+once per database and is recorded as having run. A new city, or a new area in
+one, is either its own migration or an operator's afternoon on Amenities &
+areas; it is never a change to the seeder alone, and never an edit to a
+migration that has already run somewhere.
+
 The seed loads development inventory across the ten 3D coverage areas, because
 the map-first search looks broken on an empty city (PRD risk R9). The first run
 downloads about 5MB of photographs and takes a minute or two; they are cached
@@ -150,6 +158,39 @@ balanced picture rather than invented money. Pull them with:
 ```bash
 php artisan agentpro:reconcile-settlements
 ```
+
+---
+
+## Capture capacity
+
+Coverage and capacity are two different things, and only the first of them is a
+switch. Opening an area on **Coverage & capacity** makes the 3D upgrade
+purchasable there; the dates a lister is offered afterwards come from
+`technician_slots`. An area that is open with no slots in it sells a capture and
+then says there are no dates — after the lister has paid. The entitlement is
+held and the screen says so (FR-M4-07), but it is still money taken for a visit
+nobody has booked, which is risk R2.
+
+The console opens slots one area at a time, which is right for a technician's
+next fortnight. For a city that has just been opened:
+
+```bash
+php artisan agentpro:open-capacity --technician=chidi@your-domain.com --dry-run
+```
+
+With no selector it takes every area that is open for capture with nothing
+bookable in it — exactly the rows the coverage screen marks in red. `--city` or
+`--area` narrow it; a city is usually what is meant ("capacity for Enugu"), and
+naming eleven areas one `--area` at a time is how the twelfth gets left out. `--dry-run`
+prints the plan and writes nothing; drop it to be asked, or add `--force` for a
+script. Defaults are the house ones (two visits a day, Sundays off, a fortnight
+out) and `--days`, `--times` and `--capacity` change them. It will not invent a
+technician: a slot is a promise that someone drives to a property, so the
+account has to exist and has to hold the technician role.
+
+Safe to run twice — slots are matched on the key the schema already makes
+unique, so a second run fills the gaps and leaves everything else, bookings
+included.
 
 ---
 

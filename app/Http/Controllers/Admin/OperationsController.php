@@ -71,9 +71,19 @@ class OperationsController extends Controller
      * calendar that offers more than the field team can deliver converts a
      * revenue feature into a queue of apologies (risk R2).
      */
-    public function addSlots(Request $request, Area $area)
+    /**
+     * Capacity for one area, chosen on the form.
+     *
+     * The area used to come from the URL, which meant the form on the screen
+     * could only ever post to whichever area the view had baked into its
+     * action — the first open one. Every other area on the page showed
+     * "nothing bookable" with no way to do anything about it, and opening a
+     * second area made the problem worse rather than better.
+     */
+    public function addSlots(Request $request)
     {
         $data = $request->validate([
+            'area_id'       => ['required', 'exists:areas,id'],
             'technician_id' => ['required', 'exists:users,id'],
             'from'          => ['required', 'date', 'after_or_equal:today'],
             'days'          => ['required', 'integer', 'min:1', 'max:30'],
@@ -81,8 +91,9 @@ class OperationsController extends Controller
             'times.*'       => ['date_format:H:i'],
         ]);
 
+        $area    = Area::findOrFail($data['area_id']);
         $created = 0;
-        $start = \Illuminate\Support\Carbon::parse($data['from']);
+        $start   = \Illuminate\Support\Carbon::parse($data['from']);
 
         for ($day = 0; $day < $data['days']; $day++) {
             $date = $start->copy()->addDays($day);
@@ -107,6 +118,13 @@ class OperationsController extends Controller
 
         Audit::record('area.slots_added', $area, [], ['created' => $created]);
 
-        return back()->with('status', $created.' new '.str('slot')->plural($created).' opened in '.$area->name.'.');
+        /*
+         * Capacity in an area nobody can buy in is capacity nobody will book.
+         * Not refused — preparing a calendar before opening an area is a
+         * reasonable order to work in — but said out loud, because the screen
+         * that shows it is the screen that opens coverage.
+         */
+        return back()->with('status', $created.' new '.str('slot')->plural($created).' opened in '.$area->name.'.'
+            .($area->is_scan_coverage ? '' : ' '.$area->name.' is closed for 3D capture, so nothing can be booked against them yet.'));
     }
 }

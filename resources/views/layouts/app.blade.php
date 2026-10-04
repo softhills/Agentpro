@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {{-- Read by the push subscription script, which posts JSON rather than a form. --}}
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<title>@yield('title', 'Agentpro — verified property in Lagos and Abuja')</title>
-<meta name="description" content="@yield('meta_description', 'Verified property listings across Lagos and Abuja, with the full cost of moving in shown up front.')">
+<title>@yield('title', 'Agentpro — verified property in Lagos, Abuja and Enugu')</title>
+<meta name="description" content="@yield('meta_description', 'Verified property listings across Lagos, Abuja and Enugu, with the full cost of moving in shown up front.')">
 
 {{--
     Favicon: the "A" and the degree ring from the brand mark, in greige.

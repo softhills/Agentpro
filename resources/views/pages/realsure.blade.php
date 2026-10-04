@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'RealSure — verified property in Lagos and Abuja')
+@section('title', 'RealSure — verified property in Lagos, Abuja and Enugu')
 @section('meta_description', 'RealSure is Agentpro’s verification programme: title, search report, regulatory approvals and community checks, each dated and attributed on the listing.')
 
 @section('content')
