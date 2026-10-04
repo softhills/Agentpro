@@ -1000,6 +1000,12 @@ textarea.finput{line-height:1.55;resize:vertical}
 .admintable tbody tr:last-child td{border-bottom:0}
 .admintable strong{font-family:var(--q);font-weight:700;font-size:13.5px;color:var(--ink);display:block}
 .admintable .sub{display:block;font-size:11.5px;color:var(--slate-2);margin-top:1px}
+/* ...but a whole cell can carry .sub for its colour, and display:block on a
+   <td> takes it out of the table: the cell and everything after it in the row
+   fall onto lines of their own. That is what put the sort order above the
+   action links on Amenities & areas, and it is latent in the audit, orders
+   and settlement tables too. */
+.admintable td.sub{display:table-cell;margin-top:0}
 .admintable .num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .admintable .num-low{color:var(--warn-ink);font-weight:700}
 .admintable .mono{font-family:var(--m);font-size:11.5px}
@@ -1026,11 +1032,43 @@ textarea.finput{line-height:1.55;resize:vertical}
 .taxblock .panelhint{margin-bottom:14px}
 .taxblock .panelhint a{color:var(--brand);text-decoration:underline}
 
-.taxgroup{display:flex;align-items:baseline;gap:9px;margin:20px 0 8px;
-  font-family:var(--m);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--slate-2)}
-.taxgroup em{font-style:normal;font-family:var(--i);letter-spacing:0;text-transform:none;
-  font-size:11px;color:var(--slate-2);background:var(--surface-2);border-radius:20px;padding:1px 8px}
+/* The section index sits at the top of the scroll, so the headings it points
+   at have to clear it when they arrive. */
+.taxblock{scroll-margin-top:72px}
 
+/* A group heading inside the table rather than above a table of its own.
+   Seven tables of two or three rows each is more column header than data. */
+.admintable .grouprow th{text-align:left;padding:9px 14px;background:var(--surface-2);
+  border-bottom:1px solid var(--line);font-family:var(--m);font-weight:600;font-size:10px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--slate-2)}
+.admintable tbody + tbody .grouprow th{border-top:1px solid var(--line)}
+.admintable .grouprow em{font-style:normal;font-family:var(--i);font-size:11px;letter-spacing:0;
+  text-transform:none;color:var(--slate-2);background:var(--surface);border:1px solid var(--line);
+  border-radius:20px;padding:1px 8px;margin-left:7px}
+.admintable .ta-r{text-align:right}
+
+/* Counts in the section index, which are information rather than the warning
+   the listing form's chips carry. */
+.formnav a span.n{background:var(--surface-2);color:var(--slate-2)}
+
+/* The add form: across the panel, not down it. Six fields stacked in a 420px
+   column is most of a screen for something that is one row of typing. */
+.taxadd{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px 14px;
+  align-items:end;margin:0 0 16px;padding:15px 17px;
+  border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.taxadd-title{grid-column:1/-1;margin:0;font-family:var(--m);font-size:10.5px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--slate-2)}
+.taxadd .ferror{margin:0}
+.taxadd .fcheck,.taxadd .btn{align-self:end}
+.taxadd .btn{justify-self:start;white-space:nowrap}
+/* Hints live under the row rather than in it. Inside a cell they made that one
+   field half a line taller than its neighbours, and a row of labels that do
+   not start at the same height reads as a mistake. */
+.taxadd-note{grid-column:1/-1;margin:0;font-family:var(--i);font-size:12px;
+  color:var(--slate);max-width:72ch}
+
+/* A form behind a button, still used by the payout, privacy and credit
+   screens where adding is the rare case rather than the point of the page. */
 .addbox{margin-bottom:16px}
 .addbox summary{display:inline-flex;cursor:pointer;list-style:none}
 .addbox summary::-webkit-details-marker{display:none}
@@ -1038,13 +1076,53 @@ textarea.finput{line-height:1.55;resize:vertical}
 
 .taxform{display:grid;gap:12px;max-width:420px;padding:16px 18px;
   border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
-.taxform-tight{gap:8px;margin-top:8px;padding:12px 13px;max-width:260px}
+/* Wide enough for two half fields side by side: a latitude and a longitude
+   are read as a pair and should not be a column of seven identical boxes. */
+.taxform-tight{gap:9px;margin-top:8px;padding:12px 13px;width:272px;max-width:none;
+  grid-template-columns:1fr 1fr}
+.taxform-tight > *{grid-column:1/-1}
 .taxform .fhint{margin:0}
 
-/* Each row can open three panels; they stack rather than fight for width. */
-.taxactions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px;min-width:210px}
+/* Labels on the inline edit fields. Name, slug, city and state are four
+   identical boxes otherwise, told apart only by guessing at their contents. */
+.taxfield{display:grid;gap:3px}
+.taxfield > span{font-family:var(--m);font-size:9.5px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--slate-2)}
+.taxfield-half{grid-column:span 1}
+
+/* The sort order is quiet, but it is still a cell and cannot carry .sub. */
+.admintable .ordernum{color:var(--slate-2);font-size:12px}
+
+/* Each row can open three panels; they stack rather than fight for width.
+   The flex box is a wrapper inside the cell, never the cell itself. */
+.actionscell{width:1%}
+.taxactions{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;
+  gap:10px;min-width:200px;white-space:nowrap}
+/* ...but the panel inside is prose and fields, which have to wrap or they run
+   off the end of the table and take their hint text with them. */
+.taxactions .taxform{white-space:normal}
 .taxactions form{margin:0}
+
+/* An open panel makes its row as tall as the panel. Centred, that leaves the
+   name floating in the middle of a band of nothing, nowhere near the form that
+   is editing it. */
+.admintable tr:has(details[open]) td{vertical-align:top}
 .linkbtn-bad{color:var(--bad-ink)}
+
+/* Reference material, folded away. Same chevron as the listing form's folds. */
+.taxfold{margin-bottom:34px}
+.taxfold > summary{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;cursor:pointer;
+  list-style:none;padding:13px 16px;border:1px solid var(--line);border-radius:12px;
+  background:var(--surface)}
+.taxfold > summary::-webkit-details-marker{display:none}
+.taxfold > summary::after{content:"";margin-left:auto;align-self:center;width:8px;height:8px;
+  border-right:2px solid var(--slate-2);border-bottom:2px solid var(--slate-2);
+  transform:rotate(45deg);transition:transform .15s}
+.taxfold[open] > summary::after{transform:rotate(-135deg)}
+.taxfold > summary:hover{background:var(--surface-2)}
+.taxfold > summary h2{margin:0}
+.taxfold[open] > summary{margin-bottom:16px}
+.taxfold-note{font-family:var(--i);font-size:12.5px;color:var(--slate)}
 
 .vocabgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}
 .vocab{padding:15px 17px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}

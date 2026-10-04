@@ -91,6 +91,36 @@ class TaxonomyTest extends TestCase
         $this->actingAs($this->moderator())->get(route('admin.taxonomy'))->assertOk();
     }
 
+    /**
+     * Both add forms on this screen have a field called "name", and the view
+     * repopulates from old(), which cannot tell them apart. The error bags can,
+     * so each form validates into its own — otherwise a rejected amenity comes
+     * back filled into the area form sitting underneath it.
+     */
+    public function test_a_rejected_add_reports_against_its_own_form(): void
+    {
+        $this->actingAs($this->moderator())
+            ->post(route('admin.areas.store'), ['name' => '', 'city' => 'Lagos', 'state' => 'Lagos'])
+            ->assertSessionHasErrors('name', null, 'area')
+            ->assertSessionDoesntHaveErrors('name');
+
+        $this->actingAs($this->moderator())
+            ->post(route('admin.amenities.store'), ['name' => '', 'group' => 'utilities'])
+            ->assertSessionHasErrors('name', null, 'amenity')
+            ->assertSessionDoesntHaveErrors('name');
+    }
+
+    /** The two things an operator comes here to do are both on the screen. */
+    public function test_both_lists_can_be_added_to_without_opening_anything(): void
+    {
+        $this->actingAs($this->moderator())
+            ->get(route('admin.taxonomy'))
+            ->assertOk()
+            ->assertSee('Add an amenity', false)
+            ->assertSee('Add an area', false)
+            ->assertSee('action="'.route('admin.areas.store').'"', false);
+    }
+
     // --------------------------------------------------------------- amenities
 
     public function test_an_amenity_can_be_added_without_a_deployment(): void
