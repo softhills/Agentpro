@@ -161,6 +161,37 @@ php artisan agentpro:reconcile-settlements
 
 ---
 
+## Capture capacity
+
+Coverage and capacity are two different things, and only the first of them is a
+switch. Opening an area on **Coverage & capacity** makes the 3D upgrade
+purchasable there; the dates a lister is offered afterwards come from
+`technician_slots`. An area that is open with no slots in it sells a capture and
+then says there are no dates — after the lister has paid. The entitlement is
+held and the screen says so (FR-M4-07), but it is still money taken for a visit
+nobody has booked, which is risk R2.
+
+The console opens slots one area at a time, which is right for a technician's
+next fortnight. For a city that has just been opened:
+
+```bash
+php artisan agentpro:open-capacity --technician=chidi@your-domain.com --dry-run
+```
+
+With no `--area`, it takes every area that is open for capture with nothing
+bookable in it — exactly the rows the coverage screen marks in red. `--dry-run`
+prints the plan and writes nothing; drop it to be asked, or add `--force` for a
+script. Defaults are the house ones (two visits a day, Sundays off, a fortnight
+out) and `--days`, `--times` and `--capacity` change them. It will not invent a
+technician: a slot is a promise that someone drives to a property, so the
+account has to exist and has to hold the technician role.
+
+Safe to run twice — slots are matched on the key the schema already makes
+unique, so a second run fills the gaps and leaves everything else, bookings
+included.
+
+---
+
 ## Notifications
 
 Email and the in-app inbox work out of the box. The other three need setting up:
