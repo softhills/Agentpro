@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Agentpro — verified property in Lagos and Abuja')
+@section('title', 'Agentpro — verified property in Lagos, Abuja and Enugu')
 
 @section('content')
 
@@ -35,7 +35,7 @@
 
     <div class="container hero-in">
         <h1>Find a home you can actually trust</h1>
-        <p class="lede">Verified listings across Lagos and Abuja — with the full cost of moving in shown before you call anyone.</p>
+        <p class="lede">Verified listings across Lagos, Abuja and Enugu — with the full cost of moving in shown before you call anyone.</p>
 
         <nav class="segs" aria-label="Listing intent">
             <a href="{{ route('search') }}" @if (! request('intent') && ! request('type')) aria-current="page" @endif>All</a>

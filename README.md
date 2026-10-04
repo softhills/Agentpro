@@ -1,6 +1,6 @@
 # Agentpro
 
-Verified property marketplace for Lagos and Abuja. Server-rendered PHP/MariaDB —
+Verified property marketplace for Lagos, Abuja and Enugu. Server-rendered PHP/MariaDB —
 Laravel 12, Blade, plain CSS. No SPA, no front-end build step required to run.
 
 Design direction follows the approved RealPress skin (with the three WCAG

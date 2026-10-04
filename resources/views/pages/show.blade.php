@@ -302,7 +302,7 @@
         <h2><x-icon name="pin" />Where it is</h2>
         <p class="fhint" style="margin-bottom:12px">
             @if ($property->what3words)
-                Street addressing in Lagos and Abuja is unreliable, so every listing carries a
+                Street addressing in Nigerian cities is unreliable, so every listing carries a
                 three-word address as well: <span class="w3w">{{ $property->what3words }}</span>
             @else
                 {{ $property->address_line }}, {{ $property->area?->name ?? $property->city }}

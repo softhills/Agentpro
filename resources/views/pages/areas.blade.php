@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Areas we cover — Agentpro')
-@section('meta_description', 'Every area Agentpro lists in across Lagos and Abuja, with live stock counts and where 3D capture is available.')
+@section('meta_description', 'Every area Agentpro lists in across Lagos, Abuja and Enugu, with live stock counts and where 3D capture is available.')
 
 @section('content')
 <div class="cpage">

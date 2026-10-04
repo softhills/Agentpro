@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'About Agentpro')
-@section('meta_description', 'Why Agentpro exists: in Lagos and Abuja the scarce thing is not property listings but trustworthy ones.')
+@section('meta_description', 'Why Agentpro exists: in Lagos, Abuja and Enugu the scarce thing is not property listings but trustworthy ones.')
 
 @section('content')
 <div class="cpage">
@@ -10,7 +10,7 @@
       <p class="ceyebrow">About</p>
       <h1>The scarce thing is not listings</h1>
       <p class="clede">
-        There is no shortage of property advertised in Lagos and Abuja. There is a shortage of
+        There is no shortage of property advertised in Lagos, Abuja and Enugu. There is a shortage of
         listings a person can believe — ones that are real, still available, and priced at
         what it will actually cost to move in.
       </p>
