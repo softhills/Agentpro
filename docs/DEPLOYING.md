@@ -528,10 +528,80 @@ If your CLI PHP is not on `PATH` as `php`, pass it:
 > is nothing at all. Overwriting it is a white screen on every page, and it is
 > the single easiest way to break this layout.
 
-Back up the database before any deployment that carries a migration. In cPanel
+### The database half of a deploy
+
+**Back up first, before any deployment that carries a migration.** In cPanel
 that is *Backup* → *Download a MySQL Database Backup*; in DirectAdmin,
 *Databases* → the database → *Download*. It takes about ten seconds and is the
 difference between an annoying evening and a catastrophic one.
+
+To see what a deploy is about to do to the schema before it does it:
+
+```bash
+cd ~/agentpro && git pull --ff-only
+php artisan migrate:status
+```
+
+Anything listed as *Pending* runs on the next deploy. `deploy.sh` then does the
+database in two commands, in this order:
+
+```bash
+php artisan migrate --force                               # schema, and data migrations
+php artisan db:seed --class=ReferenceDataSeeder --force   # areas and amenities
+```
+
+`--force` on both because there is no terminal to answer the production prompt.
+
+Both run **while the site is in maintenance mode**, which is the reason the
+script takes it down first and lifts it from a trap that fires even if a step
+dies. A deploy that fails half way and leaves the site down is an annoyance; one
+that fails and leaves it up, serving new code against the old schema, is a data
+problem.
+
+The seeder only populates an **empty** table, so after the first deploy it is a
+no-op — it cannot resurrect an amenity an administrator deleted or overwrite an
+area they renamed. Which is also why reference data added later, such as a new
+city's areas, arrives as a migration rather than a line in the seeder: a
+migration is the one thing that runs exactly once per database and is recorded
+as having run.
+
+**If a migration fails, the site comes back up anyway.** The script lifts
+maintenance mode from a trap that fires however it exits, so a failure at the
+migrate step leaves the site serving the code it just pulled against a schema
+that is only half migrated — which is the one state worth going out of your way
+to avoid. The deploy stops there and says so, but nothing else protects you, so:
+
+```bash
+php artisan down                 # first, before looking at anything else
+tail -50 storage/logs/laravel.log
+```
+
+Fix the cause and run `~/agentpro/deploy.sh` again; it is safe to re-run, and
+migrations that already ran are not repeated. Only lift maintenance mode by
+hand (`php artisan up`) if you decide to leave the schema as it is.
+
+**Rolling back is not symmetrical.** `php artisan migrate:rollback` undoes the
+last batch, but a migration that *changed* data can only approximate the way
+back: a flag it set has no record of what it was before, and a migration that
+inserted rows removes only the ones nothing points at. For anything
+operational — which areas are open for 3D capture, say — the audit log on
+**Coverage & capacity** is the real history, and the console is where it is put
+back.
+
+### What a deploy deliberately does not do
+
+- **It never runs a bare `db:seed`.** That is `DatabaseSeeder`, the development
+  one, which creates six accounts whose password is the word `password`. It
+  refuses to run in production, but the script names `ReferenceDataSeeder`
+  explicitly so the question never comes up.
+- **It never opens capture capacity.** Opening an area for 3D capture makes the
+  upgrade purchasable there; the dates offered afterwards are
+  `technician_slots`, and every one of them is a promise that a named technician
+  drives to a property. That is a decision a person takes, on **Coverage &
+  capacity** or with `php artisan agentpro:open-capacity --technician=<email>
+  --city=<city> --dry-run`, and never a side effect of pushing code.
+- **It never grants staff access.** First administrator is
+  `php artisan agentpro:make-admin <email> --role=admin`, once, by hand.
 
 ---
 
