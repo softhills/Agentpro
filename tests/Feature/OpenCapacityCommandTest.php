@@ -133,11 +133,54 @@ class OpenCapacityCommandTest extends TestCase
         $this->artisan('agentpro:open-capacity', $args)->assertExitCode(0);
         $after = $area->technicianSlots()->count();
 
-        // Named this time, because the default set no longer includes it — it
-        // has dates now, which is the whole point.
+        /*
+         * Named this time, because the default set no longer includes it — it
+         * has dates now, which is the whole point. This is also the pass that
+         * has to find the slots it wrote a moment ago: looking for them by a
+         * date string that the driver stores differently finds nothing, tries
+         * to insert, and dies on the unique index halfway through the areas.
+         */
         $this->artisan('agentpro:open-capacity', $args + ['--area' => ['ajah']])->assertExitCode(0);
 
         $this->assertSame($after, $area->technicianSlots()->count());
+    }
+
+    /** A city is the unit this is talked about in, and eleven --area flags is
+     *  how the twelfth area gets left out. */
+    public function test_a_whole_city_can_be_named(): void
+    {
+        $technician = $this->technician();
+        $enugu  = $this->area('Uwani', 'uwani', true, 'Enugu');
+        $also   = $this->area('Asata', 'asata', true, 'Enugu');
+        $lagos  = $this->area('Ajah', 'ajah');
+
+        $this->artisan('agentpro:open-capacity', [
+            '--technician' => $technician->email,
+            // Lower case on purpose: an operator types the city, they do not
+            // look up how it is capitalised in the table.
+            '--city' => ['enugu'],
+            '--days' => 2,
+            '--times' => '09:00',
+            '--force' => true,
+        ])->assertExitCode(0);
+
+        $this->assertSame(2, $enugu->technicianSlots()->count());
+        $this->assertSame(2, $also->technicianSlots()->count());
+        $this->assertSame(0, $lagos->technicianSlots()->count());
+    }
+
+    public function test_a_city_with_no_areas_is_refused(): void
+    {
+        $technician = $this->technician();
+        $this->area('Ajah', 'ajah');
+
+        $this->artisan('agentpro:open-capacity', [
+            '--technician' => $technician->email,
+            '--city' => ['Kano'],
+            '--force' => true,
+        ])->assertExitCode(1);
+
+        $this->assertSame(0, TechnicianSlot::count());
     }
 
     /**

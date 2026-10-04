@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\Audit;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Open capture capacity across several areas at once (FR-M4-05).
@@ -41,6 +42,7 @@ class OpenCapacity extends Command
     protected $signature = 'agentpro:open-capacity
                             {--technician= : Email of the technician these visits belong to}
                             {--area=* : Area slug, repeatable. Default: every area open for capture with nothing bookable}
+                            {--city=* : City name, repeatable — every area in it}
                             {--from= : First date, Y-m-d. Default tomorrow}
                             {--days=14 : Days to cover from that date, Sundays skipped}
                             {--times=09:00,13:00 : Visit start times each day, comma separated}
@@ -162,22 +164,40 @@ class OpenCapacity extends Command
         foreach ($dates as $date) {
             foreach ($times as $time) {
                 /*
-                 * Matched on the key the schema makes unique rather than
-                 * inserted blind, so a second run over an overlapping
-                 * fortnight cannot duplicate a slot — or, worse, fail halfway
-                 * through on a unique violation and leave the areas it had
+                 * Looked for on the key the schema makes unique before being
+                 * inserted, so a second run over an overlapping fortnight adds
+                 * what was missing instead of failing halfway through on a
+                 * unique violation — which would leave the areas it had
                  * already reached done and the rest not.
+                 *
+                 * whereDate rather than a plain where on the string, because
+                 * what is stored for a given day depends on the driver: MySQL
+                 * truncates to its DATE column, sqlite keeps the whole
+                 * "2026-10-05 00:00:00" the model's date cast hands it, and an
+                 * equality test that matches on one silently misses on the
+                 * other. Asking for the date of the value compares days on
+                 * both.
                  */
-                $slot = TechnicianSlot::firstOrCreate([
+                $exists = TechnicianSlot::where('area_id', $area->id)
+                    ->where('technician_id', $technician->id)
+                    ->whereDate('slot_date', $date->toDateString())
+                    ->where('slot_start', $time.':00')
+                    ->exists();
+
+                if ($exists) {
+                    continue;
+                }
+
+                TechnicianSlot::create([
                     'area_id'       => $area->id,
                     'technician_id' => $technician->id,
                     'slot_date'     => $date->toDateString(),
                     'slot_start'    => $time.':00',
-                ], ['capacity' => $capacity, 'booked' => 0]);
+                    'capacity'      => $capacity,
+                    'booked'        => 0,
+                ]);
 
-                if ($slot->wasRecentlyCreated) {
-                    $created++;
-                }
+                $created++;
             }
         }
 
@@ -234,9 +254,10 @@ class OpenCapacity extends Command
     /** @return \Illuminate\Database\Eloquent\Collection<int,Area>|null */
     private function areas()
     {
-        $slugs = (array) $this->option('area');
+        $slugs  = (array) $this->option('area');
+        $cities = (array) $this->option('city');
 
-        if ($slugs === []) {
+        if ($slugs === [] && $cities === []) {
             /*
              * The default is the situation this exists for: open for capture,
              * nothing bookable in it. That is the row Coverage & capacity
@@ -249,11 +270,45 @@ class OpenCapacity extends Command
                 ->get();
         }
 
-        $areas = Area::whereIn('slug', $slugs)->orderBy('city')->orderBy('name')->get();
-        $missing = array_diff($slugs, $areas->pluck('slug')->all());
+        /*
+         * A city is how this is actually talked about — "capacity for Enugu" —
+         * and naming its eleven areas one --area at a time is how the twelfth
+         * gets left out. Either selector, or both; what matches once is opened
+         * once.
+         */
+        $wanted = array_map(mb_strtolower(...), $cities);
 
-        if ($missing !== []) {
-            $this->error('No such '.str('area')->plural(count($missing)).': '.implode(', ', $missing));
+        $areas = Area::query()
+            ->where(function ($q) use ($slugs, $wanted) {
+                if ($slugs !== []) {
+                    $q->orWhereIn('slug', $slugs);
+                }
+
+                if ($wanted !== []) {
+                    // Lowered on both sides: an operator types "enugu", the
+                    // column holds "Enugu", and MySQL would not care but
+                    // sqlite would.
+                    $q->orWhereIn(DB::raw('LOWER(city)'), $wanted);
+                }
+            })
+            ->orderBy('city')
+            ->orderBy('name')
+            ->get();
+
+        $missingSlugs = array_diff($slugs, $areas->pluck('slug')->all());
+
+        if ($missingSlugs !== []) {
+            $this->error('No such '.str('area')->plural(count($missingSlugs)).': '.implode(', ', $missingSlugs));
+
+            return null;
+        }
+
+        $found = $areas->map(fn (Area $area) => mb_strtolower($area->city))->unique()->all();
+        $missingCities = array_diff($wanted, $found);
+
+        if ($missingCities !== []) {
+            $this->error('No areas in: '.implode(', ', $missingCities));
+            $this->line('Cities: '.Area::query()->distinct()->orderBy('city')->pluck('city')->implode(', '));
 
             return null;
         }

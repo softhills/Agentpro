@@ -178,8 +178,10 @@ next fortnight. For a city that has just been opened:
 php artisan agentpro:open-capacity --technician=chidi@your-domain.com --dry-run
 ```
 
-With no `--area`, it takes every area that is open for capture with nothing
-bookable in it — exactly the rows the coverage screen marks in red. `--dry-run`
+With no selector it takes every area that is open for capture with nothing
+bookable in it — exactly the rows the coverage screen marks in red. `--city` or
+`--area` narrow it; a city is usually what is meant ("capacity for Enugu"), and
+naming eleven areas one `--area` at a time is how the twelfth gets left out. `--dry-run`
 prints the plan and writes nothing; drop it to be asked, or add `--force` for a
 script. Defaults are the house ones (two visits a day, Sundays off, a fortnight
 out) and `--days`, `--times` and `--capacity` change them. It will not invent a
