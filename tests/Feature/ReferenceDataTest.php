@@ -38,6 +38,28 @@ class ReferenceDataTest extends TestCase
         $this->assertTrue(Area::where('is_scan_coverage', false)->exists());
     }
 
+    /**
+     * The three cities the site advertises, and no more. A home page promising
+     * Enugu with no Enugu area to search is a promise the listing form cannot
+     * keep.
+     */
+    public function test_it_seeds_the_cities_the_site_advertises(): void
+    {
+        $this->seed(ReferenceDataSeeder::class);
+
+        $this->assertSame(
+            ['Abuja', 'Enugu', 'Lagos'],
+            Area::query()->distinct()->orderBy('city')->pluck('city')->all(),
+        );
+
+        // FR-M4-02: coverage commits the field team, so a city arrives closed
+        // and is opened on the coverage screen when it can be serviced.
+        $this->assertFalse(
+            Area::where('city', 'Enugu')->where('is_scan_coverage', true)->exists(),
+            'Enugu was opened for 3D capture by being seeded.',
+        );
+    }
+
     /** A deploy runs it every time. Twice must equal once. */
     public function test_running_it_again_changes_nothing(): void
     {

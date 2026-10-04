@@ -121,6 +121,13 @@ area they renamed — neither model soft-deletes, so "deliberately removed" and
 "never seeded" are indistinguishable, and the convenient kind of idempotency
 would quietly undo them on every deploy.
 
+Which also means an install that was seeded before a city was added will never
+pick it up from the seeder. Those arrive as a migration instead — see
+`add_enugu_areas` — because a migration is the one thing that runs exactly once
+per database and is recorded as having run. A new city added from here on is
+either a migration or an operator's afternoon on Amenities & areas; it is not a
+change to the seeder alone.
+
 The seed loads development inventory across the ten 3D coverage areas, because
 the map-first search looks broken on an empty city (PRD risk R9). The first run
 downloads about 5MB of photographs and takes a minute or two; they are cached

@@ -42,7 +42,12 @@ class ReferenceDataSeeder extends Seeder
 
     /**
      * The ten coverage areas from the spec, plus nearby areas deliberately
-     * outside it — the 3D upgrade has to be seen to refuse somewhere.
+     * outside it — the 3D upgrade has to be seen to refuse somewhere — plus
+     * Enugu, the third city the site advertises.
+     *
+     * Centroids are approximate. They decide where the map opens for an area
+     * and nothing else, and an operator can move one on Amenities & areas
+     * without a deployment.
      */
     private function seedAreas(): void
     {
@@ -67,6 +72,24 @@ class ReferenceDataSeeder extends Seeder
             ['Ajah', 'Lagos', 'Lagos', false, 6.4698, 3.5852],
             ['Gbagada', 'Lagos', 'Lagos', false, 6.5568, 3.3903],
             ['Gwarinpa', 'Abuja', 'FCT', false, 9.1090, 7.4030],
+
+            /*
+             * Enugu. Every one of them closed for 3D capture, which is not an
+             * oversight: coverage commits the field team to servicing an area,
+             * and that is an Operations decision taken on the coverage screen
+             * (FR-M4-02). It is the same rule the console applies when an
+             * administrator adds an area by hand — a new area is never opened
+             * by the act of naming it. Enugu opens when the field team can
+             * reach it.
+             */
+            ['Independence Layout', 'Enugu', 'Enugu', false, 6.4335, 7.5160],
+            ['Enugu GRA', 'Enugu', 'Enugu', false, 6.4453, 7.4968],
+            ['New Haven', 'Enugu', 'Enugu', false, 6.4512, 7.4820],
+            ['Ogui New Layout', 'Enugu', 'Enugu', false, 6.4423, 7.4890],
+            ['Achara Layout', 'Enugu', 'Enugu', false, 6.4310, 7.4760],
+            ['Trans-Ekulu', 'Enugu', 'Enugu', false, 6.4722, 7.5201],
+            ['Abakpa Nike', 'Enugu', 'Enugu', false, 6.4790, 7.5370],
+            ['Thinkers Corner', 'Enugu', 'Enugu', false, 6.4600, 7.5500],
         ];
 
         foreach ($areas as [$name, $city, $state, $coverage, $lat, $lng]) {
