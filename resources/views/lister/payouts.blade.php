@@ -90,8 +90,7 @@
                 @csrf
                 <div class="fieldset">
                     <label class="flabel" for="amount">How much</label>
-                    <input id="amount" name="amount" type="number" step="0.01" class="finput"
-                           min="{{ $minimum }}" max="{{ $balance }}" value="{{ $balance }}" required>
+                    <x-money-input id="amount" name="amount" :value="old('amount', $balance)" required />
                     <span class="fhint">Up to {{ Money::naira($balance) }}.</span>
                 </div>
                 <button class="btn btn-brand">Request payout</button>

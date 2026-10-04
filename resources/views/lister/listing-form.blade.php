@@ -168,8 +168,8 @@
             <div class="row3">
                 <div class="fieldset">
                     <label class="flabel" for="unit-price">Price (&#8358;)</label>
-                    <input id="unit-price" name="unit[price]" type="number" step="1" min="0" class="finput"
-                           value="{{ old('unit.price', $unit->price) }}" required>
+                    <x-money-input id="unit-price" name="unit[price]"
+                                   :value="old('unit.price', $unit->price)" required />
                 </div>
 
                 <div class="fieldset">
@@ -227,7 +227,7 @@
 
                 @foreach ($fees as $i => $fee)
                     <input name="fees[{{ $i }}][label]" class="finput" value="{{ $fee['label'] ?? '' }}" placeholder="Agency fee">
-                    <input name="fees[{{ $i }}][amount]" class="finput" type="number" step="1" min="0" value="{{ $fee['amount'] ?? '' }}">
+                    <x-money-input name="fees[{{ $i }}][amount]" :value="$fee['amount'] ?? null" />
                     <input name="fees[{{ $i }}][payee]" class="finput" value="{{ $fee['payee'] ?? '' }}" placeholder="Agent">
                     <label class="checkline nowrap">
                         <input type="hidden" name="fees[{{ $i }}][is_refundable]" value="0">
@@ -238,7 +238,7 @@
 
                 @for ($i = count($fees); $i < count($fees) + 3; $i++)
                     <input name="fees[{{ $i }}][label]" class="finput" placeholder="Service charge">
-                    <input name="fees[{{ $i }}][amount]" class="finput" type="number" step="1" min="0">
+                    <x-money-input name="fees[{{ $i }}][amount]" />
                     <input name="fees[{{ $i }}][payee]" class="finput" placeholder="Estate management">
                     <label class="checkline nowrap">
                         <input type="hidden" name="fees[{{ $i }}][is_refundable]" value="0">

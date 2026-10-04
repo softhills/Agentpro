@@ -132,7 +132,7 @@
             </div>
             <div class="fieldset">
                 <label class="flabel" for="credit_amount">Amount</label>
-                <input id="credit_amount" name="amount" type="number" step="0.01" min="1" class="finput" required>
+                <x-money-input id="credit_amount" name="amount" :value="old('amount')" required />
             </div>
             <div class="fieldset">
                 <label class="flabel" for="credit_memo">Memo</label>

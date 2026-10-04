@@ -6,6 +6,7 @@ use App\Actions\IssueRefund;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Refund;
+use App\Support\MoneyInput;
 use Illuminate\Http\Request;
 use RuntimeException;
 
@@ -54,6 +55,8 @@ class OrderAdminController extends Controller
     public function refund(Request $request, Order $order, IssueRefund $refunds)
     {
         $available = $order->refundableAmount();
+
+        MoneyInput::clean($request, 'amount');
 
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01', 'max:'.max(0.01, $available)],

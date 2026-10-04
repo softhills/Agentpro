@@ -119,8 +119,7 @@
                         <summary class="linkbtn">Refund</summary>
                         <form method="POST" action="{{ route('admin.orders.refund', $order) }}" class="stack" style="margin-top:8px">
                             @csrf
-                            <input name="amount" type="number" step="0.01" class="finput finput-sm"
-                                   max="{{ $refundable }}" value="{{ $refundable }}" required>
+                            <x-money-input name="amount" :value="$refundable" class="finput-sm" required />
                             <input name="reason" class="finput finput-sm" placeholder="Why" required>
                             <button type="submit" class="btn btn-ghost btn-sm">
                                 {{ $refundable > $threshold ? 'Request refund' : 'Refund' }}
