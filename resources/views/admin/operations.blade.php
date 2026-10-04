@@ -52,9 +52,31 @@
         apologies.
     </p>
 
-    <form method="POST" action="{{ route('admin.areas.slots', $areas->firstWhere('is_scan_coverage', true) ?? $areas->first()) }}"
-          class="slotform">
+    @php
+        /*
+         * Default to the area that most needs it: open for capture, nothing
+         * bookable in it. That is the row the table above has just marked
+         * "nothing bookable", and it is the only reason an operator scrolls
+         * to this form.
+         */
+        $needy = $areas->first(fn ($a) => $a->is_scan_coverage && ! ($capacity[$a->id]->open ?? 0))
+            ?? $areas->firstWhere('is_scan_coverage', true)
+            ?? $areas->first();
+    @endphp
+
+    <form method="POST" action="{{ route('admin.areas.slots') }}" class="slotform">
         @csrf
+        <div class="fieldset">
+            <label class="flabel" for="slot_area">Area</label>
+            <select id="slot_area" name="area_id" class="finput" required>
+                @foreach ($areas as $option)
+                    @php $open = $capacity[$option->id]->open ?? 0; @endphp
+                    <option value="{{ $option->id }}" @selected($needy && $option->id === $needy->id)>
+                        {{ $option->name }} — {{ $option->city }}@if (! $option->is_scan_coverage) (closed)@elseif (! $open) — nothing bookable @endif
+                    </option>
+                @endforeach
+            </select>
+        </div>
         <div class="fieldset">
             <label class="flabel" for="technician_id">Technician</label>
             <select id="technician_id" name="technician_id" class="finput" required>
