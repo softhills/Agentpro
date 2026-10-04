@@ -90,12 +90,24 @@ class ReferenceDataSeeder extends Seeder
             ['Trans-Ekulu', 'Enugu', 'Enugu', false, 6.4722, 7.5201],
             ['Abakpa Nike', 'Enugu', 'Enugu', false, 6.4790, 7.5370],
             ['Thinkers Corner', 'Enugu', 'Enugu', false, 6.4600, 7.5500],
+            ['Uwani', 'Enugu', 'Enugu', false, 6.4365, 7.4830],
+            ['Asata', 'Enugu', 'Enugu', false, 6.4505, 7.4915],
+            /*
+             * The seventh field is a slug, where the name alone will not do.
+             * Lagos has a Maryland as well, and slugs are unique across the
+             * whole table because they are what a filter link and a saved
+             * search carry — whichever Maryland was added first would take the
+             * name and the second would be refused.
+             */
+            ['Maryland', 'Enugu', 'Enugu', false, 6.4255, 7.5115, 'maryland-enugu'],
         ];
 
-        foreach ($areas as [$name, $city, $state, $coverage, $lat, $lng]) {
+        foreach ($areas as $area) {
+            [$name, $city, $state, $coverage, $lat, $lng] = $area;
+
             Area::create([
                 'name' => $name,
-                'slug' => Str::slug($name),
+                'slug' => $area[6] ?? Str::slug($name),
                 'city' => $city,
                 'state' => $state,
                 'is_scan_coverage' => $coverage,
