@@ -64,7 +64,13 @@ class TaxonomyController extends Controller
 
     public function storeAmenity(Request $request)
     {
-        $data = $request->validate([
+        /*
+         * A named bag, because this page carries two add forms and both have a
+         * field called "name". With one shared bag the view cannot tell which
+         * form a message or a flashed value belongs to, and a failed amenity
+         * reappears inside the area form underneath it.
+         */
+        $data = $request->validateWithBag('amenity', [
             'name'          => ['required', 'string', 'max:60'],
             'group'         => ['required', 'string', 'max:40'],
             'slug'          => ['nullable', 'string', 'max:60', 'alpha_dash', 'unique:amenities,slug'],
@@ -180,7 +186,8 @@ class TaxonomyController extends Controller
 
     public function storeArea(Request $request)
     {
-        $data = $request->validate([
+        // Its own bag, for the reason given on storeAmenity above.
+        $data = $request->validateWithBag('area', [
             'name'         => ['required', 'string', 'max:80'],
             'city'         => ['required', 'string', 'max:80'],
             'state'        => ['required', 'string', 'max:80'],

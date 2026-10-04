@@ -260,12 +260,21 @@ app/
   Enums/          LifecycleState, MediaKind, PricePeriod
   Models/         Property, Unit, FeeLine, TitleClaim, MediaAsset, RealsureRecord…
   Queries/        PropertySearch — the single source of "what can this person see"
-  Support/        Money (naira formatting), Vocab (controlled vocabularies)
+  Support/        Money (naira formatting), MoneyInput (reading money back off
+                  a form), Vocab (controlled vocabularies)
 resources/views/
-  components/     property-card, fee-panel, media-viewer, placeholder, icon
+  components/     property-card, fee-panel, media-viewer, money-input,
+                  placeholder, icon
   pages/          home, search, show
 public/css/app.css  design tokens + components
 ```
+
+**Money is grouped everywhere it is shown, including inside inputs.** Prices
+here run to eight digits, so `Money::field()` writes "4,500,000" into the box,
+`public/js/money-input.js` keeps it grouped while it is typed, and
+`MoneyInput::clean()` strips the separators again before validation. A form
+with a `<x-money-input>` in it must make that `clean()` call — grouped digits
+are not `numeric`, so forgetting it rejects every figure a user enters.
 
 **Property → Unit.** Shared attributes (address, location, title, media,
 amenities) live on the property; anything that can differ between two flats in

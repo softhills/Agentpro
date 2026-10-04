@@ -11,6 +11,7 @@ use App\Models\Area;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Support\Audit;
+use App\Support\MoneyInput;
 use App\Support\Vocab;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -213,6 +214,11 @@ class ListingController extends Controller
 
     private function validated(Request $request): array
     {
+        // The price and every fee arrive grouped — "4,500,000" — because that
+        // is how the form shows them. Put back into plain digits before the
+        // numeric rules below ever see them.
+        MoneyInput::clean($request, 'unit.price', 'fees.*.amount');
+
         return $request->validate([
             'title'        => ['required', 'string', 'max:160'],
             'description'  => ['nullable', 'string', 'max:4000'],

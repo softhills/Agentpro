@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\Payments\PaymentGateway;
 use App\Support\Audit;
 use App\Support\Ledger;
+use App\Support\MoneyInput;
 use Illuminate\Http\Request;
 use RuntimeException;
 
@@ -59,6 +60,8 @@ class PayoutAdminController extends Controller
     /** Credit a lister. The only thing that puts money on a ledger by hand. */
     public function credit(Request $request)
     {
+        MoneyInput::clean($request, 'amount');
+
         $data = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
             'amount'  => ['required', 'numeric', 'min:1', 'max:99999999'],

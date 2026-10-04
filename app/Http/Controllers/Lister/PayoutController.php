@@ -9,6 +9,7 @@ use App\Models\LedgerEntry;
 use App\Models\Payout;
 use App\Services\Payments\PaymentGateway;
 use App\Support\Ledger;
+use App\Support\MoneyInput;
 use Illuminate\Http\Request;
 use RuntimeException;
 
@@ -77,6 +78,8 @@ class PayoutController extends Controller
     public function requestPayout(Request $request, IssuePayout $payouts)
     {
         $user = $request->user();
+
+        MoneyInput::clean($request, 'amount');
 
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:1', 'max:99999999999'],
