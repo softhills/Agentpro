@@ -40,6 +40,8 @@
     L.tileLayer(config.tileUrl, {
         maxZoom: config.maxZoom,
         attribution: config.attribution,
+        tileSize: config.tileSize || 256,
+        zoomOffset: config.zoomOffset || 0,
     }).addTo(map);
 
     var layer = L.layerGroup().addTo(map);

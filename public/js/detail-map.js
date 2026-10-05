@@ -34,7 +34,12 @@
 
     L.tileLayer(config.tileUrl, {
         attribution: config.attribution,
-        maxZoom: config.maxZoom
+        maxZoom: config.maxZoom,
+        // Providers differ: 256px tiles are Leaflet's assumption, and a
+        // provider serving 512s needs the offset or the whole map renders one
+        // zoom level out, with labels twice the size they should be.
+        tileSize: config.tileSize || 256,
+        zoomOffset: config.zoomOffset || 0
     }).addTo(map);
 
     /*

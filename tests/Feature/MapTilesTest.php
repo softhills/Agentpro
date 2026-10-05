@@ -86,15 +86,141 @@ class MapTilesTest extends TestCase
         );
     }
 
+    /**
+     * The config file decides which source wins, so these load it the way the
+     * framework does — with the environment set and the file read fresh. That
+     * is also the only honest way to test it: after `config:cache` the
+     * resolution has already happened, and nothing outside this file can see
+     * an environment variable at all.
+     *
+     * @param  array<string,string>  $env
+     * @return array<string,mixed>
+     */
+    private function mapConfig(array $env): array
+    {
+        foreach (['AGENTPRO_MAPTILER_KEY', 'AGENTPRO_MAPTILER_STYLE', 'AGENTPRO_MAPTILER_TILE_URL',
+                  'AGENTPRO_TILE_URL', 'AGENTPRO_TILE_ATTRIBUTION'] as $name) {
+            unset($_ENV[$name], $_SERVER[$name]);
+            putenv($name);
+        }
+
+        foreach ($env as $name => $value) {
+            $_ENV[$name] = $_SERVER[$name] = $value;
+            putenv($name.'='.$value);
+        }
+
+        return (require config_path('agentpro.php'))['map'];
+    }
+
+    public function test_a_maptiler_key_is_all_it_takes_to_switch_provider(): void
+    {
+        $map = $this->mapConfig(['AGENTPRO_MAPTILER_KEY' => 'ab12cd34']);
+
+        $this->assertSame(
+            'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=ab12cd34',
+            $map['tile_url'],
+        );
+
+        // The licence asks for the credit, so it arrives with the tiles rather
+        // than waiting for somebody to remember a second setting.
+        $this->assertStringContainsString('MapTiler', $map['attribution']);
+        $this->assertStringContainsString('maptiler.com/copyright', $map['attribution']);
+        $this->assertStringContainsString('OpenStreetMap', $map['attribution']);
+    }
+
+    public function test_the_style_and_the_whole_url_can_still_be_overridden(): void
+    {
+        $this->assertStringContainsString('hybrid', $this->mapConfig([
+            'AGENTPRO_MAPTILER_KEY' => 'k', 'AGENTPRO_MAPTILER_STYLE' => 'hybrid',
+        ])['tile_url']);
+
+        // A provider's tile path is theirs to change; when it does, the fix is
+        // a line in .env rather than a deploy of the config file.
+        $this->assertSame(
+            'https://api.maptiler.com/maps/basic/{z}/{x}/{y}@2x.png?key=k',
+            $this->mapConfig([
+                'AGENTPRO_MAPTILER_KEY' => 'k',
+                'AGENTPRO_MAPTILER_TILE_URL' => 'https://api.maptiler.com/maps/{style}/{z}/{x}/{y}@2x.png?key={key}',
+                'AGENTPRO_MAPTILER_STYLE' => 'basic',
+            ])['tile_url'],
+        );
+    }
+
+    /** For a provider this does not know about, or a self-hosted one. */
+    public function test_a_url_set_by_hand_beats_maptiler(): void
+    {
+        $map = $this->mapConfig([
+            'AGENTPRO_MAPTILER_KEY' => 'k',
+            'AGENTPRO_TILE_URL' => 'https://tiles.mine.example/{z}/{x}/{y}.png',
+        ]);
+
+        $this->assertSame('https://tiles.mine.example/{z}/{x}/{y}.png', $map['tile_url']);
+        $this->assertStringNotContainsString('MapTiler', $map['attribution'], 'Credited MapTiler for somebody else’s tiles.');
+    }
+
+    public function test_without_a_key_it_is_still_the_development_source(): void
+    {
+        $map = $this->mapConfig([]);
+
+        $this->assertStringContainsString('tile.openstreetmap.org', $map['tile_url']);
+        $this->assertStringNotContainsString('MapTiler', $map['attribution']);
+    }
+
+    public function test_a_key_left_as_the_example_is_caught(): void
+    {
+        foreach (['YOUR_KEY', 'your-key-from-the-maptiler-dashboard', 'changeme', 'paste key here'] as $placeholder) {
+            config(['agentpro.map.maptiler_key' => $placeholder]);
+
+            $this->assertStringContainsString(
+                'looks like the example',
+                implode(' ', MapTiles::problems()),
+                $placeholder.' was accepted as a key.',
+            );
+        }
+    }
+
+    /**
+     * And a real one is left alone. A key is a random alphanumeric string, so
+     * a looser check would eventually reject a working one and send its owner
+     * hunting a fault that is not there.
+     */
+    public function test_a_real_looking_key_is_not_second_guessed(): void
+    {
+        foreach (['gH3kPq9ZxVn2LmT8', 'exampleKeyLooking1', 'keyBut2Random3'] as $key) {
+            config([
+                'agentpro.map.maptiler_key' => $key,
+                'agentpro.map.tile_url' => 'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key='.$key,
+                'agentpro.map.attribution' => '© MapTiler',
+            ]);
+
+            $this->assertSame([], MapTiles::problems(), $key.' was rejected as a placeholder.');
+        }
+    }
+
+    /** Leaflet counts zoom in 256px tiles; a 512 provider is a level out. */
+    public function test_a_larger_tile_carries_the_zoom_offset_with_it(): void
+    {
+        config(['agentpro.map.tile_size' => 256]);
+        $this->assertSame(0, MapTiles::forView()['zoomOffset']);
+
+        config(['agentpro.map.tile_size' => 512]);
+        $this->assertSame(-1, MapTiles::forView()['zoomOffset']);
+        $this->assertSame(512, MapTiles::forView()['tileSize']);
+    }
+
     /** One payload, three maps. */
     public function test_a_map_is_handed_the_tiles_and_whatever_else_it_needs(): void
     {
         config(['agentpro.map.tile_url' => 'https://t/{z}/{x}/{y}.png', 'agentpro.map.attribution' => '© P']);
 
+        config(['agentpro.map.tile_size' => 256]);
+
         $this->assertSame([
             'tileUrl'     => 'https://t/{z}/{x}/{y}.png',
             'attribution' => '© P',
             'maxZoom'     => (int) config('agentpro.map.max_zoom'),
+            'tileSize'    => 256,
+            'zoomOffset'  => 0,
             'lat'         => 6.45,
         ], MapTiles::forView(['lat' => 6.45]));
     }

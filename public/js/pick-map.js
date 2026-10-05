@@ -70,7 +70,9 @@
 
     L.tileLayer(config.tileUrl, {
         attribution: config.attribution,
-        maxZoom: config.maxZoom
+        maxZoom: config.maxZoom,
+        tileSize: config.tileSize || 256,
+        zoomOffset: config.zoomOffset || 0
     }).addTo(map);
 
     var marker = null;

@@ -35,6 +35,14 @@ final class MapTiles
      */
     private const UNFILLED = '/\{\s*(api[_-]?key|apikey|key|token|access[_-]?token)\s*\}|YOUR[_-]?(API[_-]?)?KEY/i';
 
+    /*
+     * Which source won is settled in config/agentpro.php — MapTiler when there
+     * is a key, a hand-set URL over everything, the development source when
+     * there is neither — because env() only answers while a config file is
+     * being read. After `config:cache`, which every deploy runs, it returns
+     * null anywhere else. Reading it here would work in development and
+     * quietly stop working in production.
+     */
     public static function url(): string
     {
         return (string) config('agentpro.map.tile_url');
@@ -43,6 +51,14 @@ final class MapTiles
     public static function attribution(): string
     {
         return (string) config('agentpro.map.attribution');
+    }
+
+    /** The key, or null when there is nothing usable configured. */
+    private static function mapTilerKey(): ?string
+    {
+        $key = trim((string) config('agentpro.map.maptiler_key'));
+
+        return $key === '' ? null : $key;
     }
 
     public static function maxZoom(): int
@@ -59,10 +75,17 @@ final class MapTiles
      */
     public static function forView(array $extra = []): array
     {
+        $tileSize = (int) config('agentpro.map.tile_size');
+
         return array_merge([
             'tileUrl'     => self::url(),
             'attribution' => self::attribution(),
             'maxZoom'     => self::maxZoom(),
+            'tileSize'    => $tileSize,
+            // Leaflet counts zoom levels in 256px tiles. A provider serving
+            // 512s covers the same ground in one fewer level, and without the
+            // offset every map opens one level too far in.
+            'zoomOffset'  => $tileSize > 256 ? -1 : 0,
         ], $extra);
     }
 
@@ -91,6 +114,20 @@ final class MapTiles
             $problems[] = 'Maps are drawing from OpenStreetMap’s public tile service, which its usage '
                 .'policy does not allow for commercial use. Set AGENTPRO_TILE_URL and '
                 .'AGENTPRO_TILE_ATTRIBUTION to a provider you have an account with.';
+        }
+
+        /*
+         * Narrow on purpose. A MapTiler key is a random alphanumeric string,
+         * so anything that starts with "your" or carries a space is somebody's
+         * placeholder — while a prefix match on "example" or "key" would
+         * eventually reject a real one and send its owner looking for a fault
+         * that is not there.
+         */
+        if (($key = self::mapTilerKey()) !== null
+            && (preg_match('/^your/i', $key) || preg_match('/[\s<>]/', $key)
+                || in_array(strtolower($key), ['key', 'xxx', 'example', 'changeme', 'placeholder'], true))) {
+            $problems[] = 'AGENTPRO_MAPTILER_KEY still looks like the example rather than a key, so '
+                .'MapTiler is refusing every tile.';
         }
 
         if ($url === '') {
