@@ -72,26 +72,34 @@
                 @endif
 
                 {{--
-                    Editing is offered on your own listings only, although the
-                    policy would allow staff to edit anybody's. Moderation acts
-                    on other people's listings and is recorded as such —
-                    approve, reject, unlist, each with a reason. Quietly
-                    rewriting somebody's advert is a different kind of act, and
-                    not one this screen should make a one-click habit of.
-                --}}
-                @if ($p->lister_id === auth()->id())
-                    <a href="{{ route('lister.listings.edit', $p) }}" class="btn btn-ghost btn-sm">Edit</a>
+                    Edit on every row, not only your own. PropertyPolicy
+                    already allows it — before() grants a moderator every
+                    ability on a listing — and this console is the screen staff
+                    actually work in, so withholding the link only sent them
+                    round the houses to do the same thing.
 
-                    @if ($p->lifecycle_state === \App\Enums\LifecycleState::Draft)
-                        <details class="refundbox">
-                            <summary class="linkbtn linkbtn-bad">Delete</summary>
-                            <form method="POST" action="{{ route('lister.listings.destroy', $p) }}" class="taxform taxform-tight">
-                                @csrf @method('DELETE')
-                                <span class="fhint">This draft and its photographs go for good.</span>
-                                <button type="submit" class="btn btn-ghost btn-sm">Yes, delete it</button>
-                            </form>
-                        </details>
-                    @endif
+                    What makes it accountable is the record rather than the
+                    restriction: an edit writes a listing.updated event with
+                    who made it and the before, the same way approving or
+                    unlisting writes its reason. A correction typed by the
+                    person reading the complaint is worth more than one
+                    relayed to the lister and waited on.
+
+                    Delete does not follow. An edit can be read back, argued
+                    with and done again; a deleted draft and its photographs
+                    are gone, so that stays on your own drafts.
+                --}}
+                <a href="{{ route('lister.listings.edit', $p) }}" class="btn btn-ghost btn-sm">Edit</a>
+
+                @if ($p->lister_id === auth()->id() && $p->lifecycle_state === \App\Enums\LifecycleState::Draft)
+                    <details class="refundbox">
+                        <summary class="linkbtn linkbtn-bad">Delete</summary>
+                        <form method="POST" action="{{ route('lister.listings.destroy', $p) }}" class="taxform taxform-tight">
+                            @csrf @method('DELETE')
+                            <span class="fhint">This draft and its photographs go for good.</span>
+                            <button type="submit" class="btn btn-ghost btn-sm">Yes, delete it</button>
+                        </form>
+                    </details>
                 @endif
             </td>
         </tr>

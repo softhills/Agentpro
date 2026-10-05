@@ -201,8 +201,54 @@ class ListingDeletionTest extends TestCase
             ->getContent();
 
         $this->assertStringNotContainsString($theirs->slug, $html);
-        // Editing is offered on your own listing, and on the filtered page
-        // there is nobody else's to confuse it with.
         $this->assertStringContainsString(route('lister.listings.edit', $mine), $html);
+    }
+
+    /**
+     * Edit on every row, not only the administrator's own.
+     *
+     * The first cut of this screen offered it on your own rows only, on the
+     * argument that moderation acts on other people's listings through the
+     * review screen and leaves a reason behind. The decision went the other
+     * way, and it costs nothing in authorisation: PropertyPolicy::before()
+     * grants a moderator every ability on a listing already, so the link
+     * exposes what the policy has always said rather than widening it.
+     */
+    public function test_edit_is_offered_on_every_row(): void
+    {
+        $admin  = $this->admin();
+        $mine   = $this->listing($admin);
+        $theirs = $this->listing($this->user(), 'published');
+
+        $html = $this->actingAs($admin)->get(route('admin.listings'))->assertOk()->getContent();
+
+        foreach (['their own' => $mine, 'somebody else’s' => $theirs] as $whose => $property) {
+            $this->assertStringContainsString(
+                route('lister.listings.edit', $property),
+                $html,
+                'An admin was offered no way to edit '.$whose.' listing.',
+            );
+        }
+
+        // And the link has to work. A row offering an action that answers 403
+        // is worse than a row offering none.
+        $this->actingAs($admin)->get(route('lister.listings.edit', $theirs))->assertOk();
+    }
+
+    /**
+     * Delete did not come with it. An edit can be read back out of the audit
+     * log and argued with; a deleted draft and its photographs are gone, which
+     * is not something to put one click away on another lister's work.
+     */
+    public function test_delete_stays_on_an_admins_own_drafts(): void
+    {
+        $admin = $this->admin();
+        $mine  = $this->listing($admin);
+        $draft = $this->listing($this->user());
+
+        $html = $this->actingAs($admin)->get(route('admin.listings'))->assertOk()->getContent();
+
+        $this->assertStringContainsString(route('lister.listings.destroy', $mine), $html);
+        $this->assertStringNotContainsString(route('lister.listings.destroy', $draft), $html);
     }
 }
