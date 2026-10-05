@@ -240,6 +240,35 @@ class ListingSubmissionTest extends TestCase
     }
 
     /**
+     * The pin picker is an enhancement, and the fields it fills are the thing
+     * that is submitted.
+     *
+     * Which means two separate claims, and both of them matter: the map and its
+     * script have to actually be on the page, and the latitude and longitude
+     * boxes have to still be there and still be ordinary inputs. A picker that
+     * silently became the only way to set a coordinate would lock out every
+     * lister without JavaScript, and every lister using a keyboard.
+     */
+    public function test_the_location_section_offers_a_map_and_still_takes_typing(): void
+    {
+        $html = $this->actingAs($this->lister())
+            ->get(route('lister.listings.create'))
+            ->assertOk()
+            ->assertSee('id="pick-map"', false)
+            ->assertSee('js/pick-map.js', false)
+            ->assertSee('vendor/leaflet/leaflet.js', false)
+            ->getContent();
+
+        foreach (['lat', 'lng'] as $field) {
+            $this->assertMatchesRegularExpression(
+                '/<input[^>]+name="'.$field.'"[^>]*>/',
+                $html,
+                $field.' is no longer a field a lister can type into.',
+            );
+        }
+    }
+
+    /**
      * Amenities still round-trip now that the section is a <details>.
      *
      * Folding it shut changes nothing about submission — the inputs are the

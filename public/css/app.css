@@ -1540,6 +1540,24 @@ body:has(.consent) .leaflet-bottom{bottom:var(--consent-h)}
 .reportpanel .allclear{margin-top:12px}
 @media (max-width:700px){ .dmap{height:240px} }
 
+/* The pin picker on the listing form. Shorter than the listing page's map: it
+   sits inside a form and has to leave the fields it fills in on the screen
+   with it, or the lister cannot see it working. */
+.pickmap{height:280px;border-radius:11px;overflow:hidden;border:1px solid var(--line);
+  background:var(--map-bg);z-index:0}
+/* The dropped pin, in CSS for the same reason the search map's is: the
+   vendored Leaflet build has no images/ folder, so its default marker is a
+   broken <img>. A circle on a point, in the brand colour. */
+.pickpin{display:block;width:22px;height:22px;border-radius:50% 50% 50% 0;
+  background:var(--brand);border:2px solid var(--surface);
+  box-shadow:0 2px 7px rgba(43,39,32,.35);transform:rotate(-45deg);cursor:grab}
+.pickpin:active{cursor:grabbing}
+
+.pickmap-bar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:9px}
+.pickmap-bar .btn{flex:none}
+.pickmap-bar .fhint{margin:0;min-width:0}
+@media (max-width:700px){ .pickmap{height:230px} }
+
 /* ----------------------------------------------------- landing page evidence
    A band of live figures under the hero. Deliberately plain: these earn their
    place by being true and checkable, not by being large, and dressing them up

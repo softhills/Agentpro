@@ -153,16 +153,54 @@
             <x-field name="address_line" label="Street address" :value="old('address_line', $property->address_line)" required />
 
             {{--
-                Two numbers a lister cannot read off the property, on a form
-                that refuses to save without them. Saying where they come from
-                costs one line and is the difference between a listing and an
-                abandoned draft — and the magnitudes are there so that a figure
-                off a survey plan, which runs to six digits because it is in
-                metres, looks wrong before the validator says so.
+                The map fills the two boxes below it.
+
+                Latitude and longitude are not things anybody knows about their
+                own house, and the document a land seller actually holds — a
+                survey plan — carries eastings and northings in metres, which
+                this form refuses. Listings were being abandoned at that field.
+
+                The boxes stay, visible and editable, and they are still what is
+                submitted. The map is a way of filling them in: with no
+                JavaScript, no Leaflet or no tiles the form works exactly as it
+                did, which is also what keeps it usable with a keyboard.
             --}}
+            <div class="fieldset">
+                <span class="flabel">Where on the map</span>
+
+                <div id="pick-map" class="pickmap"
+                     data-config="{{ json_encode([
+                         'lat'  => (float) (old('lat', $property->lat) ?: config('agentpro.map.default_lat')),
+                         'lng'  => (float) (old('lng', $property->lng) ?: config('agentpro.map.default_lng')),
+                         'zoom' => (int) config('agentpro.map.default_zoom'),
+                         'tileUrl' => config('agentpro.map.tile_url'),
+                         'attribution' => config('agentpro.map.attribution'),
+                         'maxZoom' => (int) config('agentpro.map.max_zoom'),
+                         // So choosing an area moves an empty map to it rather
+                         // than leaving a lister in Enugu to drag from Lagos.
+                         'areas' => $areas->mapWithKeys(fn ($area) => [$area->id => [
+                             'lat'  => (float) ($area->centroid_lat ?: config('agentpro.map.default_lat')),
+                             'lng'  => (float) ($area->centroid_lng ?: config('agentpro.map.default_lng')),
+                             'zoom' => (int) $area->default_zoom,
+                         ]]),
+                     ]) }}"></div>
+
+                <div class="pickmap-bar">
+                    {{-- Unhidden by the script only where the browser offers
+                         geolocation, so it is never a button that does nothing. --}}
+                    <button type="button" class="btn btn-ghost btn-sm" data-pick-here hidden>
+                        Use my current location
+                    </button>
+                    <span class="fhint" data-pick-readout>
+                        Tap the map where the property is. The two boxes below fill in themselves.
+                    </span>
+                </div>
+            </div>
+
+            {{-- Still spelled out, for anyone typing them in by hand. --}}
             <p class="fhint">
-                The map pin. In Google Maps, press and hold the exact spot: the two numbers
-                it shows are the latitude first, then the longitude.
+                Or type them: in Google Maps, press and hold the exact spot and the two
+                numbers it shows are the latitude first, then the longitude.
             </p>
 
             <div class="row3">
@@ -463,3 +501,14 @@
     @endif
 </div>
 @endsection
+
+@push('head')
+<link rel="stylesheet" href="{{ \App\Support\Asset::url('vendor/leaflet/leaflet.css') }}">
+@endpush
+
+@push('scripts')
+{{-- The same Leaflet build as the search and listing maps: one raster renderer
+     for the whole site rather than a second map stack on this page. --}}
+<script src="{{ \App\Support\Asset::url('vendor/leaflet/leaflet.js') }}"></script>
+<script src="{{ \App\Support\Asset::url('js/pick-map.js') }}" defer></script>
+@endpush
