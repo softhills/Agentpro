@@ -464,16 +464,32 @@ at a moment of their choosing rather than yours.
    in the URL of every tile request, so anyone who opens the network tab can
    read it — restricted, that does not matter; unrestricted, it is your quota
    that gets spent.
-3. Put it in `.env` and re-cache the config:
+3. Open `.env`:
 
 ```bash
-cd ~/agentpro
-nano .env          # AGENTPRO_MAPTILER_KEY=your-key
-php artisan config:cache
+nano ~/agentpro/.env
 ```
 
-4. Load `/search` and confirm the tiles draw, then check `/admin` → **Needs
+4. Set the key. This line goes **in the file**, nothing else:
+
+```ini
+AGENTPRO_MAPTILER_KEY=your-key
+```
+
+5. Save, leave the editor, and re-cache the config **in the shell**:
+
+```bash
+cd ~/agentpro && php artisan config:cache
+```
+
+6. Load `/search` and confirm the tiles draw, then check `/admin` → **Needs
    attention** has nothing to say about maps.
+
+> The split above is not pedantry. A shell command pasted into `.env` by
+> accident — the editor is open, the next command is on the clipboard — stops
+> the whole application, not just the maps: dotenv refuses the file, every
+> artisan command fails with `The environment file is invalid!`, and a deploy
+> dies at `composer install`.
 
 The attribution MapTiler's licence requires is applied with the key, so there is
 no second setting to remember. Two things that can still go wrong, both one line
@@ -659,6 +675,7 @@ back.
 | Photographs are grey placeholders | `storage:link` was not run, or `gd` is not enabled |
 | Photo upload fails but everything else works | `gd` or `exif` missing, or `upload_max_filesize` too small in *MultiPHP INI Editor* |
 | `.env` edits have no effect | Config is cached. Re-run `php artisan config:cache` |
+| `The environment file is invalid! Failed to parse dotenv file` | A line in `.env` is not `NAME=value` — usually a shell command pasted in while the editor was open. The error names the text it choked on. Find it with `grep -n 'artisan\|^cd \|^php' ~/agentpro/.env` and delete that line |
 | `composer: command not found` | Not installed or not on `PATH` — step 3 |
 | A command fails with `No such file or directory` naming a word from this guide | A `<placeholder>` was pasted unedited; bash read `<` as a redirect |
 | Scheduler works when you run it by hand, never on the timer | The cron line uses a bare `php`. Cron has no useful `PATH` — use the absolute path |

@@ -231,6 +231,16 @@
 })();
 </script>
 
+{{--
+    Site-wide, and deliberately: password fields appear on sign-in, sign-up,
+    the password screen and twice on the privacy screen, in two different
+    shapes, and a future one could be anywhere. A per-page include is a thing
+    to remember, and the cost of not remembering is a field nobody can check
+    their typing in. It is under a kilobyte, deferred, and cached by version
+    like every other file we serve ourselves.
+--}}
+<script src="{{ \App\Support\Asset::url('js/password-peek.js') }}" defer></script>
+
 @stack('scripts')
 </body>
 </html>

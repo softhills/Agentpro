@@ -653,6 +653,30 @@ textarea.finput{line-height:1.55;resize:vertical}
    of the fee table and do not shuffle sideways as digits are typed, same as
    every rendered price on the site. */
 .finput[data-money]{font-variant-numeric:tabular-nums}
+
+/* Show-password. The wrapper is added by password-peek.js around the input it
+   already found, so it has to behave exactly as the input did in the grid it
+   was sitting in: one full-width item, nothing else. */
+.peekwrap{position:relative;display:block}
+.peekwrap .finput{padding-right:44px}
+.peek{position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  display:grid;place-items:center;width:34px;height:34px;padding:0;
+  background:none;border:0;border-radius:8px;color:var(--slate);cursor:pointer}
+.peek:hover{background:var(--surface-2);color:var(--ink)}
+.peek svg{width:19px;height:19px}
+/* The button says what it will do next, so the open eye is the "show" state. */
+.peek .peek-hide{display:none}
+.peek[aria-pressed="true"] .peek-show{display:none}
+.peek[aria-pressed="true"] .peek-hide{display:block}
+/* Edge draws its own reveal button inside password fields, and two eyes in one
+   box is worse than either. */
+input[type="password"]::-ms-reveal{display:none}
+/* A thumb is not a mouse pointer: 34px is a comfortable click and a miss on a
+   phone, where most of these passwords are typed. */
+@media (max-width:700px){
+  .peek{width:42px;height:42px}
+  .peekwrap .finput{padding-right:50px}
+}
 .fhint{font-family:var(--i);font-size:12.5px;color:var(--slate);margin:0}
 .ferror{font-family:var(--i);font-size:12.5px;color:var(--error);margin:0;font-weight:600}
 .devnote{background:var(--brand-soft);border-radius:8px;padding:9px 11px;color:var(--brand-dark)}

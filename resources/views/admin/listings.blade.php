@@ -14,6 +14,14 @@
             <option value="{{ $s }}" @selected(request('state') === $s)>{{ str_replace('_',' ',$s) }} ({{ $counts[$s] ?? 0 }})</option>
         @endforeach
     </select>
+    {{-- Shown only to somebody who has listings of their own, so it is not a
+         control that does nothing for most of the people on this screen. --}}
+    @if ($mineCount > 0)
+        <label class="checkline nowrap">
+            <input type="checkbox" name="mine" value="1" @checked(request()->boolean('mine'))>
+            <span>Only mine ({{ $mineCount }})</span>
+        </label>
+    @endif
     <button type="submit" class="btn btn-brand btn-sm">Filter</button>
 </form>
 
@@ -61,6 +69,58 @@
                     <a href="{{ route('admin.review', $p) }}" class="btn btn-ghost btn-sm">Relist</a>
                 @elseif (in_array($p->lifecycle_state->value, ['submitted','under_review'], true))
                     <a href="{{ route('admin.review', $p) }}" class="btn btn-brand btn-sm">Review</a>
+                @endif
+
+                {{--
+                    Edit on every row, not only your own. PropertyPolicy
+                    already allows it — before() grants a moderator every
+                    ability on a listing — and this console is the screen staff
+                    actually work in, so withholding the link only sent them
+                    round the houses to do the same thing.
+
+                    What makes it accountable is the record rather than the
+                    restriction: an edit writes a listing.updated event with
+                    who made it and the before, the same way approving or
+                    unlisting writes its reason. A correction typed by the
+                    person reading the complaint is worth more than one
+                    relayed to the lister and waited on.
+
+                    Delete follows, on drafts and nothing else. A draft is the
+                    one state that has never been public and can have nothing
+                    paid against it — the controller refuses both — so what is
+                    lost is work nobody outside has seen. Anything submitted is
+                    unlisted instead, which keeps the record of what happened
+                    to it.
+
+                    It is a disclosure rather than a button, and the warning
+                    names whose draft it is, because this is the one action on
+                    the screen that cannot be undone from the audit log that
+                    records it.
+                --}}
+                <a href="{{ route('lister.listings.edit', $p) }}" class="btn btn-ghost btn-sm">Edit</a>
+
+                @if ($p->lifecycle_state === \App\Enums\LifecycleState::Draft)
+                    <details class="refundbox">
+                        <summary class="linkbtn linkbtn-bad">Delete</summary>
+                        <form method="POST" action="{{ route('lister.listings.destroy', $p) }}" class="taxform taxform-tight">
+                            @csrf @method('DELETE')
+                            @if ($p->lister_id === auth()->id())
+                                <span class="fhint">This draft and its photographs go for good.</span>
+                            @else
+                                <span class="fhint">
+                                    {{ $p->lister?->name ?? 'This lister' }}’s draft and its photographs go for
+                                    good, and they are told that you deleted it.
+                                </span>
+                                {{-- Optional, and it goes to the lister as well as the
+                                     audit log: a reason the platform keeps and the person
+                                     affected never sees is a file note, not a reason. --}}
+                                <label class="flabel" for="note-{{ $p->id }}">Reason (optional)</label>
+                                <input type="text" id="note-{{ $p->id }}" name="note" maxlength="300"
+                                       class="finput" placeholder="Duplicate of an existing listing">
+                            @endif
+                            <button type="submit" class="btn btn-ghost btn-sm">Yes, delete it</button>
+                        </form>
+                    </details>
                 @endif
             </td>
         </tr>

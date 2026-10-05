@@ -19,6 +19,13 @@ class ListingAdminController extends Controller
     {
         $listings = Property::query()
             ->when($request->filled('state'), fn ($q) => $q->where('lifecycle_state', $request->query('state')))
+            /*
+             * An administrator's own listings were findable only by knowing
+             * their own name and typing it into the search box. They are
+             * created through the lister form like anybody else's, and the
+             * console they live in had no way back to them.
+             */
+            ->when($request->boolean('mine'), fn ($q) => $q->where('lister_id', $request->user()->id))
             ->when($request->filled('q'), fn ($q) => $q->where(function ($w) use ($request) {
                 $term = '%'.$request->query('q').'%';
                 $w->where('title', 'like', $term)->orWhere('address_line', 'like', $term);
@@ -33,6 +40,7 @@ class ListingAdminController extends Controller
             'listings' => $listings,
             'counts'   => Property::selectRaw('lifecycle_state, COUNT(*) c')
                 ->groupBy('lifecycle_state')->pluck('c', 'lifecycle_state'),
+            'mineCount' => Property::where('lister_id', $request->user()->id)->count(),
         ]);
     }
 }

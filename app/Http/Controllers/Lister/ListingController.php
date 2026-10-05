@@ -10,11 +10,13 @@ use App\Models\Amenity;
 use App\Models\Area;
 use App\Models\Property;
 use App\Models\Unit;
+use App\Notifications\ListingDraftDeleted;
 use App\Support\Audit;
 use App\Support\MoneyInput;
 use App\Support\Vocab;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ListingController extends Controller
@@ -194,6 +196,119 @@ class ListingController extends Controller
             'rented' => 'Marked as rented. It now appears in the sold and let archive.',
             default  => 'Unlisted. It is no longer visible to seekers.',
         });
+    }
+
+    /**
+     * Delete a draft, and only a draft.
+     *
+     * The policy has said this since the first commit — owner, and
+     * LifecycleState::Draft — and there has never been a route to it, so a
+     * listing begun by mistake could be abandoned but not removed. That is a
+     * gap for a lister and a worse one for an administrator, whose own
+     * listings do not appear anywhere in the console they work in.
+     *
+     * The state check is repeated here rather than left to the policy, and
+     * that is not belt and braces. PropertyPolicy::before() grants a moderator
+     * every ability outright, which is right for moderation and wrong for
+     * this: it would let staff delete a published listing through a route
+     * whose policy says draft-only. Anything that has been submitted is
+     * unlisted, never deleted — the archive of what happened to a listing is
+     * the evidence that anything happens here at all.
+     */
+    public function destroy(Request $request, Property $property)
+    {
+        $this->authorize('delete', $property);
+
+        if ($property->lifecycle_state !== LifecycleState::Draft) {
+            return back()->withErrors(['listing' => sprintf(
+                '"%s" has been submitted, so it is unlisted rather than deleted — that keeps the record of what happened to it.',
+                $property->title,
+            )]);
+        }
+
+        /*
+         * orders.property_id is nullOnDelete, so deleting a property with an
+         * order against it does not remove the order: it detaches it, leaving
+         * money in the ledger pointing at nothing. A draft should never have
+         * one — the capture upgrade is only sold on a published listing — but
+         * "should never" is exactly the condition worth checking before an
+         * irreversible delete.
+         */
+        if ($property->orders()->exists()) {
+            return back()->withErrors(['listing' => 'Something has been paid for against this listing, so it cannot be deleted. Contact support.']);
+        }
+
+        $before = $property->only(['uuid', 'title', 'lifecycle_state', 'lister_id']);
+
+        /*
+         * Held while the row is still there. After the delete there is nothing
+         * left to read a name or an address off, and the lister has to be
+         * notified from something.
+         */
+        $lister  = $property->lister;
+        $notMine = $request->user()->id !== $property->lister_id;
+
+        /*
+         * Optional, and only staff ever see the box — deleting your own draft
+         * needs no explanation to yourself. It goes to the lister and into the
+         * audit log together, because a reason the platform keeps and the
+         * person affected is not told is not a reason, it is a file note.
+         */
+        $note = $notMine
+            ? trim((string) $request->validate(['note' => ['nullable', 'string', 'max:300']])['note'] ?? '')
+            : '';
+
+        /*
+         * The rows go with the property — units, fees, title claims, amenities
+         * and media all cascade — but the files do not. Removing them first
+         * leaves nothing orphaned on the disk; doing it afterwards would mean
+         * losing the paths with the rows that held them.
+         */
+        foreach ($property->media as $media) {
+            $paths = array_values($media->renditions ?? []);
+            $paths[] = $media->path;
+            $paths[] = $media->poster_path;
+
+            foreach (array_filter($paths) as $path) {
+                Storage::disk($media->disk ?? config('agentpro.media.disk'))->delete($path);
+            }
+        }
+
+        $property->delete();
+
+        Audit::record('listing.deleted', null, $before, array_filter(['note' => $note]));
+
+        /*
+         * The lister is told, every time, and cannot switch it off. Before
+         * this, the audit log was the whole record: it tells the platform who
+         * deleted the draft and tells the person whose work it was nothing at
+         * all. They would have found out by going looking for it.
+         *
+         * Not sent when you delete your own — you were there.
+         */
+        if ($notMine) {
+            $lister?->notify(new ListingDraftDeleted($before['title'], $note ?: null));
+        }
+
+        /*
+         * Back to the screen the deletion was made from. Somebody clearing up
+         * their own drafts was on the lister dashboard; staff deleting a draft
+         * that is not theirs came from the admin console, and sending them to
+         * a dashboard listing properties they do not have is a dead end.
+         */
+        if (! $notMine) {
+            return redirect()->route('lister.dashboard')->with(
+                'status',
+                '"'.$before['title'].'" was deleted. Nothing had been submitted, so nothing is on record about it.',
+            );
+        }
+
+        return redirect()->route('admin.listings')->with('status', sprintf(
+            '"%s" was deleted. %s has been told%s, and the audit log records that you deleted it.',
+            $before['title'],
+            $lister?->name ?? 'The lister',
+            $note === '' ? ' — with no reason given' : '',
+        ));
     }
 
     /** An undo for a closing the lister declared. See UnlistListing::relist(). */
