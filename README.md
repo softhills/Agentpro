@@ -289,10 +289,23 @@ is kept in step so a panned view is shareable and survives a reload.
 
 > **The default tile source is not production-ready.** It points at
 > OpenStreetMap's own raster service, whose usage policy prohibits heavy or
-> commercial use — they are entitled to block traffic that ignores it. Before
-> launch set `AGENTPRO_TILE_URL` to a provider with a contract (MapTiler,
-> Stadia, or self-hosted Protomaps) and update `AGENTPRO_TILE_ATTRIBUTION` to
-> match.
+> commercial use — they are entitled to block traffic that ignores it, and the
+> first sign is every map on the site turning grey at a moment of their
+> choosing. Before launch set `AGENTPRO_TILE_URL` to a provider you have an
+> account with and `AGENTPRO_TILE_ATTRIBUTION` to the line their licence asks
+> for. The URL is not written out here on purpose: these paths change, and one
+> copied from a year-old README fails a tile at a time.
+
+`App\Support\MapTiles` is the single place all three maps — search, listing and
+the pin picker — read the tile settings from, and it reports what a swap gets
+wrong on the admin dashboard's **Needs attention** rail: production still on the
+development source, a URL still carrying the provider's `{key}` placeholder, or
+tiles served with no attribution. None of those fails at deploy time. Each of
+them is grey squares on somebody else's screen, days later.
+
+A blank `AGENTPRO_TILE_URL=` counts as unset rather than as an empty URL — in
+`.env` an empty line is a value, and taken literally it would leave every map
+drawing nothing instead of falling back to the development source.
 
 ## Architecture
 

@@ -80,8 +80,16 @@ return [
      * attribution to match. See the map section of the README.
      */
     'map' => [
-        'tile_url'    => env('AGENTPRO_TILE_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
-        'attribution' => env('AGENTPRO_TILE_ATTRIBUTION', '© OpenStreetMap contributors'),
+        /*
+         * `?:` rather than a default argument, because an empty line in .env
+         * is a value: AGENTPRO_TILE_URL= resolves to "" and env() never sees
+         * the default, which would leave every map on the site drawing
+         * nothing. Blank means "not configured", and not configured means the
+         * development source — visibly wrong in production, which the admin
+         * dashboard then says out loud, rather than invisibly absent.
+         */
+        'tile_url'    => env('AGENTPRO_TILE_URL') ?: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'attribution' => env('AGENTPRO_TILE_ATTRIBUTION') ?: '© OpenStreetMap contributors',
         'max_zoom'    => env('AGENTPRO_MAP_MAX_ZOOM', 19),
 
         // Opens over Lagos Island / Lekki rather than a national view, because

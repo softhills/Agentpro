@@ -187,6 +187,17 @@ DB_DATABASE=cpuser_agentpro
 DB_USERNAME=cpuser_agentpro
 DB_PASSWORD=the-password-you-noted
 
+# Map tiles. Without these every map on the site draws from OpenStreetMap's own
+# raster service, which their usage policy does not allow for a commercial site
+# — they can block it whenever they like, and the first you would know is grey
+# squares where the maps were. Open an account with a provider (MapTiler,
+# Stadia Maps, Thunderforest and LocationIQ all have free tiers big enough to
+# launch on; Protomaps self-hosts from one file) and paste the URL their
+# dashboard gives you, key included, with the attribution line their licence
+# asks for. The admin dashboard says so if either is missing.
+AGENTPRO_TILE_URL="https://api.your-provider.com/maps/streets/{z}/{x}/{y}.png?key=..."
+AGENTPRO_TILE_ATTRIBUTION="© Your Provider © OpenStreetMap contributors"
+
 # Both must be database-backed. 'sync' would run every notification and every
 # export inside the web request that triggered it.
 QUEUE_CONNECTION=database
@@ -481,6 +492,7 @@ webhook means people are charged and their order never completes.
 | Register, then upload a listing photo | Image appears — proves `gd` and `storage:link` |
 | `/sitemap.xml` | XML, not an error |
 | Trigger any email, wait a minute | Arrives — proves the queue cron |
+| `/admin` → **Needs attention** | Nothing about map tiles. A row there means production is still drawing from OpenStreetMap's public service, or the key never made it into the URL |
 | `storage/logs/laravel.log` | No stack traces |
 
 ---

@@ -963,6 +963,9 @@ textarea.finput{line-height:1.55;resize:vertical}
 .attn-bad{background:var(--bad-soft);color:var(--bad-ink);border-color:var(--bad-line)}
 .attn-warn{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
 .attn span{flex:1}
+/* A row with nowhere to go: no chevron, and nothing that invites a click. The
+   fix for these is in .env rather than on a screen. */
+.attn-flat{font-weight:500;line-height:1.45}
 .allclear{display:flex;align-items:center;gap:9px;font-family:var(--i);font-size:13.5px;font-weight:600;
   color:var(--ok-ink);background:var(--ok-soft);border:1px solid var(--ok-line);border-radius:11px;padding:12px 15px;margin:0}
 .allclear svg{width:16px;height:16px;flex:none}

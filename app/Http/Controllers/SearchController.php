@@ -6,6 +6,7 @@ use App\Models\Amenity;
 use App\Models\Area;
 use App\Queries\PropertySearch;
 use App\Support\Analytics;
+use App\Support\MapTiles;
 use Illuminate\Http\Request;
 
 class SearchController extends Controller
@@ -90,9 +91,7 @@ class SearchController extends Controller
             : null;
 
         return [
-            'tileUrl'     => config('agentpro.map.tile_url'),
-            'attribution' => config('agentpro.map.attribution'),
-            'maxZoom'     => (int) config('agentpro.map.max_zoom'),
+            ...MapTiles::forView(),
             'pinZoom'     => self::PIN_ZOOM,
             'center'      => [
                 'lng' => $area?->centroid_lng ?? (float) config('agentpro.map.default_lng'),

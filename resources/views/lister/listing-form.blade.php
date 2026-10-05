@@ -169,13 +169,10 @@
                 <span class="flabel">Where on the map</span>
 
                 <div id="pick-map" class="pickmap"
-                     data-config="{{ json_encode([
+                     data-config="{{ json_encode(\App\Support\MapTiles::forView([
                          'lat'  => (float) (old('lat', $property->lat) ?: config('agentpro.map.default_lat')),
                          'lng'  => (float) (old('lng', $property->lng) ?: config('agentpro.map.default_lng')),
                          'zoom' => (int) config('agentpro.map.default_zoom'),
-                         'tileUrl' => config('agentpro.map.tile_url'),
-                         'attribution' => config('agentpro.map.attribution'),
-                         'maxZoom' => (int) config('agentpro.map.max_zoom'),
                          // So choosing an area moves an empty map to it rather
                          // than leaving a lister in Enugu to drag from Lagos.
                          'areas' => $areas->mapWithKeys(fn ($area) => [$area->id => [
@@ -183,7 +180,7 @@
                              'lng'  => (float) ($area->centroid_lng ?: config('agentpro.map.default_lng')),
                              'zoom' => (int) $area->default_zoom,
                          ]]),
-                     ]) }}"></div>
+                     ])) }}"></div>
 
                 <div class="pickmap-bar">
                     {{-- Unhidden by the script only where the browser offers
