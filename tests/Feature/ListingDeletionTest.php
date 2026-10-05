@@ -236,19 +236,60 @@ class ListingDeletionTest extends TestCase
     }
 
     /**
-     * Delete did not come with it. An edit can be read back out of the audit
-     * log and argued with; a deleted draft and its photographs are gone, which
-     * is not something to put one click away on another lister's work.
+     * Delete followed Edit, on drafts and nothing else.
+     *
+     * A draft is the one state that has never been public and can have nothing
+     * paid against it, so what a delete destroys is work no visitor has seen.
+     * Everything past it is unlisted instead — see the test above, which is
+     * what stops before() turning this into a way to remove a live listing.
      */
-    public function test_delete_stays_on_an_admins_own_drafts(): void
+    public function test_delete_is_offered_on_every_draft_and_no_other_state(): void
     {
-        $admin = $this->admin();
-        $mine  = $this->listing($admin);
-        $draft = $this->listing($this->user());
+        $admin     = $this->admin();
+        $mine      = $this->listing($admin);
+        $theirs    = $this->listing($this->user());
+        $published = $this->listing($this->user(), 'published');
 
         $html = $this->actingAs($admin)->get(route('admin.listings'))->assertOk()->getContent();
 
-        $this->assertStringContainsString(route('lister.listings.destroy', $mine), $html);
-        $this->assertStringNotContainsString(route('lister.listings.destroy', $draft), $html);
+        foreach (['their own' => $mine, 'somebody else’s' => $theirs] as $whose => $draft) {
+            $this->assertStringContainsString(
+                route('lister.listings.destroy', $draft),
+                $html,
+                'An admin was offered no way to delete '.$whose.' draft.',
+            );
+        }
+
+        $this->assertStringNotContainsString(
+            route('lister.listings.destroy', $published),
+            $html,
+            'A published listing was offered a delete form.',
+        );
+    }
+
+    /**
+     * And the delete works from there. The redirect matters as much as the
+     * delete: staff clearing up somebody else's draft came from the console,
+     * and the lister dashboard they would otherwise land on lists properties
+     * they do not have.
+     */
+    public function test_an_admin_deleting_somebody_elses_draft_lands_back_in_the_console(): void
+    {
+        $admin = $this->admin();
+        $draft = $this->listing($lister = $this->user());
+
+        $this->actingAs($admin)
+            ->delete(route('lister.listings.destroy', $draft))
+            ->assertRedirect(route('admin.listings'));
+
+        $this->assertNull(Property::find($draft->id));
+
+        // Nobody is notified, so the audit log is the only record that it
+        // happened. It names the listing and who it belonged to.
+        $this->assertDatabaseHas('audit_events', [
+            'action'  => 'listing.deleted',
+            'actor_id' => $admin->id,
+        ]);
+        $this->assertStringContainsString($lister->name, session('status'));
     }
 }

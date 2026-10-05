@@ -238,6 +238,9 @@ class ListingController extends Controller
         }
 
         $before = $property->only(['uuid', 'title', 'lifecycle_state', 'lister_id']);
+        // Read while the row is still there: the name is wanted for the
+        // message, and after the delete there is nothing to read it from.
+        $listerName = $property->lister?->name ?? 'The lister';
 
         /*
          * The rows go with the property — units, fees, title claims, amenities
@@ -259,8 +262,24 @@ class ListingController extends Controller
 
         Audit::record('listing.deleted', null, $before, []);
 
-        return redirect()->route('lister.dashboard')
-            ->with('status', '"'.$before['title'].'" was deleted. Nothing had been submitted, so nothing is on record about it.');
+        /*
+         * Back to the screen the deletion was made from. Somebody clearing up
+         * their own drafts was on the lister dashboard; staff deleting a draft
+         * that is not theirs came from the admin console, and sending them to
+         * a dashboard listing properties they do not have is a dead end.
+         */
+        if ($request->user()->id === $before['lister_id']) {
+            return redirect()->route('lister.dashboard')->with(
+                'status',
+                '"'.$before['title'].'" was deleted. Nothing had been submitted, so nothing is on record about it.',
+            );
+        }
+
+        return redirect()->route('admin.listings')->with('status', sprintf(
+            '"%s" was deleted. It was %s’s draft, and they have not been told — the audit log records that you deleted it.',
+            $before['title'],
+            $listerName,
+        ));
     }
 
     /** An undo for a closing the lister declared. See UnlistListing::relist(). */

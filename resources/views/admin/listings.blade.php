@@ -85,18 +85,33 @@
                     person reading the complaint is worth more than one
                     relayed to the lister and waited on.
 
-                    Delete does not follow. An edit can be read back, argued
-                    with and done again; a deleted draft and its photographs
-                    are gone, so that stays on your own drafts.
+                    Delete follows, on drafts and nothing else. A draft is the
+                    one state that has never been public and can have nothing
+                    paid against it — the controller refuses both — so what is
+                    lost is work nobody outside has seen. Anything submitted is
+                    unlisted instead, which keeps the record of what happened
+                    to it.
+
+                    It is a disclosure rather than a button, and the warning
+                    names whose draft it is, because this is the one action on
+                    the screen that cannot be undone from the audit log that
+                    records it.
                 --}}
                 <a href="{{ route('lister.listings.edit', $p) }}" class="btn btn-ghost btn-sm">Edit</a>
 
-                @if ($p->lister_id === auth()->id() && $p->lifecycle_state === \App\Enums\LifecycleState::Draft)
+                @if ($p->lifecycle_state === \App\Enums\LifecycleState::Draft)
                     <details class="refundbox">
                         <summary class="linkbtn linkbtn-bad">Delete</summary>
                         <form method="POST" action="{{ route('lister.listings.destroy', $p) }}" class="taxform taxform-tight">
                             @csrf @method('DELETE')
-                            <span class="fhint">This draft and its photographs go for good.</span>
+                            <span class="fhint">
+                                @if ($p->lister_id === auth()->id())
+                                    This draft and its photographs go for good.
+                                @else
+                                    {{ $p->lister?->name ?? 'This lister' }}’s draft and its photographs go for
+                                    good, and they are not told.
+                                @endif
+                            </span>
                             <button type="submit" class="btn btn-ghost btn-sm">Yes, delete it</button>
                         </form>
                     </details>
