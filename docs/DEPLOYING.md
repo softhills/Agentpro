@@ -187,13 +187,10 @@ DB_DATABASE=cpuser_agentpro
 DB_USERNAME=cpuser_agentpro
 DB_PASSWORD=the-password-you-noted
 
-# Map tiles. Sign up at maptiler.com, take the key from Account → Keys, and
-# restrict it to your domain while you are there — it travels in the URL of
-# every tile request and is visible to anyone who looks. Without it the maps
-# draw from OpenStreetMap's public service, which their usage policy does not
-# allow for a commercial site: they can block it whenever they like, and the
-# first you would know is grey squares where the maps were.
-AGENTPRO_MAPTILER_KEY=your-key-from-the-maptiler-dashboard
+# Map tiles (FR-M5-02). One key, and the attribution comes with it. Step 9 has
+# the whole procedure — the key has to be restricted to this domain, which can
+# only be done once the domain exists. Leave it blank for now if you prefer.
+AGENTPRO_MAPTILER_KEY=
 
 # Both must be database-backed. 'sync' would run every notification and every
 # export inside the web request that triggered it.
@@ -452,8 +449,46 @@ approval is the only path to public visibility.
 
 ## 9. The things that only start working on a real domain
 
-Two features were undemonstrable in local development and should be switched on
+Three things were undemonstrable in local development and should be switched on
 and checked here:
+
+**Map tiles (FR-M5-02).** Until this is set, every map on the site — search, each
+listing, and the pin picker on the listing form — draws from OpenStreetMap's own
+raster service. Their usage policy does not permit commercial use, and they are
+entitled to block the traffic: the first sign is every map turning grey at once,
+at a moment of their choosing rather than yours.
+
+1. Sign up at [maptiler.com](https://www.maptiler.com/) and open **Account →
+   Keys**. The free tier is enough to launch on.
+2. **Restrict the key to this domain** before you leave that screen. It travels
+   in the URL of every tile request, so anyone who opens the network tab can
+   read it — restricted, that does not matter; unrestricted, it is your quota
+   that gets spent.
+3. Put it in `.env` and re-cache the config:
+
+```bash
+cd ~/agentpro
+nano .env          # AGENTPRO_MAPTILER_KEY=your-key
+php artisan config:cache
+```
+
+4. Load `/search` and confirm the tiles draw, then check `/admin` → **Needs
+   attention** has nothing to say about maps.
+
+The attribution MapTiler's licence requires is applied with the key, so there is
+no second setting to remember. Two things that can still go wrong, both one line
+in `.env`:
+
+| What you see | What it is |
+|---|---|
+| Grey tiles, 403s in the network tab | The key is wrong, or restricted to a different domain. A path MapTiler has changed since this was written goes in `AGENTPRO_MAPTILER_TILE_URL` — copy the URL from their dashboard |
+| Tiles draw, but labels are huge and everything is one zoom too close | The style is serving 512px tiles. `AGENTPRO_TILE_SIZE=512` |
+
+`AGENTPRO_MAPTILER_STYLE` picks a different style (`streets-v2` by default), and
+`AGENTPRO_TILE_URL` with `AGENTPRO_TILE_ATTRIBUTION` replaces MapTiler entirely
+for a different provider or self-hosted tiles. Set both if you do — the credit
+is a condition of every provider's licence, and the dashboard reports it
+missing.
 
 **Web push (FR-M9-08).** Service workers require HTTPS, which is why this never
 ran locally. Generate a key pair, add it to `.env`, re-cache the config:
@@ -630,7 +665,7 @@ back.
 | Works in the terminal, 500s in the browser | CLI PHP and the website's PHP are different versions — step 3 |
 | Nothing is ever emailed | The queue cron is not running, or `QUEUE_CONNECTION` is not `database` |
 | Alerts pile up and never send | The scheduler cron is not running |
-| Map pane blank | Check the browser console. Outbound requests to `tile.openstreetmap.org` may be blocked |
+| Map pane blank, or tiles grey | The MapTiler key is missing, wrong, or restricted to another domain — step 9. `/admin` → **Needs attention** names which |
 | Payments taken, orders never complete | The Paystack webhook cannot reach `/webhooks/paystack` |
 | `SQLSTATE[42000] ... SPATIAL` during migrate | MySQL/MariaDB too old — step 1 |
 
