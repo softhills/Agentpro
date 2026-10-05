@@ -140,6 +140,27 @@
                     <a href="{{ route('lister.listings.edit', $property) }}" class="btn btn-ghost btn-sm">Edit</a>
                 @endcan
 
+                {{--
+                    Only on a draft, and behind a disclosure rather than a
+                    one-click button: a listing is half an hour of typing and
+                    photographs, and the row it sits in has Edit next to it.
+                    Everything past draft is unlisted instead, which keeps the
+                    record of what happened to it.
+                --}}
+                @if ($state === \App\Enums\LifecycleState::Draft)
+                    <details class="refundbox">
+                        <summary class="linkbtn linkbtn-bad">Delete</summary>
+                        <form method="POST" action="{{ route('lister.listings.destroy', $property) }}" class="taxform taxform-tight">
+                            @csrf @method('DELETE')
+                            <span class="fhint">
+                                This draft and its photographs go for good. Nothing was ever
+                                submitted, so nothing is on record about it.
+                            </span>
+                            <button type="submit" class="btn btn-ghost btn-sm">Yes, delete it</button>
+                        </form>
+                    </details>
+                @endif
+
                 @if (in_array($state->value, ['published', 'sold', 'rented'], true))
                     <a href="{{ route('property.show', $property) }}" class="btn btn-ghost btn-sm">View</a>
                 @endif

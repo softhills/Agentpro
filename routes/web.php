@@ -323,6 +323,9 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/listings/{property}/edit', [ListingController::class, 'edit'])->name('listings.edit');
         Route::put('/listings/{property}', [ListingController::class, 'update'])->name('listings.update');
+        // Drafts only, enforced in the controller as well as the policy — see
+        // ListingController::destroy for why the policy alone is not enough.
+        Route::delete('/listings/{property}', [ListingController::class, 'destroy'])->name('listings.destroy');
         Route::post('/listings/{property}/submit', [ListingController::class, 'submit'])->name('listings.submit');
 
         /*

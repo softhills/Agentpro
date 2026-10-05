@@ -77,15 +77,30 @@
             </div>
         @endif
 
-        @if ($me->canList())
+        {{--
+            Staff see this too, and have to.
+
+            PropertyPolicy::before() grants a moderator every ability on a
+            listing, so an administrator can create one — and did. canList() is
+            false for them, because its other job is deciding who must pass
+            identity verification and staff must not be dragged through that,
+            so the whole group was hidden and their own listing was unreachable
+            from anywhere in the application.
+
+            Verification and payouts stay behind canList(): those really are
+            for people listing as a business.
+        --}}
+        @if ($me->canList() || $me->isStaff('moderator'))
             <div class="usermenu-g">
                 <p class="usermenu-h">Listing</p>
                 <a href="{{ route('lister.dashboard') }}"><x-icon name="home" />Your listings</a>
                 <a href="{{ route('lister.listings.create') }}"><x-icon name="draw" />Add a listing</a>
-                <a href="{{ route('lister.payouts') }}"><x-icon name="naira" />Getting paid</a>
-                @unless ($me->isVerified())
-                    <a href="{{ route('verify.show') }}"><x-icon name="check" />Verify your identity</a>
-                @endunless
+                @if ($me->canList())
+                    <a href="{{ route('lister.payouts') }}"><x-icon name="naira" />Getting paid</a>
+                    @unless ($me->isVerified())
+                        <a href="{{ route('verify.show') }}"><x-icon name="check" />Verify your identity</a>
+                    @endunless
+                @endif
             </div>
         @endif
 

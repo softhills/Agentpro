@@ -14,6 +14,14 @@
             <option value="{{ $s }}" @selected(request('state') === $s)>{{ str_replace('_',' ',$s) }} ({{ $counts[$s] ?? 0 }})</option>
         @endforeach
     </select>
+    {{-- Shown only to somebody who has listings of their own, so it is not a
+         control that does nothing for most of the people on this screen. --}}
+    @if ($mineCount > 0)
+        <label class="checkline nowrap">
+            <input type="checkbox" name="mine" value="1" @checked(request()->boolean('mine'))>
+            <span>Only mine ({{ $mineCount }})</span>
+        </label>
+    @endif
     <button type="submit" class="btn btn-brand btn-sm">Filter</button>
 </form>
 
@@ -61,6 +69,29 @@
                     <a href="{{ route('admin.review', $p) }}" class="btn btn-ghost btn-sm">Relist</a>
                 @elseif (in_array($p->lifecycle_state->value, ['submitted','under_review'], true))
                     <a href="{{ route('admin.review', $p) }}" class="btn btn-brand btn-sm">Review</a>
+                @endif
+
+                {{--
+                    Editing is offered on your own listings only, although the
+                    policy would allow staff to edit anybody's. Moderation acts
+                    on other people's listings and is recorded as such —
+                    approve, reject, unlist, each with a reason. Quietly
+                    rewriting somebody's advert is a different kind of act, and
+                    not one this screen should make a one-click habit of.
+                --}}
+                @if ($p->lister_id === auth()->id())
+                    <a href="{{ route('lister.listings.edit', $p) }}" class="btn btn-ghost btn-sm">Edit</a>
+
+                    @if ($p->lifecycle_state === \App\Enums\LifecycleState::Draft)
+                        <details class="refundbox">
+                            <summary class="linkbtn linkbtn-bad">Delete</summary>
+                            <form method="POST" action="{{ route('lister.listings.destroy', $p) }}" class="taxform taxform-tight">
+                                @csrf @method('DELETE')
+                                <span class="fhint">This draft and its photographs go for good.</span>
+                                <button type="submit" class="btn btn-ghost btn-sm">Yes, delete it</button>
+                            </form>
+                        </details>
+                    @endif
                 @endif
             </td>
         </tr>
