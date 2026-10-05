@@ -86,7 +86,9 @@ class ListingController extends Controller
 
     public function edit(Property $property)
     {
-        $this->authorize('update', $property);
+        // `rewrite`, not `update`: staff may manage a listing's photographs and
+        // read its analytics, and may not change what its advert says.
+        $this->authorize('rewrite', $property);
 
         $property->load(['units.feeLines', 'titleClaims', 'amenities', 'media']);
 
@@ -103,7 +105,7 @@ class ListingController extends Controller
 
     public function update(Request $request, Property $property)
     {
-        $this->authorize('update', $property);
+        $this->authorize('rewrite', $property);
 
         $data = $this->validated($request);
 
