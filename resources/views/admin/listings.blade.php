@@ -72,32 +72,35 @@
                 @endif
 
                 {{--
-                    Edit on every row, not only your own. PropertyPolicy
-                    already allows it — before() grants a moderator every
-                    ability on a listing — and this console is the screen staff
-                    actually work in, so withholding the link only sent them
-                    round the houses to do the same thing.
+                    Edit on your own listings only. A moderator is no longer
+                    granted `update` at all — see PropertyPolicy::AUTHORSHIP —
+                    because changing what somebody's advert says, under their
+                    name, is authorship rather than moderation. Taking a
+                    listing down is the moderation answer, and it happens on
+                    the review screen with a reason recorded.
 
-                    What makes it accountable is the record rather than the
-                    restriction: an edit writes a listing.updated event with
-                    who made it and the before, the same way approving or
-                    unlisting writes its reason. A correction typed by the
-                    person reading the complaint is worth more than one
-                    relayed to the lister and waited on.
+                    Asked of the policy rather than compared by hand, so this
+                    cannot drift from what the request would actually allow. It
+                    also drops the link on your own sold or rented listing,
+                    which `update` refuses for everybody.
 
-                    Delete follows, on drafts and nothing else. A draft is the
+                    Delete is the exception, on drafts and nothing else. A draft is the
                     one state that has never been public and can have nothing
                     paid against it — the controller refuses both — so what is
                     lost is work nobody outside has seen. Anything submitted is
                     unlisted instead, which keeps the record of what happened
                     to it.
 
-                    It is a disclosure rather than a button, and the warning
-                    names whose draft it is, because this is the one action on
-                    the screen that cannot be undone from the audit log that
-                    records it.
+                    It stays on everybody's drafts because it is answerable
+                    in the way an edit is not: confined to drafts, carrying a
+                    reason, and the lister is told. It is a disclosure rather
+                    than a button, and the warning names whose draft it is,
+                    because this is the one action on the screen that cannot be
+                    undone from the audit log that records it.
                 --}}
-                <a href="{{ route('lister.listings.edit', $p) }}" class="btn btn-ghost btn-sm">Edit</a>
+                @can('update', $p)
+                    <a href="{{ route('lister.listings.edit', $p) }}" class="btn btn-ghost btn-sm">Edit</a>
+                @endcan
 
                 @if ($p->lifecycle_state === \App\Enums\LifecycleState::Draft)
                     <details class="refundbox">

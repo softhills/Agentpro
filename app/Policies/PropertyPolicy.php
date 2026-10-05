@@ -15,9 +15,33 @@ use App\Models\User;
  */
 class PropertyPolicy
 {
+    /**
+     * Abilities a moderator is NOT granted by `before()`, because they are
+     * authorship rather than moderation.
+     *
+     * Moderating decides what happens to a listing — approved, rejected,
+     * unlisted — and happens on the review screen with a reason recorded
+     * against it. Editing somebody's listing changes what their advert says,
+     * under their name, with nothing on the page to show the platform did it.
+     * The audit entry records that it happened, which is not the same as the
+     * lister having agreed to it.
+     *
+     * It reaches further than the listing form, and deliberately: everything
+     * behind `update` is authorship. The photographs and video, the capture
+     * booking, and the listing's analytics — which the route comment already
+     * calls commercially sensitive to the lister — all sit behind this one
+     * ability, and none of them is a moderation decision.
+     *
+     * `delete` is still granted. It is the one way to clear a draft that
+     * should not exist, it is confined to drafts by the policy below and by
+     * the controller, and the lister is notified when staff use it, so it is
+     * answerable in a way that a silent rewrite is not.
+     */
+    private const AUTHORSHIP = ['update'];
+
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->isStaff('moderator')) {
+        if ($user->isStaff('moderator') && ! in_array($ability, self::AUTHORSHIP, true)) {
             return true;
         }
 
