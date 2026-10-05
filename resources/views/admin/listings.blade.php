@@ -72,12 +72,14 @@
                 @endif
 
                 {{--
-                    Edit on your own listings only. A moderator is no longer
-                    granted `update` at all — see PropertyPolicy::AUTHORSHIP —
-                    because changing what somebody's advert says, under their
-                    name, is authorship rather than moderation. Taking a
+                    Edit on your own listings only. The form has an ability of
+                    its own — PropertyPolicy::rewrite, excluded from the staff
+                    grant — because changing what somebody's advert says, under
+                    their name, is authorship rather than moderation. Taking a
                     listing down is the moderation answer, and it happens on
-                    the review screen with a reason recorded.
+                    the review screen with a reason recorded. Staff keep
+                    `update`, so the photographs and the analytics are still
+                    theirs to work with.
 
                     Asked of the policy rather than compared by hand, so this
                     cannot drift from what the request would actually allow. It
@@ -98,7 +100,7 @@
                     because this is the one action on the screen that cannot be
                     undone from the audit log that records it.
                 --}}
-                @can('update', $p)
+                @can('rewrite', $p)
                     <a href="{{ route('lister.listings.edit', $p) }}" class="btn btn-ghost btn-sm">Edit</a>
                 @endcan
 

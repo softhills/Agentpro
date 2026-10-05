@@ -316,8 +316,9 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/listings/create', [ListingController::class, 'create'])->name('listings.create');
         Route::post('/listings', [ListingController::class, 'store'])->name('listings.store');
-        // FR-M13-01. Behind the same policy as editing: how a listing is
-        // performing is commercially sensitive to the lister.
+        // FR-M13-01. Behind `update` rather than the form's own `rewrite`: how
+        // a listing is performing is commercially sensitive to the lister, and
+        // it is also what staff look at when one is reported.
         Route::get('/listings/{property}/analytics', ListingAnalyticsController::class)
             ->name('listings.analytics');
 
