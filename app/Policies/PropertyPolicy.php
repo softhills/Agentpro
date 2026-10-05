@@ -16,28 +16,25 @@ use App\Models\User;
 class PropertyPolicy
 {
     /**
-     * Abilities a moderator is NOT granted by `before()`, because they are
-     * authorship rather than moderation.
+     * Abilities a moderator is NOT granted by `before()`.
      *
-     * Moderating decides what happens to a listing — approved, rejected,
-     * unlisted — and happens on the review screen with a reason recorded
-     * against it. Editing somebody's listing changes what their advert says,
-     * under their name, with nothing on the page to show the platform did it.
-     * The audit entry records that it happened, which is not the same as the
-     * lister having agreed to it.
+     * Exactly one: rewriting a listing through the lister's own form. Editing
+     * a listing changes what somebody's advert says, under their name, with
+     * nothing on the page to show the platform did it — and the audit entry
+     * recording that it happened is not the same as the lister having agreed
+     * to it. Taking a listing down is the moderation answer, and it happens on
+     * the review screen with a reason attached.
      *
-     * It reaches further than the listing form, and deliberately: everything
-     * behind `update` is authorship. The photographs and video, the capture
-     * booking, and the listing's analytics — which the route comment already
-     * calls commercially sensitive to the lister — all sit behind this one
-     * ability, and none of them is a moderation decision.
+     * `update` is deliberately NOT in here. It is what the photographs, the
+     * video, the capture booking and the listing's analytics sit behind, and
+     * staff keep all of those: a moderator asked to take down an unlawful
+     * photograph should not have to delete the whole listing to do it.
      *
-     * `delete` is still granted. It is the one way to clear a draft that
-     * should not exist, it is confined to drafts by the policy below and by
-     * the controller, and the lister is notified when staff use it, so it is
-     * answerable in a way that a silent rewrite is not.
+     * `delete` is granted too. It is confined to drafts by the method below
+     * and by the controller, it carries a reason, and the lister is notified
+     * when staff use it — answerable in a way a silent rewrite is not.
      */
-    private const AUTHORSHIP = ['update'];
+    private const AUTHORSHIP = ['rewrite'];
 
     public function before(User $user, string $ability): ?bool
     {
@@ -69,6 +66,23 @@ class PropertyPolicy
         // into an alert rather than forbidding the edit.
         return $this->owns($user, $property)
             && ! in_array($property->lifecycle_state->value, ['sold', 'rented'], true);
+    }
+
+    /**
+     * The listing form, and nothing else.
+     *
+     * A separate ability rather than a check inside `update`, because the two
+     * really are different questions. `update` asks whether this person may
+     * change anything about the listing — photographs, a capture booking, its
+     * analytics — and staff may. `rewrite` asks whether they may change what
+     * the advert says, and only the person whose name is on it may.
+     *
+     * It defers to `update` for everything else it would otherwise repeat:
+     * sold and rented stay closed, suspension still bites.
+     */
+    public function rewrite(User $user, Property $property): bool
+    {
+        return $this->owns($user, $property) && $this->update($user, $property);
     }
 
     /** FR-M1-05: verification gates submission, not merely publication. */

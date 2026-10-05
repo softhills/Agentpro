@@ -209,8 +209,8 @@ class ListingDeletionTest extends TestCase
     /**
      * Edit on the administrator's own listings and nobody else's.
      *
-     * A moderator is not granted `update` at all — see
-     * PropertyPolicy::AUTHORSHIP — because changing what somebody's advert
+     * The form has an ability of its own, `rewrite`, which is the one thing
+     * the staff grant leaves out — because changing what somebody's advert
      * says, under their name, is authorship rather than moderation. Taking a
      * listing down is the moderation answer, and it carries a reason.
      */
@@ -242,10 +242,25 @@ class ListingDeletionTest extends TestCase
 
         $this->actingAs($admin)->get(route('lister.listings.edit', $property))->assertForbidden();
         $this->actingAs($admin)->put(route('lister.listings.update', $property), [])->assertForbidden();
+    }
 
-        // `update` is the gate on authorship generally, not just the form, so
-        // the photographs and the listing's analytics go with it.
-        $this->actingAs($admin)->get(route('lister.listings.analytics', $property))->assertForbidden();
+    /**
+     * And it stops at the form.
+     *
+     * `update` is a wider question than `rewrite` — the photographs, the
+     * video, the capture booking and the listing's analytics all sit behind
+     * it — and staff keep it. A moderator asked to take down one unlawful
+     * photograph should not have to delete the listing to do it.
+     */
+    public function test_staff_keep_everything_behind_update_on_other_peoples_listings(): void
+    {
+        $admin    = $this->admin();
+        $property = $this->listing($this->user(), 'published');
+
+        $this->assertTrue($admin->can('update', $property), 'Staff lost the photographs with the form.');
+        $this->assertFalse($admin->can('rewrite', $property));
+
+        $this->actingAs($admin)->get(route('lister.listings.analytics', $property))->assertOk();
     }
 
     /**
