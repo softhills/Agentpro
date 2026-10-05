@@ -187,6 +187,11 @@ DB_DATABASE=cpuser_agentpro
 DB_USERNAME=cpuser_agentpro
 DB_PASSWORD=the-password-you-noted
 
+# Map tiles (FR-M5-02). One key, and the attribution comes with it. Step 9 has
+# the whole procedure — the key has to be restricted to this domain, which can
+# only be done once the domain exists. Leave it blank for now if you prefer.
+AGENTPRO_MAPTILER_KEY=
+
 # Both must be database-backed. 'sync' would run every notification and every
 # export inside the web request that triggered it.
 QUEUE_CONNECTION=database
@@ -444,8 +449,46 @@ approval is the only path to public visibility.
 
 ## 9. The things that only start working on a real domain
 
-Two features were undemonstrable in local development and should be switched on
+Three things were undemonstrable in local development and should be switched on
 and checked here:
+
+**Map tiles (FR-M5-02).** Until this is set, every map on the site — search, each
+listing, and the pin picker on the listing form — draws from OpenStreetMap's own
+raster service. Their usage policy does not permit commercial use, and they are
+entitled to block the traffic: the first sign is every map turning grey at once,
+at a moment of their choosing rather than yours.
+
+1. Sign up at [maptiler.com](https://www.maptiler.com/) and open **Account →
+   Keys**. The free tier is enough to launch on.
+2. **Restrict the key to this domain** before you leave that screen. It travels
+   in the URL of every tile request, so anyone who opens the network tab can
+   read it — restricted, that does not matter; unrestricted, it is your quota
+   that gets spent.
+3. Put it in `.env` and re-cache the config:
+
+```bash
+cd ~/agentpro
+nano .env          # AGENTPRO_MAPTILER_KEY=your-key
+php artisan config:cache
+```
+
+4. Load `/search` and confirm the tiles draw, then check `/admin` → **Needs
+   attention** has nothing to say about maps.
+
+The attribution MapTiler's licence requires is applied with the key, so there is
+no second setting to remember. Two things that can still go wrong, both one line
+in `.env`:
+
+| What you see | What it is |
+|---|---|
+| Grey tiles, 403s in the network tab | The key is wrong, or restricted to a different domain. A path MapTiler has changed since this was written goes in `AGENTPRO_MAPTILER_TILE_URL` — copy the URL from their dashboard |
+| Tiles draw, but labels are huge and everything is one zoom too close | The style is serving 512px tiles. `AGENTPRO_TILE_SIZE=512` |
+
+`AGENTPRO_MAPTILER_STYLE` picks a different style (`streets-v2` by default), and
+`AGENTPRO_TILE_URL` with `AGENTPRO_TILE_ATTRIBUTION` replaces MapTiler entirely
+for a different provider or self-hosted tiles. Set both if you do — the credit
+is a condition of every provider's licence, and the dashboard reports it
+missing.
 
 **Web push (FR-M9-08).** Service workers require HTTPS, which is why this never
 ran locally. Generate a key pair, add it to `.env`, re-cache the config:
@@ -481,6 +524,8 @@ webhook means people are charged and their order never completes.
 | Register, then upload a listing photo | Image appears — proves `gd` and `storage:link` |
 | `/sitemap.xml` | XML, not an error |
 | Trigger any email, wait a minute | Arrives — proves the queue cron |
+| `/admin` → **Needs attention** | Nothing about map tiles. A row there means production is still drawing from OpenStreetMap's public service, or the MapTiler key is missing or wrong |
+| `/search`, zoom in twice | Tiles stay sharp and the labels are the right size. Huge labels one zoom out of step means the provider is serving 512px tiles — set `AGENTPRO_TILE_SIZE=512` |
 | `storage/logs/laravel.log` | No stack traces |
 
 ---
@@ -528,10 +573,80 @@ If your CLI PHP is not on `PATH` as `php`, pass it:
 > is nothing at all. Overwriting it is a white screen on every page, and it is
 > the single easiest way to break this layout.
 
-Back up the database before any deployment that carries a migration. In cPanel
+### The database half of a deploy
+
+**Back up first, before any deployment that carries a migration.** In cPanel
 that is *Backup* → *Download a MySQL Database Backup*; in DirectAdmin,
 *Databases* → the database → *Download*. It takes about ten seconds and is the
 difference between an annoying evening and a catastrophic one.
+
+To see what a deploy is about to do to the schema before it does it:
+
+```bash
+cd ~/agentpro && git pull --ff-only
+php artisan migrate:status
+```
+
+Anything listed as *Pending* runs on the next deploy. `deploy.sh` then does the
+database in two commands, in this order:
+
+```bash
+php artisan migrate --force                               # schema, and data migrations
+php artisan db:seed --class=ReferenceDataSeeder --force   # areas and amenities
+```
+
+`--force` on both because there is no terminal to answer the production prompt.
+
+Both run **while the site is in maintenance mode**, which is the reason the
+script takes it down first and lifts it from a trap that fires even if a step
+dies. A deploy that fails half way and leaves the site down is an annoyance; one
+that fails and leaves it up, serving new code against the old schema, is a data
+problem.
+
+The seeder only populates an **empty** table, so after the first deploy it is a
+no-op — it cannot resurrect an amenity an administrator deleted or overwrite an
+area they renamed. Which is also why reference data added later, such as a new
+city's areas, arrives as a migration rather than a line in the seeder: a
+migration is the one thing that runs exactly once per database and is recorded
+as having run.
+
+**If a migration fails, the site comes back up anyway.** The script lifts
+maintenance mode from a trap that fires however it exits, so a failure at the
+migrate step leaves the site serving the code it just pulled against a schema
+that is only half migrated — which is the one state worth going out of your way
+to avoid. The deploy stops there and says so, but nothing else protects you, so:
+
+```bash
+php artisan down                 # first, before looking at anything else
+tail -50 storage/logs/laravel.log
+```
+
+Fix the cause and run `~/agentpro/deploy.sh` again; it is safe to re-run, and
+migrations that already ran are not repeated. Only lift maintenance mode by
+hand (`php artisan up`) if you decide to leave the schema as it is.
+
+**Rolling back is not symmetrical.** `php artisan migrate:rollback` undoes the
+last batch, but a migration that *changed* data can only approximate the way
+back: a flag it set has no record of what it was before, and a migration that
+inserted rows removes only the ones nothing points at. For anything
+operational — which areas are open for 3D capture, say — the audit log on
+**Coverage & capacity** is the real history, and the console is where it is put
+back.
+
+### What a deploy deliberately does not do
+
+- **It never runs a bare `db:seed`.** That is `DatabaseSeeder`, the development
+  one, which creates six accounts whose password is the word `password`. It
+  refuses to run in production, but the script names `ReferenceDataSeeder`
+  explicitly so the question never comes up.
+- **It never opens capture capacity.** Opening an area for 3D capture makes the
+  upgrade purchasable there; the dates offered afterwards are
+  `technician_slots`, and every one of them is a promise that a named technician
+  drives to a property. That is a decision a person takes, on **Coverage &
+  capacity** or with `php artisan agentpro:open-capacity --technician=<email>
+  --city=<city> --dry-run`, and never a side effect of pushing code.
+- **It never grants staff access.** First administrator is
+  `php artisan agentpro:make-admin <email> --role=admin`, once, by hand.
 
 ---
 
@@ -550,7 +665,7 @@ difference between an annoying evening and a catastrophic one.
 | Works in the terminal, 500s in the browser | CLI PHP and the website's PHP are different versions — step 3 |
 | Nothing is ever emailed | The queue cron is not running, or `QUEUE_CONNECTION` is not `database` |
 | Alerts pile up and never send | The scheduler cron is not running |
-| Map pane blank | Check the browser console. Outbound requests to `tile.openstreetmap.org` may be blocked |
+| Map pane blank, or tiles grey | The MapTiler key is missing, wrong, or restricted to another domain — step 9. `/admin` → **Needs attention** names which |
 | Payments taken, orders never complete | The Paystack webhook cannot reach `/webhooks/paystack` |
 | `SQLSTATE[42000] ... SPATIAL` during migrate | MySQL/MariaDB too old — step 1 |
 

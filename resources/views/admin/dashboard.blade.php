@@ -9,6 +9,14 @@
 
 {{-- Things that need a person, first. Everything below this is context. --}}
 @php
+    /*
+     * Configuration rather than work, and it still belongs on this rail. A tile
+     * licence breach, or a key left as a placeholder, shows up as grey squares
+     * on a visitor's screen at a moment the provider chooses — and there is
+     * nowhere else in this console anybody would look for it.
+     */
+    $tileProblems = \App\Support\MapTiles::problems();
+
     $alerts = collect([
         $moderation['breaching'] > 0
             ? ['bad', $moderation['breaching'].' '.Str::plural('listing', $moderation['breaching']).' past the '.$moderation['sla_hours'].'-hour review SLA', route('admin.queue')]
@@ -52,6 +60,10 @@
         $operations['slots_open'] === 0
             ? ['warn', 'No capture slots open — the only paid feature cannot be booked', route('admin.operations')]
             : null,
+
+        // No link on these: the fix is in .env rather than on a screen, and a
+        // link that goes nowhere teaches people to ignore the whole rail.
+        ...array_map(fn (string $problem) => ['warn', $problem, null], $tileProblems),
     ])->filter();
 @endphp
 
@@ -59,10 +71,16 @@
     <section class="attention">
         <h2>Needs attention</h2>
         @foreach ($alerts as [$level, $text, $link])
-            <a href="{{ $link }}" @class(['attn', 'attn-bad' => $level === 'bad', 'attn-warn' => $level === 'warn'])>
-                <span>{{ $text }}</span>
-                <x-icon name="chevron" style="transform:rotate(-90deg);width:14px;height:14px" />
-            </a>
+            @if ($link)
+                <a href="{{ $link }}" @class(['attn', 'attn-bad' => $level === 'bad', 'attn-warn' => $level === 'warn'])>
+                    <span>{{ $text }}</span>
+                    <x-icon name="chevron" style="transform:rotate(-90deg);width:14px;height:14px" />
+                </a>
+            @else
+                <div @class(['attn', 'attn-flat', 'attn-bad' => $level === 'bad', 'attn-warn' => $level === 'warn'])>
+                    <span>{{ $text }}</span>
+                </div>
+            @endif
         @endforeach
     </section>
 @else

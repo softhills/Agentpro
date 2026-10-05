@@ -7,6 +7,33 @@
  * in the database — never inline in code (PRD §17, "configuration over code").
  * Prices are read server-side at checkout; the client never sends an amount.
  */
+
+/*
+ * Tiles, resolved here rather than in App\Support\MapTiles, because env() only
+ * answers while this file is being read. `php artisan config:cache` runs on
+ * every deploy and after it env() returns null everywhere else — so a lookup
+ * outside this file works in development, silently stops working in
+ * production, and takes an overridden tile URL with it.
+ */
+$mapTilerKey = trim((string) env('AGENTPRO_MAPTILER_KEY'));
+$explicitTileUrl = (string) env('AGENTPRO_TILE_URL');
+
+$mapTilerUrl = $mapTilerKey === '' ? null : strtr(
+    (string) env('AGENTPRO_MAPTILER_TILE_URL', 'https://api.maptiler.com/maps/{style}/256/{z}/{x}/{y}.png?key={key}'),
+    [
+        '{style}' => (string) env('AGENTPRO_MAPTILER_STYLE', 'streets-v2'),
+        '{key}'   => $mapTilerKey,
+    ],
+);
+
+/*
+ * Required by MapTiler's licence, not a courtesy, and both links have to be
+ * clickable: the credit is theirs, the data under it is OpenStreetMap's.
+ * Leaflet renders this as HTML.
+ */
+$mapTilerAttribution = '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">&copy; MapTiler</a> '
+    .'<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>';
+
 return [
     // FR-M2-14: window in which a listing still reads as "New".
     'freshness_days' => env('AGENTPRO_FRESHNESS_DAYS', 7),
@@ -72,17 +99,46 @@ return [
     /*
      * Map (FR-M5-02).
      *
-     * The default tile source is OpenStreetMap's own raster service, which is
-     * fine for development and NOT acceptable for production: their tile usage
-     * policy prohibits heavy or commercial use, and they are entitled to block
-     * traffic that ignores it. Before launch, point tile_url at a provider with
-     * a contract — MapTiler, Stadia, or self-hosted Protomoaps — and update the
-     * attribution to match. See the map section of the README.
+     * MapTiler in production, OpenStreetMap's own raster service in
+     * development. Set AGENTPRO_MAPTILER_KEY and the site uses MapTiler
+     * everywhere; leave it blank and it falls back to OSM, which needs no
+     * account and is why a fresh clone has working maps.
+     *
+     * The OSM service is NOT a production source: its usage policy prohibits
+     * heavy or commercial use, and they are entitled to block traffic that
+     * ignores it — which turns every map grey at a moment of their choosing.
+     * App\Support\MapTiles says so on the admin dashboard if production is
+     * still on it. See the map section of the README.
      */
     'map' => [
-        'tile_url'    => env('AGENTPRO_TILE_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
-        'attribution' => env('AGENTPRO_TILE_ATTRIBUTION', '© OpenStreetMap contributors'),
+        // Set, this is the production source. Blank, the site stays on the
+        // development one — which is what keeps a fresh clone working.
+        'maptiler_key' => $mapTilerKey,
+
+        /*
+         * Three sources, in order: a URL set by hand, MapTiler, and the
+         * development default.
+         *
+         * `?:` rather than a default argument, because an empty line in .env
+         * is a value: AGENTPRO_TILE_URL= resolves to "" and env() never sees
+         * the default, which would leave every map on the site drawing
+         * nothing. Blank means "not configured", and not configured means the
+         * next source down — visibly wrong in production, which the admin
+         * dashboard then says out loud, rather than invisibly absent.
+         */
+        'tile_url' => $explicitTileUrl
+            ?: $mapTilerUrl
+            ?: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+
+        'attribution' => (string) env('AGENTPRO_TILE_ATTRIBUTION')
+            ?: ($explicitTileUrl === '' && $mapTilerUrl !== null
+                ? $mapTilerAttribution
+                : '© OpenStreetMap contributors'),
+
         'max_zoom'    => env('AGENTPRO_MAP_MAX_ZOOM', 19),
+
+        // 256 unless a provider is serving something else; see maptiler.tile_url.
+        'tile_size'   => (int) env('AGENTPRO_TILE_SIZE', 256),
 
         // Opens over Lagos Island / Lekki rather than a national view, because
         // an empty viewport is a worse first impression than no map (risk R9).

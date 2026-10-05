@@ -287,12 +287,47 @@ viewport sends a few dozen rows instead of several thousand. Panning swaps the
 result list as an HTML fragment rather than re-rendering the page, and the URL
 is kept in step so a panned view is shareable and survives a reload.
 
-> **The default tile source is not production-ready.** It points at
-> OpenStreetMap's own raster service, whose usage policy prohibits heavy or
-> commercial use — they are entitled to block traffic that ignores it. Before
-> launch set `AGENTPRO_TILE_URL` to a provider with a contract (MapTiler,
-> Stadia, or self-hosted Protomaps) and update `AGENTPRO_TILE_ATTRIBUTION` to
-> match.
+**Tiles come from MapTiler in production**, and one setting switches the whole
+site over:
+
+```ini
+AGENTPRO_MAPTILER_KEY=your-key
+```
+
+The attribution MapTiler's licence requires arrives with it, rather than
+waiting for somebody to remember a second setting. `AGENTPRO_MAPTILER_STYLE`
+picks a style (`streets-v2` by default) and `AGENTPRO_MAPTILER_TILE_URL`
+replaces the URL template for the day they change the path — the fix should be
+a line in `.env`, not a deployment. `AGENTPRO_TILE_URL` and
+`AGENTPRO_TILE_ATTRIBUTION` still override everything, for a different provider
+or self-hosted tiles.
+
+**Restrict the key to your domain** in the MapTiler dashboard. It travels in
+the URL of every tile request and is visible to anyone who opens the network
+tab; restricted, that does not matter.
+
+> **Without a key the maps draw from OpenStreetMap's own raster service**,
+> whose usage policy prohibits heavy or commercial use — they are entitled to
+> block traffic that ignores it, and the first sign is every map on the site
+> turning grey at a moment of their choosing. That default is deliberate: it
+> needs no account, which is why a fresh clone has working maps.
+
+`App\Support\MapTiles` is the single place all three maps — search, listing and
+the pin picker — read the tile settings from, and it reports what a swap gets
+wrong on the admin dashboard's **Needs attention** rail: production still on the
+development source, a key still set to the example, a URL carrying an unfilled
+`{key}` placeholder, or tiles served with no attribution. None of those fails at
+deploy time. Each of them is grey squares on somebody else's screen, days later.
+
+Which source wins is decided in `config/agentpro.php` rather than in that class,
+because `env()` only answers while a config file is being read: after
+`config:cache`, which every deploy runs, it returns null everywhere else. A
+lookup anywhere but there works in development and silently stops working in
+production.
+
+A blank `AGENTPRO_TILE_URL=` counts as unset rather than as an empty URL — in
+`.env` an empty line is a value, and taken literally it would leave every map
+drawing nothing instead of falling back to the development source.
 
 ## Architecture
 

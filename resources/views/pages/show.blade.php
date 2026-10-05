@@ -311,14 +311,11 @@
         {{-- Same Leaflet build as the search map: one raster tile renderer for
              the whole site rather than a second map stack on this page. --}}
         <div id="detail-map" class="dmap"
-             data-config="{{ json_encode([
+             data-config="{{ json_encode(\App\Support\MapTiles::forView([
                  'lat' => (float) $property->lat,
                  'lng' => (float) $property->lng,
                  'label' => $property->title,
-                 'tileUrl' => config('agentpro.map.tile_url'),
-                 'attribution' => config('agentpro.map.attribution'),
-                 'maxZoom' => (int) config('agentpro.map.max_zoom'),
-             ]) }}"></div>
+             ])) }}"></div>
         <p class="fhint" style="margin-top:10px">
             The pin is the location the lister gave. Confirm it on the ground before you pay
             anybody anything.
