@@ -152,10 +152,26 @@
 
             <x-field name="address_line" label="Street address" :value="old('address_line', $property->address_line)" required />
 
+            {{--
+                Two numbers a lister cannot read off the property, on a form
+                that refuses to save without them. Saying where they come from
+                costs one line and is the difference between a listing and an
+                abandoned draft — and the magnitudes are there so that a figure
+                off a survey plan, which runs to six digits because it is in
+                metres, looks wrong before the validator says so.
+            --}}
+            <p class="fhint">
+                The map pin. In Google Maps, press and hold the exact spot: the two numbers
+                it shows are the latitude first, then the longitude.
+            </p>
+
             <div class="row3">
-                <x-field name="lat" label="Latitude" :value="old('lat', $property->lat)" required placeholder="6.4441" />
-                <x-field name="lng" label="Longitude" :value="old('lng', $property->lng)" required placeholder="3.4795" />
-                <x-field name="what3words" label="what3words" :value="old('what3words', $property->what3words)" placeholder="///plant.chief.maker" />
+                <x-field name="lat" label="Latitude" :value="old('lat', $property->lat)" required placeholder="6.4441"
+                         hint="Around 6.5 in Lagos and Enugu, 9.1 in Abuja" />
+                <x-field name="lng" label="Longitude" :value="old('lng', $property->lng)" required placeholder="3.4795"
+                         hint="Around 3.4 in Lagos, 7.5 in Abuja and Enugu" />
+                <x-field name="what3words" label="what3words" :value="old('what3words', $property->what3words)" placeholder="///plant.chief.maker"
+                         hint="Optional, from the what3words app" />
             </div>
 
             <x-field name="website_url" label="Website (optional)" type="url" :value="old('website_url', $property->website_url)"
