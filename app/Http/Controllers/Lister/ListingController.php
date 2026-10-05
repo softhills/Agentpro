@@ -10,6 +10,7 @@ use App\Models\Amenity;
 use App\Models\Area;
 use App\Models\Property;
 use App\Models\Unit;
+use App\Notifications\ListingDraftDeleted;
 use App\Support\Audit;
 use App\Support\MoneyInput;
 use App\Support\Vocab;
@@ -238,9 +239,24 @@ class ListingController extends Controller
         }
 
         $before = $property->only(['uuid', 'title', 'lifecycle_state', 'lister_id']);
-        // Read while the row is still there: the name is wanted for the
-        // message, and after the delete there is nothing to read it from.
-        $listerName = $property->lister?->name ?? 'The lister';
+
+        /*
+         * Held while the row is still there. After the delete there is nothing
+         * left to read a name or an address off, and the lister has to be
+         * notified from something.
+         */
+        $lister  = $property->lister;
+        $notMine = $request->user()->id !== $property->lister_id;
+
+        /*
+         * Optional, and only staff ever see the box — deleting your own draft
+         * needs no explanation to yourself. It goes to the lister and into the
+         * audit log together, because a reason the platform keeps and the
+         * person affected is not told is not a reason, it is a file note.
+         */
+        $note = $notMine
+            ? trim((string) $request->validate(['note' => ['nullable', 'string', 'max:300']])['note'] ?? '')
+            : '';
 
         /*
          * The rows go with the property — units, fees, title claims, amenities
@@ -260,7 +276,19 @@ class ListingController extends Controller
 
         $property->delete();
 
-        Audit::record('listing.deleted', null, $before, []);
+        Audit::record('listing.deleted', null, $before, array_filter(['note' => $note]));
+
+        /*
+         * The lister is told, every time, and cannot switch it off. Before
+         * this, the audit log was the whole record: it tells the platform who
+         * deleted the draft and tells the person whose work it was nothing at
+         * all. They would have found out by going looking for it.
+         *
+         * Not sent when you delete your own — you were there.
+         */
+        if ($notMine) {
+            $lister?->notify(new ListingDraftDeleted($before['title'], $note ?: null));
+        }
 
         /*
          * Back to the screen the deletion was made from. Somebody clearing up
@@ -268,7 +296,7 @@ class ListingController extends Controller
          * that is not theirs came from the admin console, and sending them to
          * a dashboard listing properties they do not have is a dead end.
          */
-        if ($request->user()->id === $before['lister_id']) {
+        if (! $notMine) {
             return redirect()->route('lister.dashboard')->with(
                 'status',
                 '"'.$before['title'].'" was deleted. Nothing had been submitted, so nothing is on record about it.',
@@ -276,9 +304,10 @@ class ListingController extends Controller
         }
 
         return redirect()->route('admin.listings')->with('status', sprintf(
-            '"%s" was deleted. It was %s’s draft, and they have not been told — the audit log records that you deleted it.',
+            '"%s" was deleted. %s has been told%s, and the audit log records that you deleted it.',
             $before['title'],
-            $listerName,
+            $lister?->name ?? 'The lister',
+            $note === '' ? ' — with no reason given' : '',
         ));
     }
 

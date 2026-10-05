@@ -7,8 +7,10 @@ use App\Models\Area;
 use App\Models\Order;
 use App\Models\Property;
 use App\Models\User;
+use App\Notifications\ListingDraftDeleted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -291,5 +293,68 @@ class ListingDeletionTest extends TestCase
             'actor_id' => $admin->id,
         ]);
         $this->assertStringContainsString($lister->name, session('status'));
+    }
+
+    /**
+     * And the lister is told, which is the part the audit log cannot do: it
+     * records who deleted the draft for the platform's benefit, and tells the
+     * person whose work it was nothing at all. Without this they find out by
+     * going looking for something that is no longer there.
+     */
+    public function test_the_lister_is_told_when_staff_delete_their_draft(): void
+    {
+        Notification::fake();
+
+        $lister = $this->user();
+        $draft  = $this->listing($lister);
+
+        $this->actingAs($this->admin())->delete(route('lister.listings.destroy', $draft), [
+            'note' => 'Duplicate of an existing listing.',
+        ]);
+
+        Notification::assertSentTo($lister, ListingDraftDeleted::class, function ($notification) use ($draft) {
+            // The title travels as a string. By the time the notification is
+            // built the row is gone, and a queued job holding a deleted model
+            // would fail to resolve it when it ran.
+            $this->assertSame($draft->title, $notification->title);
+            $this->assertSame('Duplicate of an existing listing.', $notification->note);
+
+            return true;
+        });
+
+        // The reason goes to both, or it is a file note rather than a reason.
+        $this->assertStringContainsString(
+            'Duplicate of an existing listing.',
+            (string) DB::table('audit_events')->where('action', 'listing.deleted')->value('after'),
+        );
+    }
+
+    /** Deleting your own draft notifies nobody. You were there. */
+    public function test_a_lister_deleting_their_own_draft_is_not_told_about_it(): void
+    {
+        Notification::fake();
+
+        $lister = $this->user();
+
+        $this->actingAs($lister)->delete(route('lister.listings.destroy', $this->listing($lister)));
+
+        Notification::assertNothingSent();
+    }
+
+    /** A reason is optional, and its absence must not cost the lister the message. */
+    public function test_the_lister_is_told_even_when_no_reason_is_given(): void
+    {
+        Notification::fake();
+
+        $lister = $this->user();
+
+        $this->actingAs($this->admin())
+            ->delete(route('lister.listings.destroy', $this->listing($lister)));
+
+        Notification::assertSentTo($lister, ListingDraftDeleted::class, function ($notification) {
+            $this->assertNull($notification->note);
+
+            return true;
+        });
     }
 }

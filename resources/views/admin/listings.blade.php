@@ -104,14 +104,20 @@
                         <summary class="linkbtn linkbtn-bad">Delete</summary>
                         <form method="POST" action="{{ route('lister.listings.destroy', $p) }}" class="taxform taxform-tight">
                             @csrf @method('DELETE')
-                            <span class="fhint">
-                                @if ($p->lister_id === auth()->id())
-                                    This draft and its photographs go for good.
-                                @else
+                            @if ($p->lister_id === auth()->id())
+                                <span class="fhint">This draft and its photographs go for good.</span>
+                            @else
+                                <span class="fhint">
                                     {{ $p->lister?->name ?? 'This lister' }}’s draft and its photographs go for
-                                    good, and they are not told.
-                                @endif
-                            </span>
+                                    good, and they are told that you deleted it.
+                                </span>
+                                {{-- Optional, and it goes to the lister as well as the
+                                     audit log: a reason the platform keeps and the person
+                                     affected never sees is a file note, not a reason. --}}
+                                <label class="flabel" for="note-{{ $p->id }}">Reason (optional)</label>
+                                <input type="text" id="note-{{ $p->id }}" name="note" maxlength="300"
+                                       class="finput" placeholder="Duplicate of an existing listing">
+                            @endif
                             <button type="submit" class="btn btn-ghost btn-sm">Yes, delete it</button>
                         </form>
                     </details>
