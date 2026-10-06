@@ -207,16 +207,14 @@ class ListingDeletionTest extends TestCase
     }
 
     /**
-     * Edit on every row, not only the administrator's own.
+     * Edit on the administrator's own listings and nobody else's.
      *
-     * The first cut of this screen offered it on your own rows only, on the
-     * argument that moderation acts on other people's listings through the
-     * review screen and leaves a reason behind. The decision went the other
-     * way, and it costs nothing in authorisation: PropertyPolicy::before()
-     * grants a moderator every ability on a listing already, so the link
-     * exposes what the policy has always said rather than widening it.
+     * The form has an ability of its own, `rewrite`, which is the one thing
+     * the staff grant leaves out — because changing what somebody's advert
+     * says, under their name, is authorship rather than moderation. Taking a
+     * listing down is the moderation answer, and it carries a reason.
      */
-    public function test_edit_is_offered_on_every_row(): void
+    public function test_edit_is_offered_on_your_own_listings_only(): void
     {
         $admin  = $this->admin();
         $mine   = $this->listing($admin);
@@ -224,17 +222,60 @@ class ListingDeletionTest extends TestCase
 
         $html = $this->actingAs($admin)->get(route('admin.listings'))->assertOk()->getContent();
 
-        foreach (['their own' => $mine, 'somebody else’s' => $theirs] as $whose => $property) {
-            $this->assertStringContainsString(
-                route('lister.listings.edit', $property),
-                $html,
-                'An admin was offered no way to edit '.$whose.' listing.',
-            );
-        }
+        $this->assertStringContainsString(route('lister.listings.edit', $mine), $html);
+        $this->assertStringNotContainsString(
+            route('lister.listings.edit', $theirs),
+            $html,
+            'An admin was offered an edit link on somebody else’s listing.',
+        );
+    }
 
-        // And the link has to work. A row offering an action that answers 403
-        // is worse than a row offering none.
-        $this->actingAs($admin)->get(route('lister.listings.edit', $theirs))->assertOk();
+    /**
+     * And the rule is the policy's, not the template's. Hiding the link while
+     * the route still answered would be a rule that holds only for people who
+     * do not type URLs.
+     */
+    public function test_an_admin_cannot_edit_somebody_elses_listing_by_url(): void
+    {
+        $admin    = $this->admin();
+        $property = $this->listing($this->user(), 'published');
+
+        $this->actingAs($admin)->get(route('lister.listings.edit', $property))->assertForbidden();
+        $this->actingAs($admin)->put(route('lister.listings.update', $property), [])->assertForbidden();
+    }
+
+    /**
+     * And it stops at the form.
+     *
+     * `update` is a wider question than `rewrite` — the photographs, the
+     * video, the capture booking and the listing's analytics all sit behind
+     * it — and staff keep it. A moderator asked to take down one unlawful
+     * photograph should not have to delete the listing to do it.
+     */
+    public function test_staff_keep_everything_behind_update_on_other_peoples_listings(): void
+    {
+        $admin    = $this->admin();
+        $property = $this->listing($this->user(), 'published');
+
+        $this->assertTrue($admin->can('update', $property), 'Staff lost the photographs with the form.');
+        $this->assertFalse($admin->can('rewrite', $property));
+
+        $this->actingAs($admin)->get(route('lister.listings.analytics', $property))->assertOk();
+    }
+
+    /**
+     * Moderation is untouched, which is the point of drawing the line at
+     * authorship rather than at staff. Taking a listing down is still staff
+     * work, and still recorded with a reason.
+     */
+    public function test_a_moderator_can_still_act_on_the_listings_they_moderate(): void
+    {
+        $admin    = $this->admin();
+        $property = $this->listing($this->user(), 'published');
+
+        $this->assertTrue($admin->can('unlist', $property));
+        $this->assertTrue($admin->can('view', $property));
+        $this->actingAs($admin)->get(route('admin.review', $property))->assertOk();
     }
 
     /**
