@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Listings — Agentpro admin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container" style="display:flex;align-items:center;gap:28px;width:100%">
+  <a href="#" class="logo">Agentpro<span class="logo-ring" aria-hidden="true"></span></a>
+</div></header>
+<div class="adminshell">
+  <aside class="adminnav" aria-label="Admin sections">
+    <p class="adminnav-title">Admin</p>
+    <a href="#">Dashboard</a><a href="#">Review queue</a><a href="#">Listings</a>
+    <a href="#">People</a><a href="#">Orders</a><a href="#">Payouts</a>
+    <a href="#">Settlements</a><a href="#">Funnels</a><a href="#">Coverage &amp; capacity</a>
+    <a href="#" class="cur">Amenities &amp; areas</a><a href="#">Audit log</a><a href="#">RealSure</a>
+  </aside>
+  <main class="adminmain">
+    <header class="adminhead">
+      <div><h1>Listings</h1><p>Every listing in every state. The review queue shows only what is awaiting a decision.</p></div>
+    </header>
+    
+<form method="GET" class="adminfilters">
+    <input type="search" name="q" value="" class="finput" placeholder="Title or address">
+    <select name="state" class="finput">
+        <option value="">Any state</option>
+                    <option value="draft" >draft (2)</option>
+                    <option value="submitted" >submitted (1)</option>
+                    <option value="under_review" >under review (0)</option>
+                    <option value="published" >published (2)</option>
+                    <option value="rejected" >rejected (0)</option>
+                    <option value="unpublished" >unpublished (0)</option>
+                    <option value="expired" >expired (0)</option>
+                    <option value="sold" >sold (0)</option>
+                    <option value="rented" >rented (0)</option>
+            </select>
+    
+            <label class="checkline nowrap">
+            <input type="checkbox" name="mine" value="1" >
+            <span>Only mine (2)</span>
+        </label>
+        <button type="submit" class="btn btn-brand btn-sm">Filter</button>
+</form>
+
+<div class="tablewrap">
+<table class="admintable">
+    <thead><tr><th>Listing</th><th>Lister</th><th>State</th><th>Price</th><th>Photos</th><th></th></tr></thead>
+    <tbody>
+                    <tr>
+            <td>
+                <strong>My own draft</strong>
+                <span class="sub">12 Bourdillon Road, Ikoyi</span>
+            </td>
+            <td>
+                Ada Admin
+                                    <span class="sub">unverified</span>
+                            </td>
+            <td><span class="lstate lstate-draft">Draft</span></td>
+            <td class="num">₦7,500,000/yr</td>
+            <td class="num ">6</td>
+            <td class="rowacts">
+                
+                
+                
+                
+                                    <a href="/dashboard/listings/uuid-1/edit" class="btn btn-ghost btn-sm">Edit</a>
+                
+                                    <details class="refundbox">
+                        <summary class="linkbtn linkbtn-bad">Delete</summary>
+                        <form method="POST" action="/dashboard/listings/uuid-1" class="taxform taxform-tight">
+                            <input type="hidden" name="_token" value="" autocomplete="off"> <input type="hidden" name="_method" value="DELETE">                                                            <span class="fhint">This draft and its photographs go for good.</span>
+                                                        <button type="submit" class="btn btn-ghost btn-sm">Yes, delete it</button>
+                        </form>
+                    </details>
+                            </td>
+        </tr>
+                    <tr>
+            <td>
+                <strong>My published listing</strong>
+                <span class="sub">12 Bourdillon Road, Ikoyi</span>
+            </td>
+            <td>
+                Ada Admin
+                                    <span class="sub">unverified</span>
+                            </td>
+            <td><span class="lstate lstate-published">Published</span></td>
+            <td class="num">₦7,500,000/yr</td>
+            <td class="num ">6</td>
+            <td class="rowacts">
+                                    <a href="/property/uuid-2" class="btn btn-ghost btn-sm">View</a>
+                
+                
+                                    <a href="/admin/queue/uuid-2" class="btn btn-ghost btn-sm">Unlist</a>
+                
+                
+                                    <a href="/dashboard/listings/uuid-2/edit" class="btn btn-ghost btn-sm">Edit</a>
+                
+                            </td>
+        </tr>
+                    <tr>
+            <td>
+                <strong>Somebody else&#039;s listing</strong>
+                <span class="sub">12 Bourdillon Road, Ikoyi</span>
+            </td>
+            <td>
+                Tunde Adeyemi
+                            </td>
+            <td><span class="lstate lstate-published">Published</span></td>
+            <td class="num">₦7,500,000/yr</td>
+            <td class="num ">6</td>
+            <td class="rowacts">
+                                    <a href="/property/uuid-3" class="btn btn-ghost btn-sm">View</a>
+                
+                
+                                    <a href="/admin/queue/uuid-3" class="btn btn-ghost btn-sm">Unlist</a>
+                
+                
+                
+                            </td>
+        </tr>
+                    <tr>
+            <td>
+                <strong>Awaiting review</strong>
+                <span class="sub">12 Bourdillon Road, Ikoyi</span>
+            </td>
+            <td>
+                Tunde Adeyemi
+                            </td>
+            <td><span class="lstate lstate-submitted">Submitted</span></td>
+            <td class="num">₦7,500,000/yr</td>
+            <td class="num ">6</td>
+            <td class="rowacts">
+                
+                
+                                    <a href="/admin/queue/uuid-4" class="btn btn-brand btn-sm">Review</a>
+                
+                
+                
+                            </td>
+        </tr>
+                    <tr>
+            <td>
+                <strong>Somebody else&#039;s draft</strong>
+                <span class="sub">12 Bourdillon Road, Ikoyi</span>
+            </td>
+            <td>
+                Tunde Adeyemi
+                            </td>
+            <td><span class="lstate lstate-draft">Draft</span></td>
+            <td class="num">₦7,500,000/yr</td>
+            <td class="num ">6</td>
+            <td class="rowacts">
+                
+                
+                
+                
+                
+                                    <details class="refundbox">
+                        <summary class="linkbtn linkbtn-bad">Delete</summary>
+                        <form method="POST" action="/dashboard/listings/uuid-5" class="taxform taxform-tight">
+                            <input type="hidden" name="_token" value="" autocomplete="off"> <input type="hidden" name="_method" value="DELETE">                                                            <span class="fhint">
+                                    Tunde Adeyemi’s draft and its photographs go for
+                                    good, and they are told that you deleted it.
+                                </span>
+                                
+                                <label class="flabel" for="note-5">Reason (optional)</label>
+                                <input type="text" id="note-5" name="note" maxlength="300"
+                                       class="finput" placeholder="Duplicate of an existing listing">
+                                                        <button type="submit" class="btn btn-ghost btn-sm">Yes, delete it</button>
+                        </form>
+                    </details>
+                            </td>
+        </tr>
+        </tbody>
+</table>
+</div>
+<div style="margin-top:16px"></div>
+  </main>
+</div>
+</body>
+</html>

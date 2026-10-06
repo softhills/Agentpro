@@ -136,7 +136,7 @@
             </div>
 
             <div class="listacts">
-                @can('update', $property)
+                @can('rewrite', $property)
                     <a href="{{ route('lister.listings.edit', $property) }}" class="btn btn-ghost btn-sm">Edit</a>
                 @endcan
 
